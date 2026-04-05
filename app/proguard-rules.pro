@@ -1,0 +1,2 @@
+-keep class rikka.shizuku.** { *; }
+-dontnote **

@@ -1,0 +1,95 @@
+-- Merging decision tree log ---
+provider#rikka.shizuku.ShizukuProvider
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:36:9-42:82
+	android:enabled
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:40:13-35
+	android:authorities
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:38:13-59
+	android:multiprocess
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:39:13-41
+	android:exported
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:41:13-36
+	android:permission
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:42:13-79
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:37:13-57
+manifest
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+	package
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:3:5-41
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:versionName
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:5:5-32
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:11-69
+	android:versionCode
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:4:5-28
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+uses-sdk
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+	android:targetSdkVersion
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:9:9-38
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:8:9-35
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+uses-permission#moe.shizuku.manager.permission.API_V23
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:11:5-78
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:11:22-75
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:12:5-80
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:12:22-77
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:13:5-81
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:13:22-78
+uses-permission#android.permission.MANAGE_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:14:5-82
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:14:22-79
+queries
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:15:5-17:15
+package#moe.shizuku.privileged.api
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:16:9-62
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:16:18-59
+application
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
+	android:extractNativeLibs
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:requestLegacyExternalStorage
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:24:9-52
+	android:label
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:21:9-41
+	android:icon
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:22:9-45
+	android:theme
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:23:9-60
+activity#yhjmew.minecraft.nbteditor.MainActivity
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:26:9-34:20
+	android:label
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:28:13-45
+	android:exported
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:29:13-36
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:27:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:30:13-33:29
+action#android.intent.action.MAIN
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:31:17-69
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:31:25-66
+category#android.intent.category.LAUNCHER
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:32:17-77
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:32:27-74

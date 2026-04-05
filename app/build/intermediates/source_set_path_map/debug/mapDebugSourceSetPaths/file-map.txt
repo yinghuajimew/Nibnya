@@ -1,0 +1,7 @@
+yhjmew.minecraft.nbteditor.app-pngs-0 D:\NBTeditor\app\build\generated\res\pngs\debug
+yhjmew.minecraft.nbteditor.app-resValues-1 D:\NBTeditor\app\build\generated\res\resValues\debug
+yhjmew.minecraft.nbteditor.app-packageDebugResources-2 D:\NBTeditor\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+yhjmew.minecraft.nbteditor.app-packageDebugResources-3 D:\NBTeditor\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+yhjmew.minecraft.nbteditor.app-debug-4 D:\NBTeditor\app\build\intermediates\merged_res\debug\mergeDebugResources
+yhjmew.minecraft.nbteditor.app-debug-5 D:\NBTeditor\app\src\debug\res
+yhjmew.minecraft.nbteditor.app-main-6 D:\NBTeditor\app\src\main\res

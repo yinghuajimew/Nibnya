@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="?android:attr/selectableItemBackground"
+    android:minHeight="32dp"
+    android:gravity="center_vertical">
+
+    <!-- 1. 动态缩进占位符 (Java代码控制宽度) -->
+    <View
+        android:id="@+id/view_indentation"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:visibility="visible" />
+
+    <!-- 2. 展开/折叠指示器 (▶ / ▼) -->
+    <TextView
+        android:id="@+id/tv_expand_icon"
+        android:layout_width="24dp"
+        android:layout_height="match_parent"
+        android:text="▶"
+        android:textSize="12sp"
+        android:textColor="#9E9E9E"
+        android:gravity="center"
+        android:visibility="visible" />
+
+    <!-- 3. 类型图标 / Emoji (重点) -->
+    <!-- 这里如果是Emoji，背景可以是透明；如果是字母，背景带色块 -->
+    <TextView
+        android:id="@+id/tv_type_icon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:text="I"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_marginEnd="8dp" />
+
+    <!-- 4. 键与值 -->
+    <!-- 4. 键与值 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp">
+
+        <!-- 改用 RelativeLayout，确保 Key 在左，Value 在右，且 Key 不会把 Value 挤没 -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Value (右边先占位) -->
+            <TextView
+                android:id="@+id/tv_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Value"
+                android:textColor="#666666"
+                android:textSize="14sp"
+                android:layout_alignParentEnd="true"
+                android:layout_marginStart="8dp"
+                android:maxWidth="120dp"
+                android:ellipsize="end"
+                android:singleLine="true" />
+
+            <!-- Key (左边填满剩余空间) -->
+            <TextView
+                android:id="@+id/tv_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Long Title Key..."
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:layout_toStartOf="@id/tv_value"
+                android:layout_alignParentStart="true"
+                android:layout_marginEnd="4dp" />
+            <!-- 中间的冒号不要了，或者包含在 Key 里，或者单独处理 -->
+        </RelativeLayout>
+
+        <!-- [新增] 第二行：中文翻译 + 解析值 -->
+        <TextView
+            android:id="@+id/tv_key_desc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/text_here_is_the_translation"
+            android:textSize="11sp"
+            android:textColor="#009688"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,64 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'yhjmew.minecraft.nbteditor'
+    compileSdk 35
+    
+    defaultConfig {
+        applicationId "yhjmew.minecraft.nbteditor"
+        minSdk 28
+        targetSdk 35
+        versionCode 4
+        versionName "1.0.4"
+    }
+
+    // 【修正】签名配置块必须在 buildTypes 之前，且要有 signingConfigs { }
+    signingConfigs {
+        // Debug 签名（AS自动生成）
+        debug {
+            storeFile file('debugmt.keystore')
+            storePassword 'android'
+            keyAlias 'mt'
+            keyPassword 'android'
+        }
+        
+        // Release 签名
+        release {
+            storeFile file('yhjmew.minecraft.nbteditor.keystore')
+            storePassword 'yinghuaji'
+            keyAlias 'yhjmew.minecraft.nbteditor'
+            keyPassword 'yinghuaji'
+        }
+    }
+
+    // 构建类型配置
+    buildTypes {
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            debuggable true
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            signingConfig signingConfigs.debug  // 使用 debug 签名
+        }
+        
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release  // 使用 release 签名
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
