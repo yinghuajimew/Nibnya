@@ -8,7 +8,7 @@ android {
     
     defaultConfig {
         applicationId "yhjmew.minecraft.nbteditor"
-        minSdk 28
+        minSdk 23
         targetSdk 35
         versionCode 4
         versionName "1.0.4"
@@ -61,4 +61,5 @@ android {
 dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.annotation:annotation-jvm:1.9.1'
 }

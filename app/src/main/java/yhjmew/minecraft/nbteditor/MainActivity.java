@@ -1,5 +1,6 @@
 package yhjmew.minecraft.nbteditor;
 
+import androidx.annotation.NonNull;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -11,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter; // 必需
@@ -84,9 +86,9 @@ public class MainActivity extends Activity {
     private String currentWorkingDbPath = null;
     private String currentWorkingFileOrDir = null;
 
-    private Stack<JsonObject> navigationStack = new Stack<JsonObject>();
-    private Stack<String> pathStack = new Stack<String>();
-    private Stack<Integer> scrollPositionStack = new Stack<Integer>();
+    private final Stack<JsonObject> navigationStack = new Stack<>();
+    private final Stack<String> pathStack = new Stack<>();
+    private final Stack<Integer> scrollPositionStack = new Stack<>();
     private static JsonElement clipboard = null;
 
     private String currentLang;
@@ -119,7 +121,7 @@ private Uri safTreeUri = null;  // 保存 SAF 授权的 URI
     private int puzzleCols = 1;
 // 【新增】数据缓存：Key -> JsonObject
     // 用于在不同 NBT 之间切换时实现“秒开”且保留状态
-    private java.util.HashMap<String, JsonObject> nbtDataCache = new java.util.HashMap<>();
+    private final java.util.HashMap<String, JsonObject> nbtDataCache = new java.util.HashMap<>();
 // 【新增】列表缓存 (避免每次点侧边栏都重新扫描数据库)
     private List<String> cacheMapList = null;
     private List<String> cacheVillageList = null;
@@ -135,7 +137,7 @@ private int lastTreeClickPosition = -1; // 记录树状图最后点击的位置
     private static JsonObject tempNbtData = null;
     private static String tempTargetKey = null;
 // 会话缓存：Key(比如 "~local_player" 或 "level.dat") -> Session
-    private java.util.Map<String, EditorSession> sessionCacheMap = new java.util.HashMap<>();
+    private final java.util.Map<String, EditorSession> sessionCacheMap = new java.util.HashMap<>();
 private boolean useShizuku = true; // 默认启用 Shizuku
     View sidebarContainer = null;
     View sidebar = null;
@@ -148,13 +150,10 @@ private boolean useShizuku = true; // 默认启用 Shizuku
     private static final String BRIDGE_ROOT = PUBLIC_ROOT + "Bridge/";
     private static final String LEVEL_DAT_NAME = "level_working.dat";
 
-    private final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = new Shizuku.OnRequestPermissionResultListener() {
-        @Override
-        public void onRequestPermissionResult(int requestCode, int grantResult) {
-            if (grantResult == PackageManager.PERMISSION_GRANTED)
-                toast(getString(R.string.toast_shizuku_granted));
-            else toast(getString(R.string.toast_shizuku_denied));
-        }
+    private final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = (requestCode, grantResult) -> {
+        if (grantResult == PackageManager.PERMISSION_GRANTED)
+            toast(getString(R.string.toast_shizuku_granted));
+        else toast(getString(R.string.toast_shizuku_denied));
     };
 
 // ============================================
@@ -268,10 +267,13 @@ if (tvCurrentPath != null) {
     toast("错误：找不到路径显示控件 tv_current_path");
 }
 
-try {
-    registerListener();
-} catch (Exception e) {
-}
+        try {
+            registerListener();
+        } catch (Exception e) {
+            Log.e("MainActivity", "Shizuku registerListener failed", e);
+            // 可选：toast提示
+            toast("Shizuku 初始化异常: " + e.getMessage());
+        }
 Shizuku.addRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
 checkStoragePermission();
 
@@ -480,7 +482,7 @@ View btnMultiPlayer = findViewById(R.id.btn_online_players);
 if (btnMultiPlayer != null) {
     btnMultiPlayer.setOnClickListener(v -> {
         if (sidebarContainer != null) sidebarContainer.setVisibility(View.GONE);
-        ensureDbLoaded(() -> showMultiPlayerDialog());
+        ensureDbLoaded(this::showMultiPlayerDialog);
     });
 }
 
@@ -488,7 +490,7 @@ View btnMap = findViewById(R.id.btn_map_nbt);
 if (btnMap != null) {
     btnMap.setOnClickListener(v -> {
         if (sidebarContainer != null) sidebarContainer.setVisibility(View.GONE);
-        ensureDbLoaded(() -> showMapListDialog());
+        ensureDbLoaded(this::showMapListDialog);
     });
 }
 
@@ -496,7 +498,7 @@ View btnVillage = findViewById(R.id.btn_village_nbt);
 if (btnVillage != null) {
     btnVillage.setOnClickListener(v -> {
         if (sidebarContainer != null) sidebarContainer.setVisibility(View.GONE);
-        ensureDbLoaded(() -> showVillageListDialog());
+        ensureDbLoaded(this::showVillageListDialog);
     });
 }
 
@@ -568,7 +570,7 @@ View btnGlobal = findViewById(R.id.btn_global_nbt);
 if (btnGlobal != null) {
     btnGlobal.setOnClickListener(v ->  {
         if (sidebarContainer != null) sidebarContainer.setVisibility(View.GONE);
-        ensureDbLoaded(() -> showGlobalDataDialog());
+        ensureDbLoaded(this::showGlobalDataDialog);
     });
 }
 
@@ -626,7 +628,6 @@ if (sidebarHeader != null) {
     toast("错误：找不到 sidebar_header");
 }
 
-View view_Mask = findViewById(R.id.view_mask);
 if (viewMask != null) {
     viewMask.setOnClickListener(v -> {
         sidebar[0] = findViewById(R.id.custom_sidebar_container);
@@ -660,83 +661,81 @@ if (viewMask != null) {
             // 下面是你原有的单张图片处理逻辑
             final ProgressDialog processing = ProgressDialog.show(this, getString(R.string.msg_processing), getString(R.string.toast_generate_bedrock_edition_map), true);
             
-            new Thread(new Runnable(){
-                public void run(){
-                    try {
-                        // 1. 读取原图
-                        java.io.InputStream is = getContentResolver().openInputStream(imageUri);
-                        android.graphics.Bitmap original = android.graphics.BitmapFactory.decodeStream(is);
+            new Thread(() -> {
+                try {
+                    // 1. 读取原图
+                    java.io.InputStream is = getContentResolver().openInputStream(imageUri);
+                    android.graphics.Bitmap original = android.graphics.BitmapFactory.decodeStream(is);
+                    if (is != null) {
                         is.close();
-                        
-                        // 2. 创建 128x128 居中画布
-                        int targetW = 128;
-                        int targetH = 128;
-                        android.graphics.Bitmap finalBitmap = android.graphics.Bitmap.createBitmap(targetW, targetH, android.graphics.Bitmap.Config.ARGB_8888);
-                        android.graphics.Canvas canvas = new android.graphics.Canvas(finalBitmap);
-                        canvas.drawColor(android.graphics.Color.WHITE); 
-                        
-                        // 缩放逻辑
-                        int origW = original.getWidth();
-                        int origH = original.getHeight();
-                        float scale = Math.min((float)targetW / origW, (float)targetH / origH);
-                        int newW = Math.round(origW * scale);
-                        int newH = Math.round(origH * scale);
-                        int left = (targetW - newW) / 2;
-                        int top = (targetH - newH) / 2;
-                        
-                        android.graphics.Rect destRect = new android.graphics.Rect(left, top, left + newW, top + newH);
-                        canvas.drawBitmap(original, null, destRect, null);
-                        
-                        // 3. 准备数据 (65536)
-                        int targetSize = 65536; 
-                        if (currentTargetMapArray == null) currentTargetMapArray = new JsonArray();
-                        
-                        while (currentTargetMapArray.size() < targetSize) currentTargetMapArray.add((byte)0);
-                        while (currentTargetMapArray.size() > targetSize) currentTargetMapArray.remove(currentTargetMapArray.size() - 1);
-                        
-                        // 4. 像素转换
-                        int index = 0;
-                        int[] pixels = new int[128 * 128];
-                        finalBitmap.getPixels(pixels, 0, 128, 0, 0, 128, 128);
-                        
-                        for (int i = 0; i < pixels.length; i++) {
-                            int color = pixels[i];
-                            byte r = (byte) android.graphics.Color.red(color);
-                            byte g = (byte) android.graphics.Color.green(color);
-                            byte b = (byte) android.graphics.Color.blue(color);
-                            byte a = (byte) android.graphics.Color.alpha(color);
-                            
-                            currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(r));
-                            currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(g));
-                            currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(b));
-                            currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(a));
-                        }
-                        
-                        // 5. 修正 NBT
-                        if (nbtAdapter != null) {
-                            JsonObject mapRoot = nbtAdapter.getData();
-                            if (mapRoot != null) {
-                                JsonObject lockedTag = new JsonObject();
-                                lockedTag.addProperty("t", 1); lockedTag.addProperty("v", (byte)1);
-                                mapRoot.add("mapLocked", lockedTag);
-                            }
-                        }
-
-                        runOnUiThread(new Runnable(){
-                            public void run(){
-                                processing.dismiss();
-                                toast(getString(R.string.toast_the_map_is_generated));
-                                if(nbtAdapter!=null) nbtAdapter.notifyDataSetChanged();
-                                if(nbtTreeAdapter!=null) nbtTreeAdapter.notifyDataSetChanged();
-                            }
-                        });
-                        
-                        original.recycle();
-                        finalBitmap.recycle();
-                        
-                    } catch (final Exception e) {
-                        runOnUiThread(new Runnable(){ public void run(){ processing.dismiss(); toast(getString(R.string.toast_build_failed) + e); }});
                     }
+
+                    // 2. 创建 128x128 居中画布
+                    int targetW = 128;
+                    int targetH = 128;
+                    android.graphics.Bitmap finalBitmap = android.graphics.Bitmap.createBitmap(targetW, targetH, android.graphics.Bitmap.Config.ARGB_8888);
+                    android.graphics.Canvas canvas = new android.graphics.Canvas(finalBitmap);
+                    canvas.drawColor(Color.WHITE);
+
+                    // 缩放逻辑
+                    int origW = original.getWidth();
+                    int origH = original.getHeight();
+                    float scale = Math.min((float)targetW / origW, (float)targetH / origH);
+                    int newW = Math.round(origW * scale);
+                    int newH = Math.round(origH * scale);
+                    int left = (targetW - newW) / 2;
+                    int top = (targetH - newH) / 2;
+
+                    android.graphics.Rect destRect = new android.graphics.Rect(left, top, left + newW, top + newH);
+                    canvas.drawBitmap(original, null, destRect, null);
+
+                    // 3. 准备数据 (65536)
+                    int targetSize = 65536;
+                    if (currentTargetMapArray == null) currentTargetMapArray = new JsonArray();
+
+                    while (currentTargetMapArray.size() < targetSize) currentTargetMapArray.add((byte)0);
+                    while (currentTargetMapArray.size() > targetSize) currentTargetMapArray.remove(currentTargetMapArray.size() - 1);
+
+                    // 4. 像素转换
+                    int index = 0;
+                    int[] pixels = new int[128 * 128];
+                    finalBitmap.getPixels(pixels, 0, 128, 0, 0, 128, 128);
+
+                    for (int i = 0; i < pixels.length; i++) {
+                        int color = pixels[i];
+                        byte r = (byte) Color.red(color);
+                        byte g = (byte) Color.green(color);
+                        byte b = (byte) Color.blue(color);
+                        byte a = (byte) Color.alpha(color);
+
+                        currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(r));
+                        currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(g));
+                        currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(b));
+                        currentTargetMapArray.set(index++, new com.google.gson.JsonPrimitive(a));
+                    }
+
+                    // 5. 修正 NBT
+                    if (nbtAdapter != null) {
+                        JsonObject mapRoot = nbtAdapter.getData();
+                        if (mapRoot != null) {
+                            JsonObject lockedTag = new JsonObject();
+                            lockedTag.addProperty("t", 1); lockedTag.addProperty("v", (byte)1);
+                            mapRoot.add("mapLocked", lockedTag);
+                        }
+                    }
+
+                    runOnUiThread(() -> {
+                        processing.dismiss();
+                        toast(getString(R.string.toast_the_map_is_generated));
+                        if(nbtAdapter!=null) nbtAdapter.notifyDataSetChanged();
+                        if(nbtTreeAdapter!=null) nbtTreeAdapter.notifyDataSetChanged();
+                    });
+
+                    original.recycle();
+                    finalBitmap.recycle();
+
+                } catch (final Exception e) {
+                    runOnUiThread(() -> { processing.dismiss(); toast(getString(R.string.toast_build_failed) + e); });
                 }
             }).start();
         }
@@ -768,7 +767,7 @@ if (viewMask != null) {
 
 // 【新增】保存当前状态（防止切换语言或旋转屏幕后数据丢失）
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         // 保存关键变量
         outState.putBoolean("isEditingPlayer", isEditingPlayer);
@@ -889,11 +888,7 @@ if (viewMask != null) {
             return;
         }
 
-        Arrays.sort(filesArr, new Comparator<File>() {
-            public int compare(File f1, File f2) {
-                return Long.compare(f2.lastModified(), f1.lastModified());
-            }
-        });
+        Arrays.sort(filesArr, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
 
         final List<File> fileList = new ArrayList<>(Arrays.asList(filesArr));
         final List<String> nameList = new ArrayList<>();
@@ -912,60 +907,41 @@ if (viewMask != null) {
                 .setTitle(getString(R.string.title_manage_cache))
                 .setView(lv)
                 .setNeutralButton(getString(R.string.btn_close), null)
-                .setPositiveButton(getString(R.string.btn_clear_all), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        new AlertDialog.Builder(MainActivity.this)
-                                .setTitle(getString(R.string.title_clear_confirm))
-                                .setMessage(getString(R.string.msg_clear_all_cache))
-                                .setPositiveButton(getString(R.string.btn_delete), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dd, int ww) {
-                                        for (File f : fileList) deleteRecursive(f);
-                                        fileList.clear();
-                                        nameList.clear();
-                                        adapter.notifyDataSetChanged();
-                                        // 【加固】重置路径变量
-                                        currentWorkingDbPath = null;
-                                        currentWorkingFileOrDir = null;
-                                        lastLoadedWorldFolder = null; // 【新增】强制下次加载时重置
-                                        toast(getString(R.string.toast_cleared_short));
-                                    }
-                                })
-                                .setNegativeButton(getString(R.string.btn_cancel), null)
-                                .show();
-                    }
-                })
-                .create();
-
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
-                toast(getString(R.string.toast_hold_delete));
-            }
-        });
-
-        lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> p, View v, final int pos, long id) {
-                final File target = fileList.get(pos);
-                new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.btn_delete))
-                        .setMessage(String.format(getString(R.string.msg_delete_confirm), target.getName()))
-                        .setPositiveButton(getString(R.string.btn_delete), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int w) {
-                                deleteRecursive(target);
-                                fileList.remove(pos);
-                                nameList.remove(pos);
-                                adapter.notifyDataSetChanged();
-                                toast(getString(R.string.toast_deleted));
-                            }
+                .setPositiveButton(getString(R.string.btn_clear_all), (d, w) -> new AlertDialog.Builder(MainActivity.this)
+                        .setTitle(getString(R.string.title_clear_confirm))
+                        .setMessage(getString(R.string.msg_clear_all_cache))
+                        .setPositiveButton(getString(R.string.btn_delete), (dd, ww) -> {
+                            for (File f : fileList) deleteRecursive(f);
+                            fileList.clear();
+                            nameList.clear();
+                            adapter.notifyDataSetChanged();
+                            // 【加固】重置路径变量
+                            currentWorkingDbPath = null;
+                            currentWorkingFileOrDir = null;
+                            lastLoadedWorldFolder = null; // 【新增】强制下次加载时重置
+                            toast(getString(R.string.toast_cleared_short));
                         })
                         .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show();
-                return true;
-            }
+                        .show())
+                .create();
+
+        lv.setOnItemClickListener((p, v, pos, id) -> toast(getString(R.string.toast_hold_delete)));
+
+        lv.setOnItemLongClickListener((p, v, pos, id) -> {
+            final File target = fileList.get(pos);
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle(getString(R.string.btn_delete))
+                    .setMessage(String.format(getString(R.string.msg_delete_confirm), target.getName()))
+                    .setPositiveButton(getString(R.string.btn_delete), (d, w) -> {
+                        deleteRecursive(target);
+                        fileList.remove(pos);
+                        nameList.remove(pos);
+                        adapter.notifyDataSetChanged();
+                        toast(getString(R.string.toast_deleted));
+                    })
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
+                    .show();
+            return true;
         });
         dialog.show();
     }
@@ -973,29 +949,31 @@ if (viewMask != null) {
 // ==========================================
 // 【修改】备份管理：使用 Adapter 原地刷新
 // ==========================================
-    private void showBackupList(final String folderName) {
-        File backupDir = new File(getBackupsDir(), folderName);
-        if (!backupDir.exists() || backupDir.listFiles() == null) {
-            toast(getString(R.string.toast_no_backups));
-            return;
-        }
+private void showBackupList(final String folderName) {
+    File backupDir = new File(getBackupsDir(), folderName);
+    if (!backupDir.exists() || backupDir.listFiles() == null) {
+        toast(getString(R.string.toast_no_backups));
+        return;
+    }
 
-        final File[] backups = backupDir.listFiles();
-        Arrays.sort(backups, new Comparator<File>() {
-            @Override
-            public int compare(File f1, File f2) {
-                return Long.compare(f2.lastModified(), f1.lastModified());
-            }
-        });
+    final File[] backups = backupDir.listFiles();
 
-        final List<File> fileList = new ArrayList<>(Arrays.asList(backups));
-        final List<String> nameList = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        for (File f : fileList) {
-            String time = sdf.format(new Date(f.lastModified()));
-            if (f.isDirectory()) nameList.add("📁 " + f.getName() + "\n" + time);
-            else nameList.add("📄 " + f.getName() + "\n" + time);
-        }
+    // 【修复】确保 backups 不为 null 且不为空
+    if (backups == null || backups.length == 0) {
+        toast(getString(R.string.toast_no_backups));
+        return;
+    }
+
+    Arrays.sort(backups, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+
+    final List<File> fileList = new ArrayList<>(Arrays.asList(backups));
+    final List<String> nameList = new ArrayList<>();
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+    for (File f : fileList) {
+        String time = sdf.format(new Date(f.lastModified()));
+        if (f.isDirectory()) nameList.add("📁 " + f.getName() + "\n" + time);
+        else nameList.add("📄 " + f.getName() + "\n" + time);
+    }
 
         final ArrayAdapter<
                 String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, nameList);
@@ -1009,65 +987,53 @@ if (viewMask != null) {
                 .create();
 
         // 点击恢复
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
-                restoreBackup(fileList.get(pos));
-                dialog.dismiss();
-            }
+        lv.setOnItemClickListener((p, v, pos, id) -> {
+            restoreBackup(fileList.get(pos));
+            dialog.dismiss();
         });
 
         // 【修复部分】长按菜单：包含删除和重命名
-        lv.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> p, View v, final int pos, long id) {
-                final File target = fileList.get(pos);
-                String
-                        [] ops = {getString(R.string.menu_del_backup), getString(R.string.menu_rename)};
+        lv.setOnItemLongClickListener((p, v, pos, id) -> {
+            final File target = fileList.get(pos);
+            String
+                    [] ops = {getString(R.string.menu_del_backup), getString(R.string.menu_rename)};
 
-                new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.title_manage_prefix) + target.getName())
-                        .setItems(ops, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int w) {
-                                if (w == 0) { // 删除
-                                    deleteRecursive(target);
-                                    fileList.remove(pos);
-                                    nameList.remove(pos);
-                                    adapter.notifyDataSetChanged();
-                                    toast(getString(R.string.toast_deleted));
-                                } else { // 重命名
-                                    final EditText input = new EditText(MainActivity.this);
-                                    input.setText(target.getName());
-                                    new AlertDialog.Builder(MainActivity.this)
-                                            .setTitle(getString(R.string.title_rename))
-                                            .setView(input)
-                                            .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dd, int ww) {
-                                                    String newName = input.getText().toString().trim();
-                                                    if (!newName.isEmpty()) {
-                                                        File newFile = new File(target.getParent(), newName);
-                                                        if (target.renameTo(newFile)) {
-                                                            fileList.set(pos, newFile);
-                                                            // 重新格式化显示名
-                                                            String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(newFile.lastModified()));
-                                                            String prefix = newFile.isDirectory() ? "📁 " : "📄 ";
-                                                            nameList.set(pos, prefix + newName + "\n" + time);
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle(getString(R.string.title_manage_prefix) + target.getName())
+                    .setItems(ops, (d, w) -> {
+                        if (w == 0) { // 删除
+                            deleteRecursive(target);
+                            fileList.remove(pos);
+                            nameList.remove(pos);
+                            adapter.notifyDataSetChanged();
+                            toast(getString(R.string.toast_deleted));
+                        } else { // 重命名
+                            final EditText input = new EditText(MainActivity.this);
+                            input.setText(target.getName());
+                            new AlertDialog.Builder(MainActivity.this)
+                                    .setTitle(getString(R.string.title_rename))
+                                    .setView(input)
+                                    .setPositiveButton(getString(R.string.btn_confirm), (dd, ww) -> {
+                                        String newName = input.getText().toString().trim();
+                                        if (!newName.isEmpty()) {
+                                            File newFile = new File(target.getParent(), newName);
+                                            if (target.renameTo(newFile)) {
+                                                fileList.set(pos, newFile);
+                                                // 重新格式化显示名
+                                                String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(newFile.lastModified()));
+                                                String prefix = newFile.isDirectory() ? "📁 " : "📄 ";
+                                                nameList.set(pos, prefix + newName + "\n" + time);
 
-                                                            adapter.notifyDataSetChanged();
-                                                            toast(getString(R.string.toast_renamed));
-                                                        } else {
-                                                            toast(getString(R.string.toast_rename_failed));
-                                                        }
-                                                    }
-                                                }
-                                            }).show();
-                                }
-                            }
-                        }).show();
-                return true;
-            }
+                                                adapter.notifyDataSetChanged();
+                                                toast(getString(R.string.toast_renamed));
+                                            } else {
+                                                toast(getString(R.string.toast_rename_failed));
+                                            }
+                                        }
+                                    }).show();
+                        }
+                    }).show();
+            return true;
         });
 
         dialog.show();
@@ -1156,59 +1122,51 @@ private void copyLevelDatOut(final String folder) {
 
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_loading), getString(R.string.msg_moving), true);
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String src = currentWorldsPath + folder + "/level.dat";
-                    File destFile = new File(getWorksDir(), LEVEL_DAT_NAME);
+        new Thread(() -> {
+            try {
+                String src = currentWorldsPath + folder + "/level.dat";
+                File destFile = new File(getWorksDir(), LEVEL_DAT_NAME);
 
-                    if (destFile.exists()) destFile.delete();
+                if (destFile.exists()) destFile.delete();
 
-                    boolean success = copyFileNative(new File(src), destFile);
+                boolean success = copyFileNative(new File(src), destFile);
 
-                    if (!success && checkShizukuAvailable()) {
-                        File bridgeDir = new File(BRIDGE_ROOT);
-                        if (!bridgeDir.exists()) bridgeDir.mkdirs();
-                        String bridgeFile = BRIDGE_ROOT + "level.dat";
-                        
-                        runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
-                        runShizukuCmd(new String[]{"sh", "-c", "cp \"" + src + "\" \"" + bridgeFile + "\""}).waitFor();
-                        runShizukuCmd(new String[]{"sh", "-c", "chmod 777 \"" + bridgeFile + "\""}).waitFor();
+                if (!success && checkShizukuAvailable()) {
+                    File bridgeDir = new File(BRIDGE_ROOT);
+                    if (!bridgeDir.exists()) bridgeDir.mkdirs();
+                    String bridgeFile = BRIDGE_ROOT + "level.dat";
 
-                        File bF = new File(bridgeFile);
-                        if (bF.exists()) {
-                            copyFile(bF, destFile);
-                            success = true;
-                        }
+                    runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
+                    runShizukuCmd(new String[]{"sh", "-c", "cp \"" + src + "\" \"" + bridgeFile + "\""}).waitFor();
+                    runShizukuCmd(new String[]{"sh", "-c", "chmod 777 \"" + bridgeFile + "\""}).waitFor();
+
+                    File bF = new File(bridgeFile);
+                    if (bF.exists()) {
+                        copyFile(bF, destFile);
+                        success = true;
                     }
-
-                    if (success) {
-                        currentWorkingFileOrDir = destFile.getAbsolutePath();
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                loading.dismiss();
-                                
-                                // 【核心修复】强制切换到世界模式
-                                isEditingPlayer = false; 
-                                currentTargetKey = null; // level.dat 没有 Key
-                                
-                                // 此时 isEditingPlayer 已经是 false 了，parseLevelDat 会正确读取文件
-                                parseLevelDat();
-                                
-                                toast(getString(R.string.toast_loaded) + "level.dat");
-                            }
-                        });
-                    } else {
-                        throw new Exception(getString(R.string.err_read_file_not_generated));
-                    }
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() { loading.dismiss(); toast(e.toString()); }
-                    });
                 }
+
+                if (success) {
+                    currentWorkingFileOrDir = destFile.getAbsolutePath();
+
+                    runOnUiThread(() -> {
+                        loading.dismiss();
+
+                        // 【核心修复】强制切换到世界模式
+                        isEditingPlayer = false;
+                        currentTargetKey = null; // level.dat 没有 Key
+
+                        // 此时 isEditingPlayer 已经是 false 了，parseLevelDat 会正确读取文件
+                        parseLevelDat();
+
+                        toast(getString(R.string.toast_loaded) + "level.dat");
+                    });
+                } else {
+                    throw new Exception(getString(R.string.err_read_file_not_generated));
+                }
+            } catch (final Exception e) {
+                runOnUiThread(() -> { loading.dismiss(); toast(e.toString()); });
             }
         }).start();
     }
@@ -1218,80 +1176,72 @@ private void parseLevelDat() {
         saveCurrentSessionToMemory();
         
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_reading), getString(R.string.msg_reading_details), true);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final JsonObject newJson;
-                    
-                    if (isEditingPlayer) {
-                        // === 读数据库 Key ===
-                        if (currentWorkingDbPath == null) throw new Exception(getString(R.string.err_internal_player_path));
-                        File lockFile = new File(currentWorkingDbPath, "LOCK");
-                        if (lockFile.exists()) lockFile.delete();
+        new Thread(() -> {
+            try {
+                final JsonObject newJson;
 
-                        PlayerDbManager dbManager = new PlayerDbManager(currentWorkingDbPath);
-                        byte[] data;
-                        if (currentTargetKey != null) {
-                            data = dbManager.readSpecificKey(currentTargetKey);
-                        } else {
-                            data = dbManager.readLocalPlayer();
-                            currentTargetKey = "~local_player"; 
-                        }
-                        dbManager.close();
-                        newJson = BedrockParser.parseBytes(data);
-                        
+                if (isEditingPlayer) {
+                    // === 读数据库 Key ===
+                    if (currentWorkingDbPath == null) throw new Exception(getString(R.string.err_internal_player_path));
+                    File lockFile = new File(currentWorkingDbPath, "LOCK");
+                    if (lockFile.exists()) lockFile.delete();
+
+                    PlayerDbManager dbManager = new PlayerDbManager(currentWorkingDbPath);
+                    byte[] data;
+                    if (currentTargetKey != null) {
+                        data = dbManager.readSpecificKey(currentTargetKey);
                     } else {
-                        // === 读 Level.dat ===
-                        String path = currentWorkingFileOrDir;
-                        if (path == null) path = new File(getWorksDir(), LEVEL_DAT_NAME).getAbsolutePath();
-                        if (!new File(path).exists()) throw new Exception(getString(R.string.err_work_file_missing));
-                        
-                        newJson = BedrockParser.parse(path);
+                        data = dbManager.readLocalPlayer();
+                        currentTargetKey = "~local_player";
                     }
+                    dbManager.close();
+                    newJson = BedrockParser.parseBytes(data);
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            loading.dismiss();
-                            try {
-                                rootNbtData = newJson;
-                                
-                                // 更新缓存
-                                if (isEditingPlayer) nbtDataCache.put(currentTargetKey, rootNbtData);
-                                else nbtDataCache.put("level.dat", rootNbtData);
-                                
-                                // 重置视图
-                                navigationStack.clear();
-                                pathStack.clear();
-                                scrollPositionStack.clear();
-                                currentListData = rootNbtData;
-                                
-                                updateAdapter(rootNbtData);
-                                updatePathTitle();
-                                
-                                // 【核心修复】补回这行代码！
-                                // 如果当前加载的是 level.dat，就尝试提取名字和种子显示在标题栏
-                                if (!isEditingPlayer) {
-                                    updateWorldInfoCard(rootNbtData);
-                                }
-                                
-                                String targetName = (isEditingPlayer && currentTargetKey != null) ? currentTargetKey : "Level.dat";
-                                toast(getString(R.string.toast_refreshed_prefix) + targetName);
-                                
-                            } catch (Exception uiEx) {
-                                toast(getString(R.string.err_display_data) + uiEx.toString());
-                            }
-                        }
-                    });
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable() { 
-                        @Override public void run() { 
-                            loading.dismiss(); 
-                            toast("Refresh Failed: " + e.getMessage());
-                        } 
-                    }); 
+                } else {
+                    // === 读 Level.dat ===
+                    String path = currentWorkingFileOrDir;
+                    if (path == null) path = new File(getWorksDir(), LEVEL_DAT_NAME).getAbsolutePath();
+                    if (!new File(path).exists()) throw new Exception(getString(R.string.err_work_file_missing));
+
+                    newJson = BedrockParser.parse(path);
                 }
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    try {
+                        rootNbtData = newJson;
+
+                        // 更新缓存
+                        if (isEditingPlayer) nbtDataCache.put(currentTargetKey, rootNbtData);
+                        else nbtDataCache.put("level.dat", rootNbtData);
+
+                        // 重置视图
+                        navigationStack.clear();
+                        pathStack.clear();
+                        scrollPositionStack.clear();
+                        currentListData = rootNbtData;
+
+                        updateAdapter(rootNbtData);
+                        updatePathTitle();
+
+                        // 【核心修复】补回这行代码！
+                        // 如果当前加载的是 level.dat，就尝试提取名字和种子显示在标题栏
+                        if (!isEditingPlayer) {
+                            updateWorldInfoCard(rootNbtData);
+                        }
+
+                        String targetName = (isEditingPlayer && currentTargetKey != null) ? currentTargetKey : "Level.dat";
+                        toast(getString(R.string.toast_refreshed_prefix) + targetName);
+
+                    } catch (Exception uiEx) {
+                        toast(getString(R.string.err_display_data) + uiEx);
+                    }
+                });
+            } catch (final Exception e) {
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    toast("Refresh Failed: " + e.getMessage());
+                });
             }
         }).start();
     }
@@ -1320,368 +1270,334 @@ private void loadPlayerData(final String folderName, final Runnable onSuccess) {
         final boolean canUseShizuku = checkShizukuAvailable(); 
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.title_read_player), getString(R.string.msg_init_player), true);
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+        new Thread(() -> {
+            try {
+                // === 4. 路径构建 ===
+                File base = new File(currentWorldsPath);
+                File worldDir = new File(base, folderName);
+                // 这里的路径构建更安全，避免多余的斜杠
+                String srcPath = new File(worldDir, "db").getAbsolutePath();
+                File srcDirFile = new File(srcPath);
+
+                // === 5. 判断模式 (Native vs Shizuku) ===
+                boolean useNative = false;
+                // 如果文件夹存在、可读且能列出文件，优先使用原生方式（速度快、无Hack）
+                if (srcDirFile.exists() && srcDirFile.canRead() && srcDirFile.listFiles() != null) {
+                    useNative = true;
+                } else {
+                    // 如果原生不可用，必须依赖 Shizuku
+                    if (!canUseShizuku) {
+                        throw new Exception(getString(R.string.toast_err_permission_denied_shizuku));
+                    }
+                }
+
+                // === 6. 主动清除源头僵尸锁 ===
                 try {
-                    // === 4. 路径构建 ===
-                    File base = new File(currentWorldsPath);
-                    File worldDir = new File(base, folderName);
-                    // 这里的路径构建更安全，避免多余的斜杠
-                    String srcPath = new File(worldDir, "db").getAbsolutePath();
-                    File srcDirFile = new File(srcPath);
-
-                    // === 5. 判断模式 (Native vs Shizuku) ===
-                    boolean useNative = false;
-                    // 如果文件夹存在、可读且能列出文件，优先使用原生方式（速度快、无Hack）
-                    if (srcDirFile.exists() && srcDirFile.canRead() && srcDirFile.listFiles() != null) {
-                        useNative = true;
-                    } else {
-                        // 如果原生不可用，必须依赖 Shizuku
-                        if (!canUseShizuku) {
-                            throw new Exception(getString(R.string.toast_err_permission_denied_shizuku)); 
-                        }
-                    }
-
-                    // === 6. 主动清除源头僵尸锁 ===
-                    try {
-                        if (useNative) {
-                            File lock = new File(srcDirFile, "LOCK");
-                            if (lock.exists()) lock.delete();
-                        } else {
-                            Process pCheck = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + srcPath + "/LOCK\""});
-                            if (pCheck.waitFor() == 0) {
-                                runShizukuCmd(new String[]{"sh", "-c", "rm -f \"" + srcPath + "/LOCK\""}).waitFor();
-                                runOnUiThread(new Runnable() {
-                                    @Override public void run() { toast(getString(R.string.toast_lock_delete)); }
-                                });
-                            }
-                        }
-                    } catch (Exception ignored) { }
-
-                    // === 7. 准备工作目录 ===
-                    String uniqueId = String.valueOf(System.currentTimeMillis());
-                    File workDir = new File(getWorksDir(), "working_db_" + uniqueId);
-                    String appPrivatePath = workDir.getAbsolutePath();
-
-                    // === 8. 搬运流程 ===
                     if (useNative) {
-                        // 【分支A】原生 Java 复制
-                        if (!workDir.exists()) workDir.mkdirs();
-                        // 使用 smartCopy (假设是优化后的复制方法)
-                        smartCopy(srcDirFile, workDir); 
-                        
+                        File lock = new File(srcDirFile, "LOCK");
+                        if (lock.exists()) lock.delete();
                     } else {
-                        // 【分支B】Shizuku 复制
-                        String bridgePath = BRIDGE_ROOT + "load_db_" + uniqueId;
-                        
-                        // 准备中转站
-                        runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
-                        createNoMedia(); // 防止相册扫描碎片文件
-                        
-                        runShizukuCmd(new String[]{"sh", "-c", "rm -rf \"" + bridgePath + "\""}).waitFor();
-                        runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + bridgePath + "\""}).waitFor();
-                        
-                        // 带错误检查的复制命令
-                        String cmd = "cp -rf \"" + srcPath + "/.\" \"" + bridgePath + "/\"";
-                        Process pCopy = runShizukuCmd(new String[]{"sh", "-c", cmd});
-                        int exitCode = pCopy.waitFor();
-                        
-                        if (exitCode != 0) {
-                            BufferedReader reader = new BufferedReader(new InputStreamReader(pCopy.getErrorStream()));
-                            StringBuilder errSb = new StringBuilder();
-                            String line;
-                            while((line = reader.readLine()) != null) errSb.append(line).append("\n");
-                            throw new Exception("Shizuku Copy Error (" + exitCode + "):\n" + errSb.toString() + "\nSource: " + srcPath);
+                        Process pCheck = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + srcPath + "/LOCK\""});
+                        if (pCheck.waitFor() == 0) {
+                            runShizukuCmd(new String[]{"sh", "-c", "rm -f \"" + srcPath + "/LOCK\""}).waitFor();
+                            runOnUiThread(() -> toast(getString(R.string.toast_lock_delete)));
                         }
-                        
-                        // 提权与检查
-                        runShizukuCmd(new String[]{"sh", "-c", "chmod -R 777 \"" + bridgePath + "\""}).waitFor();
-                        File bridgeDir = new File(bridgePath);
-                        
-                        if (!bridgeDir.exists()) {
-                            throw new Exception(getString(R.string.msg_failed_to_create_staging_directory) + bridgePath);
-                        }
-                        if (bridgeDir.list() == null || bridgeDir.list().length == 0) {
-                             throw new Exception(getString(R.string.msg_the_source_directory_appears_to_be_empty) + srcPath);
-                        }
+                    }
+                } catch (Exception ignored) { }
 
-                        if (!workDir.exists()) workDir.mkdirs();
-                        smartCopy(bridgeDir, workDir); // 从中转站复制到私有目录
-                        
-                        // 清理中转站
-                        runShizukuCmd(new String[]{"sh", "-c", "rm -rf \"" + bridgePath + "\""}).waitFor();
+                // === 7. 准备工作目录 ===
+                String uniqueId = String.valueOf(System.currentTimeMillis());
+                File workDir = new File(getWorksDir(), "working_db_" + uniqueId);
+                String appPrivatePath = workDir.getAbsolutePath();
+
+                // === 8. 搬运流程 ===
+                if (useNative) {
+                    // 【分支A】原生 Java 复制
+                    if (!workDir.exists()) workDir.mkdirs();
+                    // 使用 smartCopy (假设是优化后的复制方法)
+                    smartCopy(srcDirFile, workDir);
+
+                } else {
+                    // 【分支B】Shizuku 复制
+                    String bridgePath = BRIDGE_ROOT + "load_db_" + uniqueId;
+
+                    // 准备中转站
+                    runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
+                    createNoMedia(); // 防止相册扫描碎片文件
+
+                    runShizukuCmd(new String[]{"sh", "-c", "rm -rf \"" + bridgePath + "\""}).waitFor();
+                    runShizukuCmd(new String[]{"sh", "-c", "mkdir -p \"" + bridgePath + "\""}).waitFor();
+
+                    // 带错误检查的复制命令
+                    String cmd = "cp -rf \"" + srcPath + "/.\" \"" + bridgePath + "/\"";
+                    Process pCopy = runShizukuCmd(new String[]{"sh", "-c", cmd});
+                    int exitCode = pCopy.waitFor();
+
+                    if (exitCode != 0) {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(pCopy.getErrorStream()));
+                        StringBuilder errSb = new StringBuilder();
+                        String line;
+                        while((line = reader.readLine()) != null) errSb.append(line).append("\n");
+                        throw new Exception("Shizuku Copy Error (" + exitCode + "):\n" + errSb + "\nSource: " + srcPath);
                     }
 
-                    // === 9. 本地净化与读取 ===
-                    new File(workDir, "LOCK").delete();
-                    new File(workDir, "LOG").delete();
-                    new File(workDir, "LOG.old").delete();
+                    // 提权与检查
+                    runShizukuCmd(new String[]{"sh", "-c", "chmod -R 777 \"" + bridgePath + "\""}).waitFor();
+                    File bridgeDir = new File(bridgePath);
 
-                    currentWorkingDbPath = appPrivatePath;
+                    if (!bridgeDir.exists()) {
+                        throw new Exception(getString(R.string.msg_failed_to_create_staging_directory) + bridgePath);
+                    }
+                    String[] files = bridgeDir.list();
+                    if (files == null || files.length == 0) {
+                         throw new Exception(getString(R.string.msg_the_source_directory_appears_to_be_empty) + srcPath);
+                    }
 
-                    PlayerDbManager dbManager = new PlayerDbManager(appPrivatePath);
-                    byte[] data = dbManager.readLocalPlayer();
-                    dbManager.close();
+                    if (!workDir.exists()) workDir.mkdirs();
+                    smartCopy(bridgeDir, workDir); // 从中转站复制到私有目录
 
-                    final JsonObject playerDataObj = BedrockParser.parseBytes(data);
+                    // 清理中转站
+                    runShizukuCmd(new String[]{"sh", "-c", "rm -rf \"" + bridgePath + "\""}).waitFor();
+                }
 
-                    // === 10. UI 更新 (成功) ===
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            loading.dismiss();
-                            
-                            // 状态重置
-                            isEditingPlayer = true;
-                            currentTargetKey = "~local_player"; // 核心修复：重置 Key
-                            
-                            // 数据加载
-                            rootNbtData = playerDataObj;
-                            // 更新缓存 (Snippet 1 特性)
-                            nbtDataCache.put("~local_player", rootNbtData);
-                            
-                            // 界面刷新
-                            navigationStack.clear();
-                            pathStack.clear();
-                            scrollPositionStack.clear();
+                // === 9. 本地净化与读取 ===
+                new File(workDir, "LOCK").delete();
+                new File(workDir, "LOG").delete();
+                new File(workDir, "LOG.old").delete();
 
-                            updateAdapter(rootNbtData);
-                            updatePathTitle(); // 刷新标题 (Snippet 1 特性)
+                currentWorkingDbPath = appPrivatePath;
 
-                            toast(getString(R.string.toast_player_loaded_success));
-                            
-                            // 执行回调
-                            if (onSuccess != null) {
-                                onSuccess.run();
-                            }
-                            
-                            // 更新路径显示
-                            if (tvCurrentPath != null)
-                                tvCurrentPath.setText(getString(R.string.path_editing_player) + folderName + ")");
-                        }
-                    });
+                PlayerDbManager dbManager = new PlayerDbManager(appPrivatePath);
+                byte[] data = dbManager.readLocalPlayer();
+                dbManager.close();
+
+                final JsonObject playerDataObj = BedrockParser.parseBytes(data);
+
+                // === 10. UI 更新 (成功) ===
+                runOnUiThread(() -> {
+                    loading.dismiss();
+
+                    // 状态重置
+                    isEditingPlayer = true;
+                    currentTargetKey = "~local_player"; // 核心修复：重置 Key
+
+                    // 数据加载
+                    rootNbtData = playerDataObj;
+                    // 更新缓存 (Snippet 1 特性)
+                    nbtDataCache.put("~local_player", rootNbtData);
+
+                    // 界面刷新
+                    navigationStack.clear();
+                    pathStack.clear();
+                    scrollPositionStack.clear();
+
+                    updateAdapter(rootNbtData);
+                    updatePathTitle(); // 刷新标题 (Snippet 1 特性)
+
+                    toast(getString(R.string.toast_player_loaded_success));
+
+                    // 执行回调
+                    if (onSuccess != null) {
+                        onSuccess.run();
+                    }
+
+                    // 更新路径显示
+                    if (tvCurrentPath != null)
+                        tvCurrentPath.setText(getString(R.string.path_editing_player) + folderName + ")");
+                });
 
 } catch (final Exception e) {
-    // === 11. 异常处理 ===
-    runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-            loading.dismiss();
-            
-            // 特殊处理：数据库损坏
-            if (e.getMessage() != null && e.getMessage().contains("DB_CORRUPT")) {
-                showDbRepairConfirmDialog(currentWorkingDbPath, folderName, onSuccess);
-            } 
-            // 【新增】Shizuku 禁用时的直接访问失败
-            else if (!useShizuku) {
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getString(R.string.title_load_failed))
-                    .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + getFullStackTrace(e))
-                    .setPositiveButton(getString(R.string.btn_open_settings), new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d, int w) {
-                            Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                            startActivity(intent);
-                        }
-                    })
-                    .setNegativeButton(getString(R.string.btn_understood), null)
-                    .show();
-            }
-            // 原有通用处理
-            else {
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getString(R.string.title_load_failed))
-                    .setMessage(getString(R.string.msg_load_failed_advice) + getFullStackTrace(e))
-                    .setPositiveButton(getString(R.string.btn_copy_error), new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d, int w) {
-                            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                            android.content.ClipData clip = android.content.ClipData.newPlainText("Error", getFullStackTrace(e));
-                            cm.setPrimaryClip(clip);
-                            toast(getString(R.string.toast_copied));
-                        }
-                    })
-                    .setNegativeButton(getString(R.string.btn_understood), null)
-                    .show();
-            }
-        }
-    });
+// === 11. 异常处理 ===
+runOnUiThread(() -> {
+    loading.dismiss();
+
+    // 特殊处理：数据库损坏
+    if (e.getMessage() != null && e.getMessage().contains("DB_CORRUPT")) {
+        showDbRepairConfirmDialog(currentWorkingDbPath, folderName, onSuccess);
+    }
+    // 【新增】Shizuku 禁用时的直接访问失败
+    else if (!useShizuku) {
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle(getString(R.string.title_load_failed))
+            .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + getFullStackTrace(e))
+            .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+            })
+            .setNegativeButton(getString(R.string.btn_understood), null)
+            .show();
+    }
+    // 原有通用处理
+    else {
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle(getString(R.string.title_load_failed))
+            .setMessage(getString(R.string.msg_load_failed_advice) + getFullStackTrace(e))
+            .setPositiveButton(getString(R.string.btn_copy_error), (d, w) -> {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = android.content.ClipData.newPlainText("Error", getFullStackTrace(e));
+                cm.setPrimaryClip(clip);
+                toast(getString(R.string.toast_copied));
+            })
+            .setNegativeButton(getString(R.string.btn_understood), null)
+            .show();
+    }
+});
 }
-            }
         }).start();
     }
 
 // 2. 保存回写 (修复版：带更详细的错误反馈)
     private void saveAndPushBack(final JsonObject dataToSave, final String folder) {
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_saving), getString(R.string.msg_processing), true);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // 1. 创建备份
-                    createBackup(folder);
+        new Thread(() -> {
+            try {
+                // 1. 创建备份
+                createBackup(folder);
 
-                    // 2. 判断当前模式
-                    if (isEditingPlayer) {
-                        // === 保存玩家数据 ===
-                        if (currentWorkingDbPath == null)
-                            throw new Exception("Error: DbPath is NULL");
-                        File oldWorkDir = new File(currentWorkingDbPath);
-                        if (!oldWorkDir.exists())
-                            throw new Exception("Error: WorkDir lost (" + currentWorkingDbPath + ")");
-                        if (currentTargetKey == null) {
-                             // 如果万一为空，兜底设为本地玩家，防止写飞
-                             currentTargetKey = "~local_player";
-                        }
-
-                        // 创建新的唯一目录
-                        String uniqueId = String.valueOf(System.currentTimeMillis());
-                        File newWorkDir = new File(getWorksDir(), "working_db_" + uniqueId);
-
-                        // 复制旧环境
-                                                // [修改前] copyDirectory(oldWorkDir, newWorkDir);
-                        // [修改后] 加速
-                        smartCopy(oldWorkDir, newWorkDir);
-                        // 删除旧锁
-                        new File(newWorkDir, "LOCK").delete();
-                        new File(newWorkDir, "LOG").delete();
-                        new File(newWorkDir, "LOG.old").delete();
-
-                        // 【核心改动1】JsonObject -> Bytes -> LevelDB (在后台线程序列化)
-                        byte[] bytes = BedrockParser.writeToBytes(dataToSave);
-                        PlayerDbManager db = new PlayerDbManager(newWorkDir.getAbsolutePath());
-                        db.writeSpecificKey(currentTargetKey, bytes);
-                        db.close();
-
-                        // 回写到游戏目录 (Bridge -> Shizuku -> Data)
-                        String bridgeSave = BRIDGE_ROOT + "save_db_" + uniqueId;
-                        runShizukuCmd(new String
-                                []{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
-                                createNoMedia();
-                        runShizukuCmd(new String
-                                []{"sh", "-c", "rm -rf \"" + bridgeSave + "\""}).waitFor();
-                        // [修改前] copyDirectory(newWorkDir, new File(bridgeSave)); 
-                        // [修改后] 加速
-                        smartCopy(newWorkDir, new File(bridgeSave));
-
-                        String mcDbPath = currentWorldsPath + folder + "/db/";
-                        runShizukuCmd(new String
-                                []{"sh", "-c", "cp -rf \"" + bridgeSave + "/.\" \"" + mcDbPath + "\""}).waitFor();
-                        runShizukuCmd(new String
-                                []{"sh", "-c", "rm -rf \"" + bridgeSave + "\""}).waitFor();
-
-                        // 清理
-                        deleteRecursive(oldWorkDir);
-                        currentWorkingDbPath = newWorkDir.getAbsolutePath();
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                loading.dismiss();
-                                toast(getString(R.string.toast_player_saved));
-                            }
-                        });
-
-                    } else {
-                        // === 保存 Level.dat ===
-
-                        // 1. 确认路径
-                        if (currentWorkingFileOrDir == null) {
-                            File f = new File(getWorksDir(), LEVEL_DAT_NAME);
-                            currentWorkingFileOrDir = f.getAbsolutePath();
-                        }
-
-                        // 【核心改动2】JsonObject -> 文件 (在后台线程序列化)
-                        BedrockParser.write(dataToSave, currentWorkingFileOrDir);
-
-                        // 3. 准备回写到游戏
-                        File workingFile = new File(currentWorkingFileOrDir);
-                        String bridgeFile = BRIDGE_ROOT + "level.dat";
-                        new File(BRIDGE_ROOT).mkdirs();
-                        copyFile(workingFile, new File(bridgeFile));
-
-                        String targetPath = currentWorldsPath + folder + "/level.dat";
-
-                        // 4. 尝试原生覆盖
-                        boolean success = copyFileNative(workingFile, new File(targetPath));
-
-                        // 5. 原生失败则用 Shizuku
-                        if (!success && checkShizukuAvailable()) {
-                            runShizukuCmd(new String
-                                    []{"sh", "-c", "cp \"" + bridgeFile + "\" \"" + targetPath + "\""}).waitFor();
-                            success = true;
-                        }
-
-                        if (success) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    loading.dismiss();
-                                    toast(getString(R.string.toast_level_dat_saved));
-                                }
-                            });
-                        } else {
-                            throw new Exception(getString(R.string.msg_write_to_game_dir_failed));
-                        }
+                // 2. 判断当前模式
+                if (isEditingPlayer) {
+                    // === 保存玩家数据 ===
+                    if (currentWorkingDbPath == null)
+                        throw new Exception("Error: DbPath is NULL");
+                    File oldWorkDir = new File(currentWorkingDbPath);
+                    if (!oldWorkDir.exists())
+                        throw new Exception("Error: WorkDir lost (" + currentWorkingDbPath + ")");
+                    if (currentTargetKey == null) {
+                         // 如果万一为空，兜底设为本地玩家，防止写飞
+                         currentTargetKey = "~local_player";
                     }
+
+                    // 创建新的唯一目录
+                    String uniqueId = String.valueOf(System.currentTimeMillis());
+                    File newWorkDir = new File(getWorksDir(), "working_db_" + uniqueId);
+
+                    // 复制旧环境
+                                            // [修改前] copyDirectory(oldWorkDir, newWorkDir);
+                    // [修改后] 加速
+                    smartCopy(oldWorkDir, newWorkDir);
+                    // 删除旧锁
+                    new File(newWorkDir, "LOCK").delete();
+                    new File(newWorkDir, "LOG").delete();
+                    new File(newWorkDir, "LOG.old").delete();
+
+                    // 【核心改动1】JsonObject -> Bytes -> LevelDB (在后台线程序列化)
+                    byte[] bytes = BedrockParser.writeToBytes(dataToSave);
+                    PlayerDbManager db = new PlayerDbManager(newWorkDir.getAbsolutePath());
+                    db.writeSpecificKey(currentTargetKey, bytes);
+                    db.close();
+
+                    // 回写到游戏目录 (Bridge -> Shizuku -> Data)
+                    String bridgeSave = BRIDGE_ROOT + "save_db_" + uniqueId;
+                    runShizukuCmd(new String
+                            []{"sh", "-c", "mkdir -p \"" + BRIDGE_ROOT + "\""}).waitFor();
+                            createNoMedia();
+                    runShizukuCmd(new String
+                            []{"sh", "-c", "rm -rf \"" + bridgeSave + "\""}).waitFor();
+                    // [修改前] copyDirectory(newWorkDir, new File(bridgeSave));
+                    // [修改后] 加速
+                    smartCopy(newWorkDir, new File(bridgeSave));
+
+                    String mcDbPath = currentWorldsPath + folder + "/db/";
+                    runShizukuCmd(new String
+                            []{"sh", "-c", "cp -rf \"" + bridgeSave + "/.\" \"" + mcDbPath + "\""}).waitFor();
+                    runShizukuCmd(new String
+                            []{"sh", "-c", "rm -rf \"" + bridgeSave + "\""}).waitFor();
+
+                    // 清理
+                    deleteRecursive(oldWorkDir);
+                    currentWorkingDbPath = newWorkDir.getAbsolutePath();
+
+                    runOnUiThread(() -> {
+                        loading.dismiss();
+                        toast(getString(R.string.toast_player_saved));
+                    });
+
+                } else {
+                    // === 保存 Level.dat ===
+
+                    // 1. 确认路径
+                    if (currentWorkingFileOrDir == null) {
+                        File f = new File(getWorksDir(), LEVEL_DAT_NAME);
+                        currentWorkingFileOrDir = f.getAbsolutePath();
+                    }
+
+                    // 【核心改动2】JsonObject -> 文件 (在后台线程序列化)
+                    BedrockParser.write(dataToSave, currentWorkingFileOrDir);
+
+                    // 3. 准备回写到游戏
+                    File workingFile = new File(currentWorkingFileOrDir);
+                    String bridgeFile = BRIDGE_ROOT + "level.dat";
+                    new File(BRIDGE_ROOT).mkdirs();
+                    copyFile(workingFile, new File(bridgeFile));
+
+                    String targetPath = currentWorldsPath + folder + "/level.dat";
+
+                    // 4. 尝试原生覆盖
+                    boolean success = copyFileNative(workingFile, new File(targetPath));
+
+                    // 5. 原生失败则用 Shizuku
+                    if (!success && checkShizukuAvailable()) {
+                        runShizukuCmd(new String
+                                []{"sh", "-c", "cp \"" + bridgeFile + "\" \"" + targetPath + "\""}).waitFor();
+                        success = true;
+                    }
+
+                    if (success) {
+                        runOnUiThread(() -> {
+                            loading.dismiss();
+                            toast(getString(R.string.toast_level_dat_saved));
+                        });
+                    } else {
+                        throw new Exception(getString(R.string.msg_write_to_game_dir_failed));
+                    }
+                }
 } catch (final Exception e) {
-    runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-            loading.dismiss();
-            String msg = e.getMessage();
-            
-            // 【新增】区分 Shizuku 禁用状态和实际错误
-            if (!useShizuku) {
-                // 用户禁用了 Shizuku，提示直接访问失败
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getString(R.string.err_save_failed))
-                    .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + msg)
-                    .setPositiveButton(getString(R.string.btn_open_settings), new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d, int w) {
-                            // 打开系统文件管理权限设置
-                            Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+runOnUiThread(() -> {
+    loading.dismiss();
+    String msg = e.getMessage();
+
+    // 【新增】区分 Shizuku 禁用状态和实际错误
+    if (!useShizuku) {
+        // 用户禁用了 Shizuku，提示直接访问失败
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle(getString(R.string.err_save_failed))
+            .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + msg)
+            .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
+                // 打开系统文件管理权限设置
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+            })
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show();
+    } else {
+        // 原有 Shizuku 错误处理
+        if (msg != null && msg.contains("Shizuku")) {
+            new AlertDialog.Builder(MainActivity.this)
+                .setTitle(getString(R.string.title_shizuku_error))
+                .setMessage(msg)
+                .setPositiveButton(getString(R.string.btn_open_shizuku), (d, w) -> {
+                    try {
+                        Intent intent = getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
+                        if (intent != null) {
                             startActivity(intent);
                         }
-                    })
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show();
-            } else {
-                // 原有 Shizuku 错误处理
-                if (msg != null && msg.contains("Shizuku")) {
-                    new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.title_shizuku_error))
-                        .setMessage(msg)
-                        .setPositiveButton(getString(R.string.btn_open_shizuku), new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int w) {
-                                try {
-                                    Intent intent = getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
-                                    if (intent != null) {
-                                        startActivity(intent);
-                                    }
-                                } catch (Exception ex) {
-                                    toast(getString(R.string.toast_shizuku_not_installed));
-                                }
-                            }
-                        })
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show();
-                } else {
-                    // 普通错误
-                    new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.err_save_failed))
-                        .setMessage(getFullStackTrace(e))
-                        .setPositiveButton(getString(R.string.btn_confirm), null)
-                        .show();
-                }
-            }
+                    } catch (Exception ex) {
+                        toast(getString(R.string.toast_shizuku_not_installed));
+                    }
+                })
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show();
+        } else {
+            // 普通错误
+            new AlertDialog.Builder(MainActivity.this)
+                .setTitle(getString(R.string.err_save_failed))
+                .setMessage(getFullStackTrace(e))
+                .setPositiveButton(getString(R.string.btn_confirm), null)
+                .show();
         }
-    });
+    }
+});
 }
-            }
         }).start();
     }
 
@@ -1714,7 +1630,7 @@ private void loadPlayerData(final String folderName, final Runnable onSuccess) {
             }
         } catch (Exception e) {
             // 备份是辅助功能，失败了也不要打断主流程，打印日志即可
-            e.printStackTrace();
+            Log.e("MainActivity", "操作失败", e);
         }
     }
 
@@ -1725,95 +1641,92 @@ private void loadPlayerData(final String folderName, final Runnable onSuccess) {
     private void showWorldSelector() {
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_scanning), getString(R.string.msg_parsing_archive_information), true);
         
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // 1. 获取文件夹列表
-                    List<String> rawFolders = new ArrayList<String>();
-                    
-                    // 原生获取
-                    File dir = new File(currentWorldsPath);
-                    if (dir.exists() && dir.canRead()) {
-                         File[] files = dir.listFiles();
-                         if(files!=null) for(File f:files) if(f.isDirectory()) rawFolders.add(f.getName());
-                    }
-                    
-                    // Shizuku 获取
-                    if (rawFolders.isEmpty() && checkShizukuAvailable()) {
-                        Process p = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + currentWorldsPath + "\""});
-                        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                        String line;
-                        while((line=r.readLine())!=null) if(line.trim().length()>0) rawFolders.add(line.trim());
-                        p.waitFor();
-                    }
+        new Thread(() -> {
+            try {
+                // 1. 获取文件夹列表
+                List<String> rawFolders = new ArrayList<>();
 
-                    // 2. 过滤有效存档并读取名字
-                    final List<String> displayList = new ArrayList<>(); // 显示用的 (名字+ID)
-                    final List<String> folderList = new ArrayList<>();  // 逻辑用的 (ID)
-                    
-                    for (String name : rawFolders) {
-                        String fullPath = currentWorldsPath + name;
-                        File checkLevel = new File(fullPath, "level.dat");
-                        File checkDb = new File(fullPath, "db");
-                        
-                        boolean isGood = false;
-                        
-                        // 检查有效性
-                        if (checkLevel.exists() && checkDb.exists()) isGood = true;
-                        else if (checkShizukuAvailable()) {
-                             try {
-                                 int code1 = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + checkLevel.getAbsolutePath() + "\""}).waitFor();
-                                 // ls -d 检查文件夹
-                                 int code2 = runShizukuCmd(new String[]{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor();
-                                 if (code1 == 0 && code2 == 0) isGood = true;
-                             } catch(Exception e){}
-                        }
-                        
-                        if (isGood) {
-                            // 【核心修改】读取真实名字
-                            String realName = getWorldRealName(name);
-                            if (realName == null) realName = getString(R.string.msg_unknown_world);
-                            
-                            // 格式： "我的世界\n-w14OU6m5Gk="
-                            displayList.add(realName + "\n" + name);
-                            folderList.add(name);
-                        }
-                    }
-
-                    // 转换为数组
-                    final String[] displayArr = displayList.toArray(new String[0]);
-                    
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            loading.dismiss();
-                            if(displayArr.length == 0) { 
-                                toast(getString(R.string.err_no_saves_detail)); 
-                                return; 
-                            }
-                            
-                            new AlertDialog.Builder(MainActivity.this)
-                                .setTitle(String.format(getString(R.string.dialog_select_archive_title), displayArr.length))
-                                .setItems(displayArr, new DialogInterface.OnClickListener() {
-                                    @Override public void onClick(DialogInterface d, int i) {
-                                        // 点击时，从 folderList 里取纯净的文件夹名
-                                        String realFolder = folderList.get(i);
-                                        
-                                        // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
-                                        // 这里建议输入框里还是显示名字+ID，或者只显示ID
-                                        // 为了兼容之前的逻辑，这里暂时填入 ID，或者你可以把 UI 改成显示中文
-                                        etWorldName.setText(realFolder); 
-                                        
-                                        // 触发加载
-                                        copyLevelDatOut(realFolder);
-                                    }
-                                }).show();
-                        }
-                    });
-                } catch(final Exception e) { 
-                    runOnUiThread(new Runnable() { @Override public void run() { loading.dismiss(); toast(e.toString()); } }); 
+                // 原生获取
+                File dir = new File(currentWorldsPath);
+                if (dir.exists() && dir.canRead()) {
+                     File[] files = dir.listFiles();
+                     if(files!=null) for(File f:files) if(f.isDirectory()) rawFolders.add(f.getName());
                 }
+
+                // Shizuku 获取
+                if (rawFolders.isEmpty() && checkShizukuAvailable()) {
+                    Process p = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + currentWorldsPath + "\""});
+                    BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    String line;
+                    while((line=r.readLine())!=null) if(line.trim().length()>0) rawFolders.add(line.trim());
+                    p.waitFor();
+                }
+
+                // 2. 过滤有效存档并读取名字
+                final List<String> displayList = new ArrayList<>(); // 显示用的 (名字+ID)
+                final List<String> folderList = new ArrayList<>();  // 逻辑用的 (ID)
+
+                for (String name : rawFolders) {
+                    String fullPath = currentWorldsPath + name;
+                    File checkLevel = new File(fullPath, "level.dat");
+                    File checkDb = new File(fullPath, "db");
+
+                    boolean isGood = false;
+
+                    // 检查有效性
+                    if (checkLevel.exists() && checkDb.exists()) isGood = true;
+                    else if (checkShizukuAvailable()) {
+                         try {
+                             int code1 = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + checkLevel.getAbsolutePath() + "\""}).waitFor();
+                             // ls -d 检查文件夹
+                             int code2 = runShizukuCmd(new String[]{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor();
+                             if (code1 == 0 && code2 == 0) isGood = true;
+                         } catch(Exception e){}
+                    }
+
+                    if (isGood) {
+                        // 【核心修改】读取真实名字
+                        String realName = getWorldRealName(name);
+                        if (realName == null) realName = getString(R.string.msg_unknown_world);
+
+                        // 格式： "我的世界\n-w14OU6m5Gk="
+                        displayList.add(realName + "\n" + name);
+                        folderList.add(name);
+                    }
+                }
+
+                // 转换为数组
+                final String[] displayArr = displayList.toArray(new String[0]);
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        loading.dismiss();
+                        if(displayArr.length == 0) {
+                            toast(getString(R.string.err_no_saves_detail));
+                            return;
+                        }
+
+                        new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(String.format(getString(R.string.dialog_select_archive_title), displayArr.length))
+                            .setItems(displayArr, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int i) {
+                                    // 点击时，从 folderList 里取纯净的文件夹名
+                                    String realFolder = folderList.get(i);
+
+                                    // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
+                                    // 这里建议输入框里还是显示名字+ID，或者只显示ID
+                                    // 为了兼容之前的逻辑，这里暂时填入 ID，或者你可以把 UI 改成显示中文
+                                    etWorldName.setText(realFolder);
+
+                                    // 触发加载
+                                    copyLevelDatOut(realFolder);
+                                }
+                            }).show();
+                    }
+                });
+            } catch(final Exception e) {
+                runOnUiThread(new Runnable() { @Override public void run() { loading.dismiss(); toast(e.toString()); } });
             }
         }).start();
     }
@@ -1828,23 +1741,20 @@ private void showPathSelector() {
 
     new AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_path_title))
-            .setItems(options, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    if (w == 0) {
-                        currentWorldsPath = PATH_STANDARD;
-                        toast(getString(R.string.toast_switched_std));
-                        showWorldSelector();
-                    } else if (w == 1) {
-                        currentWorldsPath = PATH_LEGACY;
-                        toast(getString(R.string.toast_switched_legacy));
-                        showWorldSelector();
-                    } else if (w == 2) {
-                        showCustomPathDialog();
-                    } else if (w == 3) {
-                        // 【新增】SAF 路径选择
-                        openSafPathSelector();
-                    }
+            .setItems(options, (d, w) -> {
+                if (w == 0) {
+                    currentWorldsPath = PATH_STANDARD;
+                    toast(getString(R.string.toast_switched_std));
+                    showWorldSelector();
+                } else if (w == 1) {
+                    currentWorldsPath = PATH_LEGACY;
+                    toast(getString(R.string.toast_switched_legacy));
+                    showWorldSelector();
+                } else if (w == 2) {
+                    showCustomPathDialog();
+                } else if (w == 3) {
+                    // 【新增】SAF 路径选择
+                    openSafPathSelector();
                 }
             })
             .show();
@@ -1859,68 +1769,65 @@ private void showPathSelector() {
                 .setTitle(getString(R.string.dialog_custom_path_title))
                 .setMessage(getString(R.string.msg_custom_path))
                 .setView(input)
-                .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        String p = input.getText().toString().trim();
-                        if (p.isEmpty()) return;
-                        // 去除末尾可能多余的斜杠，为了下面获取 getName() 准确
-                        if (p.endsWith("/")) p = p.substring(0, p.length() - 1);
+                .setPositiveButton(getString(R.string.btn_confirm), (d, w) -> {
+                    String p = input.getText().toString().trim();
+                    if (p.isEmpty()) return;
+                    // 去除末尾可能多余的斜杠，为了下面获取 getName() 准确
+                    if (p.endsWith("/")) p = p.substring(0, p.length() - 1);
 
-                        File target = new File(p);
-                        File checkLevel = new File(target, "level.dat");
-                        File checkDb = new File(target, "db");
+                    File target = new File(p);
+                    File checkLevel = new File(target, "level.dat");
+                    File checkDb = new File(target, "db");
 
-                        boolean hasLevel = checkLevel.exists();
-                        boolean hasDb = checkDb.exists() && checkDb.isDirectory();
+                    boolean hasLevel = checkLevel.exists();
+                    boolean hasDb = checkDb.exists() && checkDb.isDirectory();
 
-                        // Shizuku 二次检查
-                        if (checkShizukuAvailable() && (!hasLevel || !hasDb)) {
-                            try {
-                                if (!hasLevel && runShizukuCmd(new String
-                                                        []{"sh", "-c", "ls \"" + checkLevel.getAbsolutePath() + "\""}).waitFor() == 0)
-                                    hasLevel = true;
-                                if (!hasDb && runShizukuCmd(new String
-                                                        []{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor() == 0)
-                                    hasDb = true;
-                            } catch (Exception e) {
-                            }
+                    // Shizuku 二次检查
+                    if (checkShizukuAvailable() && (!hasLevel || !hasDb)) {
+                        try {
+                            if (!hasLevel && runShizukuCmd(new String
+                                                    []{"sh", "-c", "ls \"" + checkLevel.getAbsolutePath() + "\""}).waitFor() == 0)
+                                hasLevel = true;
+                            if (!hasDb && runShizukuCmd(new String
+                                                    []{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor() == 0)
+                                hasDb = true;
+                        } catch (Exception e) {
                         }
+                    }
 
-                        if (hasLevel || hasDb) {
-                            // --- 命中具体存档逻辑 ---
-                            if (hasLevel && hasDb) {
-                                // 1. 设置 Base 路径为该存档的【上一级目录】
-                                // 这样 copyLevelDatOut 拼接路径时才正确
-                                File parentDir = target.getParentFile();
-                                if (parentDir != null) {
-                                    currentWorldsPath = parentDir.getAbsolutePath() + "/";
-                                }
-
-                                // 2. 获取存档文件夹名
-                                String folderName = target.getName();
-
-                                // 3. 更新 UI
-                                etWorldName.setText(folderName);
-                                toast(getString(R.string.toast_direct_load) + folderName);
-
-                                // 4. 【核心改动】直接调用加载逻辑，不弹列表！
-                                copyLevelDatOut(folderName);
-                            } else {
-                                // 存档残缺报错
-                                new AlertDialog.Builder(MainActivity.this)
-                                        .setTitle(getString(R.string.title_archive_damaged))
-                                        .setMessage(String.format(getString(R.string.msg_archive_damaged), (hasLevel ? "✅" : "❌"), (hasDb ? "✅" : "❌")))
-                                        .setPositiveButton(getString(R.string.btn_confirm), null)
-                                        .show();
+                    if (hasLevel || hasDb) {
+                        // --- 命中具体存档逻辑 ---
+                        if (hasLevel && hasDb) {
+                            // 1. 设置 Base 路径为该存档的【上一级目录】
+                            // 这样 copyLevelDatOut 拼接路径时才正确
+                            File parentDir = target.getParentFile();
+                            if (parentDir != null) {
+                                currentWorldsPath = parentDir.getAbsolutePath() + "/";
                             }
+
+                            // 2. 获取存档文件夹名
+                            String folderName = target.getName();
+
+                            // 3. 更新 UI
+                            etWorldName.setText(folderName);
+                            toast(getString(R.string.toast_direct_load) + folderName);
+
+                            // 4. 【核心改动】直接调用加载逻辑，不弹列表！
+                            copyLevelDatOut(folderName);
                         } else {
-                            // --- 未命中具体存档，视为父目录列表模式 ---
-                            if (!p.endsWith("/")) p += "/"; // 补回斜杠
-                            currentWorldsPath = p;
-                            toast(getString(R.string.toast_path_updated));
-                            showWorldSelector();
+                            // 存档残缺报错
+                            new AlertDialog.Builder(MainActivity.this)
+                                    .setTitle(getString(R.string.title_archive_damaged))
+                                    .setMessage(String.format(getString(R.string.msg_archive_damaged), (hasLevel ? "✅" : "❌"), (hasDb ? "✅" : "❌")))
+                                    .setPositiveButton(getString(R.string.btn_confirm), null)
+                                    .show();
                         }
+                    } else {
+                        // --- 未命中具体存档，视为父目录列表模式 ---
+                        if (!p.endsWith("/")) p += "/"; // 补回斜杠
+                        currentWorldsPath = p;
+                        toast(getString(R.string.toast_path_updated));
+                        showWorldSelector();
                     }
                 })
                 .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -3585,12 +3492,12 @@ private void showPuzzleWarningDialog() {
                         
                         final EditText etW = new EditText(MainActivity.this); 
                         etW.setHint(getString(R.string.hint_width_col)); 
-                        etW.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); 
+                        etW.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
                         etW.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
                         
                         final EditText etH = new EditText(MainActivity.this); 
                         etH.setHint(getString(R.string.hint_height_row)); 
-                        etH.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); 
+                        etH.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
                         etH.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
                         
                         layout.addView(etW); layout.addView(etH);
@@ -3777,7 +3684,7 @@ final byte finalFreeSlot = freeSlot;
                 final int cellH = src.getHeight() / puzzleRows;
                 final int totalMaps = puzzleRows * puzzleCols;
 
-                final java.util.concurrent.ConcurrentHashMap<Integer, JsonObject> itemsMap = 
+                final java.util.concurrent.ConcurrentHashMap<Integer, JsonObject> itemsMap =
                     new java.util.concurrent.ConcurrentHashMap<Integer, JsonObject>();
 
                 runOnUiThread(new Runnable() {
@@ -3790,7 +3697,7 @@ final byte finalFreeSlot = freeSlot;
                 int threadCount = useMultiThreading ? Math.min(cores + 1, 8) : 1;
                 java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
                 final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(totalMaps);
-                final java.util.concurrent.atomic.AtomicReference<Throwable> errorRef = 
+                final java.util.concurrent.atomic.AtomicReference<Throwable> errorRef =
                     new java.util.concurrent.atomic.AtomicReference<Throwable>();
 
                 int globalIndex = 0;
@@ -4549,7 +4456,7 @@ runOnUiThread(new Runnable() {
         // 创建一个包含 EditText 的容器，设置边距
         android.widget.FrameLayout container = new android.widget.FrameLayout(this);
         android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
-            android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         params.setMargins(50, 20, 50, 0);
         etSearch.setLayoutParams(params);
@@ -5893,7 +5800,7 @@ private void copyLogsToClipboard() {
             return;
         }
         
-        android.content.ClipboardManager cm = 
+        android.content.ClipboardManager cm =
             (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
         android.content.ClipData clip = android.content.ClipData.newPlainText("Logs", allLogs.toString());
         cm.setPrimaryClip(clip);

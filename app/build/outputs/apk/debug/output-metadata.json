@@ -17,5 +17,5 @@
     }
   ],
   "elementType": "File",
-  "minSdkVersionForDexing": 28
+  "minSdkVersionForDexing": 23
 }
