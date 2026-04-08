@@ -207,6 +207,7 @@
     <string name="msg_search_for_players">Search for players...</string>
     <string name="msg_search_map_data">Search map data...</string>
     <string name="msg_search_village_data">Search village data...</string>
+    <string name="msg_slice_missing">Missing map</string>
     <string name="msg_start_id">Start ID: </string>
     <string name="msg_success">🎉 Success!\n</string>
     <string name="msg_the_data_corresponding_to_this_key_was_not_found">The data corresponding to the key was not found</string>
@@ -228,7 +229,7 @@ Would you like to create a new empty data set?</string>
     <string name="path_current_level">Current: world data (level.dat)</string>
     <string name="path_current_player">Current: Player data (~local_player)</string>
     <string name="path_custom">Custom path</string>
-    <string name="path_editing_player">Editing: Player data (</string>
+    <string name="path_editing_player_format">Editing: Player Data (~local_player) (%1$s)</string>
     <string name="path_legacy">Old version path (games/com.mojang...)</string>
     <string name="path_prefix">Path: /</string>
     <string name="path_restored_player">Backup restored (player)</string>

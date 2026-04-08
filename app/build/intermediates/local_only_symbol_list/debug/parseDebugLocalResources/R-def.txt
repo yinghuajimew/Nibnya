@@ -285,6 +285,7 @@ string msg_scanning
 string msg_search_for_players
 string msg_search_map_data
 string msg_search_village_data
+string msg_slice_missing
 string msg_start_id
 string msg_success
 string msg_the_data_corresponding_to_this_key_was_not_found
@@ -304,7 +305,7 @@ string open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes
 string path_current_level
 string path_current_player
 string path_custom
-string path_editing_player
+string path_editing_player_format
 string path_legacy
 string path_prefix
 string path_restored_player

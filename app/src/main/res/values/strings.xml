@@ -210,7 +210,7 @@ Would you like to create a new empty data set?</string>
     <string name="path_current_level">Current: world data (level.dat)</string>
     <string name="path_current_player">Current: Player data (~local_player)</string>
     <string name="path_custom">Custom path</string>
-    <string name="path_editing_player">Editing: Player data (</string>
+    <string name="path_editing_player_format">Editing: Player Data (~local_player) (%1$s)</string>
     <string name="path_legacy">Old version path (games/com.mojang...)</string>
     <string name="path_prefix">Path: /</string>
     <string name="path_restored_player">Backup restored (player)</string>
@@ -236,7 +236,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_batch_delete">⚠️ Batch delete</string>
     <string name="title_choose_puzzle_size">Choose puzzle size</string>
     <string name="title_clear_confirm">Confirm clearing</string>
-    <string name="title_current">current:</string>
+    <string name="title_current">Current: %1$s</string>
     <string name="title_data_does_not_exist">Data does not exist</string>
     <string name="title_database_corruption">⚠️ Database corruption</string>
     <string name="title_dendrogram">Tree diagram:</string>
@@ -384,7 +384,7 @@ Would you like to create a new empty data set?</string>
 <string name="about_header">about</string>
 <string name="settings_header">settings</string>
 <string name="long_press_here_to_open_the_root_menu">long press here to open the root menu</string>
-<string name="btn_choose">🔍 choose</string>
+<string name="btn_choose">Select %1$s</string>
 
 <string name="title_item">item</string>
 <string name="title_block">block</string>
@@ -399,4 +399,5 @@ Would you like to create a new empty data set?</string>
 <string name="title_effect_label">[effect] </string>
 <string name="title_enchant_label">[enchant] </string>
 <string name="title_choose">Choose</string>
+<string name="msg_slice_missing">Missing map</string>
 </resources>

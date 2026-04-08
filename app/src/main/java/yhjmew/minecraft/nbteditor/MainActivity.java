@@ -1,9 +1,12 @@
 package yhjmew.minecraft.nbteditor;
 
+import static android.content.ContentValues.TAG;
+
 import androidx.annotation.NonNull;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ClipData;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -14,6 +17,7 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter; // 必需
 import android.widget.Button;
@@ -159,36 +163,18 @@ private boolean useShizuku = true; // 默认启用 Shizuku
 // ============================================
 // 【新增】核心修复：Android 7.0+ 语言切换
 // ============================================
-    @Override
-    protected void attachBaseContext(android.content.Context newBase) {
-        // 1. 读取保存的语言设置
-        // 注意：这里必须用 newBase 来获取 SharedPreferences
-        android.content.SharedPreferences prefs = newBase.getSharedPreferences("nbt_config", android.content.Context.MODE_PRIVATE);
+@Override
+protected void attachBaseContext(android.content.Context newBase) {
+    android.content.SharedPreferences prefs = newBase.getSharedPreferences("nbt_config", android.content.Context.MODE_PRIVATE);
+    String defaultLang = java.util.Locale.getDefault().getLanguage().contains("zh") ? "zh" : "en";
+    String lang = prefs.getString("app_language", defaultLang);
 
-        // 默认语言逻辑：如果系统是中文就默认 zh，否则默认 en
-        String defaultLang = java.util.Locale.getDefault().getLanguage().contains("zh") ? "zh" : "en";
-        String lang = prefs.getString("app_language", defaultLang);
+    // 直接设置，无需中间变量
+    android.content.res.Configuration config = new android.content.res.Configuration();
+    config.setLocale("en".equals(lang) ? java.util.Locale.ENGLISH : java.util.Locale.CHINESE);
 
-        // 2. 准备 Locale 对象
-        java.util.Locale locale;
-        if ("en".equals(lang)) {
-            locale = java.util.Locale.ENGLISH;
-        } else {
-            locale = java.util.Locale.CHINESE;
-        }
-
-        // 3. 构建新的 Context (兼容高版本安卓)
-        if (android.os.Build.VERSION.SDK_INT >= 17) {
-            android.content.res.Configuration config = new android.content.res.Configuration();
-            config.setLocale(locale);
-            // 使用 createConfigurationContext 创建新的上下文
-            android.content.Context context = newBase.createConfigurationContext(config);
-            super.attachBaseContext(context);
-        } else {
-            // 旧版本安卓保持默认
-            super.attachBaseContext(newBase);
-        }
-    }
+    super.attachBaseContext(newBase.createConfigurationContext(config));
+}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -239,7 +225,7 @@ if (savedSafUri != null) {
     } catch (Exception e) {
         // 权限已失效，清除
         safTreeUri = null;
-        prefs.edit().remove("saf_tree_uri").commit();
+        prefs.edit().remove("saf_tree_uri").apply();
     }
 }
 
@@ -502,37 +488,30 @@ if (btnVillage != null) {
     });
 }
 
-View btnSearchNbt = findViewById(R.id.btn_search_nbt);
-if (btnSearchNbt != null) {
-    btnSearchNbt.setOnClickListener(v -> {
-        if (isTreeMode) {
-            toast(getString(R.string.toast_the_search_function_currently_only_supports_list_mode));
-            return;
+        final View btnSearchNbt = findViewById(R.id.btn_search_nbt);
+        if (btnSearchNbt != null) {
+            btnSearchNbt.setOnClickListener(v -> {
+                if (isTreeMode) {
+                    toast(getString(R.string.toast_the_search_function_currently_only_supports_list_mode));
+                    return;
+                }
+                if (nbtAdapter == null || nbtAdapter.getCount() == 0) {
+                    toast(getString(R.string.toast_there_is_currently_no_data_to_search));
+                    return;
+                }
+                showEditorSearchDialog();
+            });
         }
-        if (nbtAdapter == null || nbtAdapter.getCount() == 0) {
-            toast(getString(R.string.toast_there_is_currently_no_data_to_search));
-            return;
+
+        View btnFullTree = findViewById(R.id.btn_fullscreen_tree);
+        if (btnFullTree != null && btnTree != null) {
+            btnFullTree.setOnClickListener(v -> btnTree.performClick());
         }
-        showEditorSearchDialog();
-    });
-}
 
-View btnFullTree = findViewById(R.id.btn_fullscreen_tree);
-final View mainBtnTree = findViewById(R.id.btn_tree_mode);
-if (btnFullTree != null && mainBtnTree != null) {
-    btnFullTree.setOnClickListener(v -> mainBtnTree.performClick());
-}
-
-View btnFullView = findViewById(R.id.btn_fullscreen_view);
-if (btnFullView != null) {
-    btnFullView.setOnClickListener(v -> showViewOptionsDialog());
-}
-
-View btnFullSearch = findViewById(R.id.btn_fullscreen_search);
-final View mainBtnSearch = findViewById(R.id.btn_search_nbt);
-if (btnFullSearch != null && mainBtnSearch != null) {
-    btnFullSearch.setOnClickListener(v -> mainBtnSearch.performClick());
-}
+        View btnFullSearch = findViewById(R.id.btn_fullscreen_search);
+        if (btnFullSearch != null && btnSearchNbt != null) {
+            btnFullSearch.setOnClickListener(v -> btnSearchNbt.performClick());
+        }
 
 View btnOpenKey = findViewById(R.id.btn_open_any_key);
 if (btnOpenKey != null) {
@@ -756,7 +735,7 @@ if (viewMask != null) {
             currentWorldsPath = path + "/";  // SAF 路径特殊标记
             
             // 保存到 SharedPreferences
-            prefs.edit().putString("saf_tree_uri", path).commit();
+            prefs.edit().putString("saf_tree_uri", path).apply();
             
             toast(String.format(getString(R.string.msg_saf_selected), path));
             showWorldSelector();
@@ -1403,7 +1382,7 @@ private void loadPlayerData(final String folderName, final Runnable onSuccess) {
 
                     // 更新路径显示
                     if (tvCurrentPath != null)
-                        tvCurrentPath.setText(getString(R.string.path_editing_player) + folderName + ")");
+                        tvCurrentPath.setText(getString(R.string.path_editing_player_format, folderName));
                 });
 
 } catch (final Exception e) {
@@ -1418,14 +1397,23 @@ runOnUiThread(() -> {
     // 【新增】Shizuku 禁用时的直接访问失败
     else if (!useShizuku) {
         new AlertDialog.Builder(MainActivity.this)
-            .setTitle(getString(R.string.title_load_failed))
-            .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + getFullStackTrace(e))
-            .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivity(intent);
-            })
-            .setNegativeButton(getString(R.string.btn_understood), null)
-            .show();
+                .setTitle(getString(R.string.title_load_failed))
+                .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + getFullStackTrace(e))
+                .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
+                    // 检查版本
+                    if (android.os.Build.VERSION.SDK_INT >= 30) {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    } else {
+                        // Android 10 及以下使用传统存储设置
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton(getString(R.string.btn_understood), null)
+                .show();
     }
     // 原有通用处理
     else {
@@ -1562,11 +1550,19 @@ runOnUiThread(() -> {
         new AlertDialog.Builder(MainActivity.this)
             .setTitle(getString(R.string.err_save_failed))
             .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + msg)
-            .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
-                // 打开系统文件管理权限设置
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivity(intent);
-            })
+                .setPositiveButton(getString(R.string.btn_open_settings), (d, w) -> {
+                    if (android.os.Build.VERSION.SDK_INT >= 30) {
+                        // Android 11+ 使用 MANAGE_ALL_FILES_ACCESS_PERMISSION
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    } else {
+                        // Android 10 及以下使用应用详情设置页
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    }
+                })
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show();
     } else {
@@ -1658,7 +1654,7 @@ runOnUiThread(() -> {
                     Process p = runShizukuCmd(new String[]{"sh", "-c", "ls \"" + currentWorldsPath + "\""});
                     BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     String line;
-                    while((line=r.readLine())!=null) if(line.trim().length()>0) rawFolders.add(line.trim());
+                    while((line=r.readLine())!=null) if(!line.trim().isEmpty()) rawFolders.add(line.trim());
                     p.waitFor();
                 }
 
@@ -1681,7 +1677,9 @@ runOnUiThread(() -> {
                              // ls -d 检查文件夹
                              int code2 = runShizukuCmd(new String[]{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor();
                              if (code1 == 0 && code2 == 0) isGood = true;
-                         } catch(Exception e){}
+                         } catch(Exception e){
+                             Log.w(TAG, "Shizuku check failed: " + e.getMessage());
+                         }
                     }
 
                     if (isGood) {
@@ -1698,35 +1696,30 @@ runOnUiThread(() -> {
                 // 转换为数组
                 final String[] displayArr = displayList.toArray(new String[0]);
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        loading.dismiss();
-                        if(displayArr.length == 0) {
-                            toast(getString(R.string.err_no_saves_detail));
-                            return;
-                        }
-
-                        new AlertDialog.Builder(MainActivity.this)
-                            .setTitle(String.format(getString(R.string.dialog_select_archive_title), displayArr.length))
-                            .setItems(displayArr, new DialogInterface.OnClickListener() {
-                                @Override public void onClick(DialogInterface d, int i) {
-                                    // 点击时，从 folderList 里取纯净的文件夹名
-                                    String realFolder = folderList.get(i);
-
-                                    // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
-                                    // 这里建议输入框里还是显示名字+ID，或者只显示ID
-                                    // 为了兼容之前的逻辑，这里暂时填入 ID，或者你可以把 UI 改成显示中文
-                                    etWorldName.setText(realFolder);
-
-                                    // 触发加载
-                                    copyLevelDatOut(realFolder);
-                                }
-                            }).show();
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    if(displayArr.length == 0) {
+                        toast(getString(R.string.err_no_saves_detail));
+                        return;
                     }
+
+                    new AlertDialog.Builder(MainActivity.this)
+                        .setTitle(String.format(getString(R.string.dialog_select_archive_title), displayArr.length))
+                        .setItems(displayArr, (d, i) -> {
+                            // 点击时，从 folderList 里取纯净的文件夹名
+                            String realFolder = folderList.get(i);
+
+                            // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
+                            // 这里建议输入框里还是显示名字+ID，或者只显示ID
+                            // 为了兼容之前的逻辑，这里暂时填入 ID，或者你可以把 UI 改成显示中文
+                            etWorldName.setText(realFolder);
+
+                            // 触发加载
+                            copyLevelDatOut(realFolder);
+                        }).show();
                 });
             } catch(final Exception e) {
-                runOnUiThread(new Runnable() { @Override public void run() { loading.dismiss(); toast(e.toString()); } });
+                runOnUiThread(() -> { loading.dismiss(); toast(e.toString()); });
             }
         }).start();
     }
@@ -1792,6 +1785,7 @@ private void showPathSelector() {
                                                     []{"sh", "-c", "ls -d \"" + checkDb.getAbsolutePath() + "\""}).waitFor() == 0)
                                 hasDb = true;
                         } catch (Exception e) {
+                            Log.w(TAG, "Shizuku db check failed: " + e.getMessage());
                         }
                     }
 
@@ -1845,13 +1839,15 @@ private void showPathSelector() {
                     intent.setData(Uri.parse("package:" + getPackageName()));
                     startActivity(intent);
                 } catch (Exception e) {
+                    Log.e(TAG, "Failed to open settings: " + e.getMessage());
+                    toast("无法打开系统设置");
                 }
             }
         }
     }
 
     private void registerListener() throws Exception {
-        final Class<?> c = Class.forName("rikka.shizuku.Shizuku");
+        Class.forName("rikka.shizuku.Shizuku");
     }
 
 private Process runShizukuCmd(String[] cmd) throws Exception {
@@ -1888,22 +1884,28 @@ private Process runShizukuCmd(String[] cmd) throws Exception {
 }
 }
 
-private boolean checkShizukuAvailable() {
-    // 【新增】如果用户禁用了 Shizuku，直接返回 false
-    if (!useShizuku) {
-        return false;
+    private boolean checkShizukuAvailable() {
+        if (!useShizuku) {
+            return false;
+        }
+
+        try {
+            final Class<?> c = Class.forName("rikka.shizuku.Shizuku");
+
+            // 安全转换 Boolean
+            Method p = c.getMethod("pingBinder");
+            Boolean pingResult = (Boolean) p.invoke(null);
+            if (pingResult == null || !pingResult) return false;
+
+            // 安全转换 Integer
+            Method ch = c.getMethod("checkSelfPermission");
+            Integer permission = (Integer) ch.invoke(null);
+            return permission != null && permission == PackageManager.PERMISSION_GRANTED;
+
+        } catch (Exception e) {
+            return false;
+        }
     }
-    
-    try {
-        final Class<?> c = Class.forName("rikka.shizuku.Shizuku");
-        Method p = c.getMethod("pingBinder");
-        if (!(boolean) p.invoke(null)) return false;
-        Method ch = c.getMethod("checkSelfPermission");
-        return (int) ch.invoke(null) == PackageManager.PERMISSION_GRANTED;
-    } catch (Exception e) {
-        return false;
-    }
-}
 
 private boolean checkShizukuReady() {
     // 【新增】禁用 Shizuku 时直接返回 true（表示"已准备好"走系统路径）
@@ -1916,6 +1918,7 @@ private boolean checkShizukuReady() {
         Class<?> c = Class.forName("rikka.shizuku.Shizuku");
         c.getMethod("requestPermission", int.class).invoke(null, 0);
     } catch (Exception e) {
+        Log.w(TAG, "Shizuku request permission failed: " + e.getMessage());
     }
     return false;
 }
@@ -2008,11 +2011,8 @@ View sidebarContainer = findViewById(R.id.custom_sidebar_container);
             if (!scrollPositionStack.isEmpty()) {
                 final int lastPos = scrollPositionStack.pop();
                 // 必须要 post 执行，因为 updateAdapter 刚刚才 reset 了列表
-                nbtListView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        nbtListView.setSelection(lastPos); // 瞬间跳回原来的位置
-                    }
+                nbtListView.post(() -> {
+                    nbtListView.setSelection(lastPos); // 瞬间跳回原来的位置
                 });
             }
 
@@ -2160,12 +2160,7 @@ private void showEditValueDialog(final String key, final JsonObject item) {
         btnAutocomplete.setText(getString(R.string.btn_choose) + getTypeLabel(finalDataType));
         btnAutocomplete.setTextColor(Color.parseColor("#2196F3"));
         btnAutocomplete.setBackgroundColor(Color.TRANSPARENT);
-        btnAutocomplete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showAutocompleteDialog(input, finalDataType, input.getText().toString());
-            }
-        });
+        btnAutocomplete.setOnClickListener(v -> showAutocompleteDialog(input, finalDataType, input.getText().toString()));
         layout.addView(btnAutocomplete);
         
         builder.setView(layout);
@@ -2175,33 +2170,30 @@ private void showEditValueDialog(final String key, final JsonObject item) {
     }
 
     // ========== 保存按钮 ==========
-    builder.setPositiveButton(getString(R.string.btn_save_short), new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface d, int w) {
-            try {
-                String val = input.getText().toString().trim();
-                
-                if (type >= 1 && type <= 3) {
-                    item.addProperty("v", Integer.parseInt(val));
-                } else if (type == 4) {
-                    item.addProperty("v", Long.parseLong(val));
-                } else if (type >= 5 && type <= 6) {
-                    item.addProperty("v", Double.parseDouble(val));
-                } else if (type == 8) {
-                    item.addProperty("v", val);
-                } else if (type == 7 || type == 11 || type == 12) {
-                    JsonElement parsed = new com.google.gson.JsonParser().parse(val);
-                    item.add("v", parsed.getAsJsonArray());
-                }
-                
-                if (!isTreeMode) {
-                    nbtAdapter.refreshKeys();
-                } else {
-                    nbtTreeAdapter.notifyDataSetChanged();
-                }
-            } catch (Exception e) {
-                toast(getString(R.string.err_save_failed) + e.getMessage());
+    builder.setPositiveButton(getString(R.string.btn_save_short), (d, w) -> {
+        try {
+            String val = input.getText().toString().trim();
+
+            if (type >= 1 && type <= 3) {
+                item.addProperty("v", Integer.parseInt(val));
+            } else if (type == 4) {
+                item.addProperty("v", Long.parseLong(val));
+            } else if (type >= 5 && type <= 6) {
+                item.addProperty("v", Double.parseDouble(val));
+            } else if (type == 8) {
+                item.addProperty("v", val);
+            } else if (type == 7 || type == 11 || type == 12) {
+                JsonElement parsed = new JsonParser().parse(val);
+                item.add("v", parsed.getAsJsonArray());
             }
+
+            if (!isTreeMode) {
+                nbtAdapter.refreshKeys();
+            } else {
+                nbtTreeAdapter.notifyDataSetChanged();
+            }
+        } catch (Exception e) {
+            toast(getString(R.string.err_save_failed) + e.getMessage());
         }
     });
     
@@ -2248,78 +2240,75 @@ private void showLongPressMenu(final String key, final JsonObject itemData) {
 
     new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_manage_prefix) + key)
-            .setItems(ops, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    // 根据模式获取正确的容器和 key
-                    JsonObject parentContainer;
-                    String nodeKey = key;
-                    JsonObject nodeData = itemData;
-                    
-                    if (isTreeMode) {
-                        // 树状图模式
-                        if (lastTreeClickPosition < 0) return;
-                        
-                        parentContainer = nbtTreeAdapter.getParentContainer(lastTreeClickPosition);
-                        if (parentContainer == null) {
-                            parentContainer = rootNbtData;
-                        }
-                        
-                        String actualKey = nbtTreeAdapter.getNodeKey(lastTreeClickPosition);
-                        if (actualKey != null) nodeKey = actualKey;
-                        
-                        JsonObject actualData = nbtTreeAdapter.getNodeData(lastTreeClickPosition);
-                        if (actualData != null) nodeData = actualData;
-                    } else {
-                        // 列表模式
-                        parentContainer = nbtAdapter.getData();
+            .setItems(ops, (d, w) -> {
+                // 根据模式获取正确的容器和 key
+                JsonObject parentContainer;
+                String nodeKey = key;
+                JsonObject nodeData = itemData;
+
+                if (isTreeMode) {
+                    // 树状图模式
+                    if (lastTreeClickPosition < 0) return;
+
+                    parentContainer = nbtTreeAdapter.getParentContainer(lastTreeClickPosition);
+                    if (parentContainer == null) {
+                        parentContainer = rootNbtData;
                     }
 
-                    switch (w) {
-                        case 0: // 复制
-                            clipboard = nodeData.deepCopy();
-                            toast(getString(R.string.toast_copy_success));
-                            break;
-                            
-                        case 1: // 粘贴
-                            if (clipboard == null) {
-                                toast(getString(R.string.toast_clipboard_empty));
-                                return;
+                    String actualKey = nbtTreeAdapter.getNodeKey(lastTreeClickPosition);
+                    if (actualKey != null) nodeKey = actualKey;
+
+                    JsonObject actualData = nbtTreeAdapter.getNodeData(lastTreeClickPosition);
+                    if (actualData != null) nodeData = actualData;
+                } else {
+                    // 列表模式
+                    parentContainer = nbtAdapter.getData();
+                }
+
+                switch (w) {
+                    case 0: // 复制
+                        clipboard = nodeData.deepCopy();
+                        toast(getString(R.string.toast_copy_success));
+                        break;
+
+                    case 1: // 粘贴
+                        if (clipboard == null) {
+                            toast(getString(R.string.toast_clipboard_empty));
+                            return;
+                        }
+                        final String pasteKey = nodeKey + "_copy";
+                        if (parentContainer.has(pasteKey)) {
+                            toast(getString(R.string.toast_name_exists));
+                            return;
+                        }
+                        parentContainer.add(pasteKey, clipboard.deepCopy());
+                        refreshAfterTreeEdit();
+                        toast(getString(R.string.toast_pasted));
+                        break;
+
+                    case 2: // 删除
+                        parentContainer.remove(nodeKey);
+                        refreshAfterTreeEdit();
+                        toast(getString(R.string.toast_deleted));
+                        break;
+
+                    case 3: // 重命名
+                        showTreeRenameDialog(nodeKey, nodeData, parentContainer);
+                        break;
+
+                    case 4: // 添加子项
+                        int type = nodeData.get("t").getAsInt();
+                        if (type == 10) {
+                            JsonObject childContainer = nodeData.getAsJsonObject("v");
+                            showAddChildDialog(childContainer);
+                            // 树状图模式需要特殊处理展开
+                            if (isTreeMode && !nbtTreeAdapter.getNode(lastTreeClickPosition).isExpanded) {
+                                nbtTreeAdapter.toggleExpand(lastTreeClickPosition);
                             }
-                            final String pasteKey = nodeKey + "_copy";
-                            if (parentContainer.has(pasteKey)) {
-                                toast(getString(R.string.toast_name_exists));
-                                return;
-                            }
-                            parentContainer.add(pasteKey, clipboard.deepCopy());
-                            refreshAfterTreeEdit();
-                            toast(getString(R.string.toast_pasted));
-                            break;
-                            
-                        case 2: // 删除
-                            parentContainer.remove(nodeKey);
-                            refreshAfterTreeEdit();
-                            toast(getString(R.string.toast_deleted));
-                            break;
-                            
-                        case 3: // 重命名
-                            showTreeRenameDialog(nodeKey, nodeData, parentContainer);
-                            break;
-                            
-                        case 4: // 添加子项
-                            int type = nodeData.get("t").getAsInt();
-                            if (type == 10) {
-                                JsonObject childContainer = nodeData.getAsJsonObject("v");
-                                showAddChildDialog(childContainer);
-                                // 树状图模式需要特殊处理展开
-                                if (isTreeMode && !nbtTreeAdapter.getNode(lastTreeClickPosition).isExpanded) {
-                                    nbtTreeAdapter.toggleExpand(lastTreeClickPosition);
-                                }
-                            } else {
-                                toast(getString(R.string.toast_compound_only));
-                            }
-                            break;
-                    }
+                        } else {
+                            toast(getString(R.string.toast_compound_only));
+                        }
+                        break;
                 }
             }).show();
 }
@@ -2331,20 +2320,17 @@ private void showTreeRenameDialog(final String oldKey, final JsonObject itemData
     new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_rename))
             .setView(input)
-            .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    String newKey = input.getText().toString().trim();
-                    if (newKey.isEmpty() || newKey.equals(oldKey)) return;
-                    if (parentContainer.has(newKey)) {
-                        toast(getString(R.string.toast_name_exists));
-                        return;
-                    }
-                    parentContainer.remove(oldKey);
-                    parentContainer.add(newKey, itemData);
-                    refreshAfterTreeEdit();
-                    toast(getString(R.string.toast_renamed));
+            .setPositiveButton(getString(R.string.btn_confirm), (d, w) -> {
+                String newKey = input.getText().toString().trim();
+                if (newKey.isEmpty() || newKey.equals(oldKey)) return;
+                if (parentContainer.has(newKey)) {
+                    toast(getString(R.string.toast_name_exists));
+                    return;
                 }
+                parentContainer.remove(oldKey);
+                parentContainer.add(newKey, itemData);
+                refreshAfterTreeEdit();
+                toast(getString(R.string.toast_renamed));
             })
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show();
@@ -2383,13 +2369,10 @@ private void refreshAfterTreeEdit() {
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.title_add_child))
-                .setItems(types, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        final int selectedType = ids[w];
-                        // 弹出命名对话框
-                        showNameInputDialog(parent, selectedType);
-                    }
+                .setItems(types, (d, w) -> {
+                    final int selectedType = ids[w];
+                    // 弹出命名对话框
+                    showNameInputDialog(parent, selectedType);
                 })
                 .show();
     }
@@ -2401,66 +2384,63 @@ private void refreshAfterTreeEdit() {
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle(getString(R.string.menu_rename))
                 .setView(input)
-                .setPositiveButton(getString(R.string.btn_create), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dd, int ww) {
-                        String name = input.getText().toString();
-                        if (!name.isEmpty()) {
-                            if (parentCompound.has(name)) {
-                                toast(getString(R.string.toast_name_exists));
-                                return;
-                            }
-
-                            JsonObject t = new JsonObject();
-                            t.addProperty("t", type);
-
-                            // 根据不同类型设置初始值 (全类型支持)
-                            switch (type) {
-                                case 1:
-                                    t.addProperty("v", (byte) 0);
-                                    break;
-                                case 2:
-                                    t.addProperty("v", (short) 0);
-                                    break;
-                                case 3:
-                                    t.addProperty("v", 0);
-                                    break;
-                                case 4:
-                                    t.addProperty("v", 0L);
-                                    break;
-                                case 5:
-                                    t.addProperty("v", 0.0f);
-                                    break;
-                                case 6:
-                                    t.addProperty("v", 0.0d);
-                                    break;
-                                case 7:
-                                    t.add("v", new JsonArray());
-                                    break; // Byte Array
-                                case 8:
-                                    t.addProperty("v", "");
-                                    break; // String
-                                case 9:
-                                    t.add("v", new JsonArray());
-                                    t.addProperty("itemType", 0); // 默认为 End
-                                    break;
-                                case 10:
-                                    t.add("v", new JsonObject());
-                                    break; // Compound
-                                case 11:
-                                    t.add("v", new JsonArray());
-                                    break; // Int Array
-                                case 12:
-                                    t.add("v", new JsonArray());
-                                    break; // Long Array
-                            }
-
-                            parentCompound.add(name, t);
-
-                            // 刷新界面
-                            if (nbtAdapter.getData() == parentCompound) nbtAdapter.refreshKeys();
-                            toast(getString(R.string.toast_created) + name);
+                .setPositiveButton(getString(R.string.btn_create), (dd, ww) -> {
+                    String name = input.getText().toString();
+                    if (!name.isEmpty()) {
+                        if (parentCompound.has(name)) {
+                            toast(getString(R.string.toast_name_exists));
+                            return;
                         }
+
+                        JsonObject t = new JsonObject();
+                        t.addProperty("t", type);
+
+                        // 根据不同类型设置初始值 (全类型支持)
+                        switch (type) {
+                            case 1:
+                                t.addProperty("v", (byte) 0);
+                                break;
+                            case 2:
+                                t.addProperty("v", (short) 0);
+                                break;
+                            case 3:
+                                t.addProperty("v", 0);
+                                break;
+                            case 4:
+                                t.addProperty("v", 0L);
+                                break;
+                            case 5:
+                                t.addProperty("v", 0.0f);
+                                break;
+                            case 6:
+                                t.addProperty("v", 0.0d);
+                                break;
+                            case 7:
+                                t.add("v", new JsonArray());
+                                break; // Byte Array
+                            case 8:
+                                t.addProperty("v", "");
+                                break; // String
+                            case 9:
+                                t.add("v", new JsonArray());
+                                t.addProperty("itemType", 0); // 默认为 End
+                                break;
+                            case 10:
+                                t.add("v", new JsonObject());
+                                break; // Compound
+                            case 11:
+                                t.add("v", new JsonArray());
+                                break; // Int Array
+                            case 12:
+                                t.add("v", new JsonArray());
+                                break; // Long Array
+                        }
+
+                        parentCompound.add(name, t);
+
+                        // 刷新界面
+                        if (nbtAdapter.getData() == parentCompound) nbtAdapter.refreshKeys();
+                        toast(getString(R.string.toast_created) + name);
                     }
                 }).show();
     }
@@ -2468,17 +2448,14 @@ private void refreshAfterTreeEdit() {
     private void showRenameDialog(final String oldKey, final JsonObject itemData) {
         final EditText input = new EditText(this);
         input.setText(oldKey);
-        new AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input).setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        String newKey = input.getText().toString();
-                        if (!newKey.isEmpty() && !nbtAdapter.getData().has(newKey)) {
-                            nbtAdapter.getData().remove(oldKey);
-                            nbtAdapter.getData().add(newKey, itemData);
-                            nbtAdapter.refreshKeys();
-                        }
-                    }
-                }).show();
+        new AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input).setPositiveButton(getString(R.string.btn_confirm), (d, w) -> {
+            String newKey = input.getText().toString();
+            if (!newKey.isEmpty() && !nbtAdapter.getData().has(newKey)) {
+                nbtAdapter.getData().remove(oldKey);
+                nbtAdapter.getData().add(newKey, itemData);
+                nbtAdapter.refreshKeys();
+            }
+        }).show();
     }
 
 // 根菜单 (长按顶部标题或点击全屏右上角触发)
@@ -2510,99 +2487,92 @@ private void showRootMenu() {
 
     new AlertDialog.Builder(this)
             .setTitle(getString(R.string.menu_root_title))
-            .setItems(ops, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    if (w == 0) {
-                        // === 1. 添加子项 ===
-                        showAddChildDialog(current);
-                    } else if (w == 1) {
-                        // === 2. 粘贴 (作为子节点插入) ===
-                        if (clipboard == null) {
-                            toast(getString(R.string.toast_clipboard_empty));
-                            return;
-                        }
-                        final EditText input = new EditText(MainActivity.this);
-                        input.setHint(getString(R.string.hint_new_tag_name));
-                        new AlertDialog.Builder(MainActivity.this)
-                                .setTitle(getString(R.string.title_paste_as))
-                                .setView(input)
-                                .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dd, int ww) {
-                                        String n = input.getText().toString();
-                                        if (!n.isEmpty() && !current.has(n)) {
-                                            current.add(n, clipboard.deepCopy());
-                                            refreshAfterTreeEdit();
-                                            toast(getString(R.string.toast_pasted));
-                                        } else {
-                                            toast(getString(R.string.toast_name_empty_or_exists));
-                                        }
-                                    }
-                                }).show();
-                    } else if (w == 2) {
-                        // === 3. 复制当前完整数据 (JSON 导出) ===
-                        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                        android.content.ClipData clip = android.content.ClipData.newPlainText("NBT_JSON", current.toString());
-                        cm.setPrimaryClip(clip);
-                        toast(getString(R.string.toast_copy_success));
-                    } else if (w == 3) {
-                        // === 4. 粘贴并替换当前数据 (导入) ===
-                        final android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                        if (!cm.hasPrimaryClip() || cm.getPrimaryClip().getItemCount() == 0) {
-                            toast(getString(R.string.toast_clipboard_empty));
-                            return;
-                        }
-
-                        new AlertDialog.Builder(MainActivity.this)
-                                .setTitle(getString(R.string.msg_confirm_replace))
-                                .setMessage(getString(R.string.msg_replace_warning))
-                                .setPositiveButton(getString(R.string.btn_replace), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        try {
-                                            CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
-                                            if (text == null) return;
-
-                                            JsonObject newObj = JsonParser.parseString(text.toString()).getAsJsonObject();
-
-                                            // 清空当前界面并填入新数据
-                                            List<String> oldKeys = new ArrayList<String>(current.keySet());
-                                            for (String k : oldKeys) current.remove(k);
-
-                                            for (java.util.Map.Entry<String, JsonElement> entry : newObj.entrySet()) {
-                                                current.add(entry.getKey(), entry.getValue());
-                                            }
-
-                                            refreshAfterTreeEdit();
-                                            toast(getString(R.string.toast_pasted));
-
-                                        } catch (Exception e) {
-                                            toast(getString(R.string.err_json_parse));
-                                        }
-                                    }
-                                })
-                                .setNegativeButton(getString(R.string.btn_cancel), null)
-                                .show();
-                    } else if (w == 4) {
-                        // === 5. 清空所有 ===
-                        new AlertDialog.Builder(MainActivity.this)
-                                .setTitle(getString(R.string.dialog_danger_title))
-                                .setMessage(getString(R.string.dialog_clear_msg))
-                                .setPositiveButton(getString(R.string.btn_confirm_clear), new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dd, int ww) {
-                                        List<String> keys = new ArrayList<String>(current.keySet());
-                                        for (String key : keys) {
-                                            current.remove(key);
-                                        }
-                                        refreshAfterTreeEdit();
-                                        toast(getString(R.string.toast_cleared));
-                                    }
-                                })
-                                .setNegativeButton(getString(R.string.btn_cancel), null)
-                                .show();
+            .setItems(ops, (d, w) -> {
+                if (w == 0) {
+                    // === 1. 添加子项 ===
+                    showAddChildDialog(current);
+                } else if (w == 1) {
+                    // === 2. 粘贴 (作为子节点插入) ===
+                    if (clipboard == null) {
+                        toast(getString(R.string.toast_clipboard_empty));
+                        return;
                     }
+                    final EditText input = new EditText(MainActivity.this);
+                    input.setHint(getString(R.string.hint_new_tag_name));
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.title_paste_as))
+                            .setView(input)
+                            .setPositiveButton(getString(R.string.btn_confirm), (dd, ww) -> {
+                                String n = input.getText().toString();
+                                if (!n.isEmpty() && !current.has(n)) {
+                                    current.add(n, clipboard.deepCopy());
+                                    refreshAfterTreeEdit();
+                                    toast(getString(R.string.toast_pasted));
+                                } else {
+                                    toast(getString(R.string.toast_name_empty_or_exists));
+                                }
+                            }).show();
+                } else if (w == 2) {
+                    // === 3. 复制当前完整数据 (JSON 导出) ===
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("NBT_JSON", current.toString());
+                    cm.setPrimaryClip(clip);
+                    toast(getString(R.string.toast_copy_success));
+                } else if (w == 3) {
+                    // === 4. 粘贴并替换当前数据 (导入) ===
+                    final android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (!cm.hasPrimaryClip()) {
+                        toast(getString(R.string.toast_clipboard_empty));
+                        return;
+                    }
+                    ClipData clip = cm.getPrimaryClip();
+                    if (clip == null || clip.getItemCount() == 0) {
+                        toast(getString(R.string.toast_clipboard_empty));
+                        return;
+                    }
+
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.msg_confirm_replace))
+                            .setMessage(getString(R.string.msg_replace_warning))
+                            .setPositiveButton(getString(R.string.btn_replace), (dialog, which) -> {
+                                try {
+                                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                                    if (text == null) return;
+
+                                    JsonObject newObj = JsonParser.parseString(text.toString()).getAsJsonObject();
+
+                                    // 清空当前界面并填入新数据
+                                    List<String> oldKeys = new ArrayList<>(current.keySet());
+                                    for (String k : oldKeys) current.remove(k);
+
+                                    for (java.util.Map.Entry<String, JsonElement> entry : newObj.entrySet()) {
+                                        current.add(entry.getKey(), entry.getValue());
+                                    }
+
+                                    refreshAfterTreeEdit();
+                                    toast(getString(R.string.toast_pasted));
+
+                                } catch (Exception e) {
+                                    toast(getString(R.string.err_json_parse));
+                                }
+                            })
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show();
+                } else if (w == 4) {
+                    // === 5. 清空所有 ===
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.dialog_danger_title))
+                            .setMessage(getString(R.string.dialog_clear_msg))
+                            .setPositiveButton(getString(R.string.btn_confirm_clear), (dd, ww) -> {
+                                List<String> keys = new ArrayList<>(current.keySet());
+                                for (String key : keys) {
+                                    current.remove(key);
+                                }
+                                refreshAfterTreeEdit();
+                                toast(getString(R.string.toast_cleared));
+                            })
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show();
                 }
             }).show();
 }
@@ -2671,7 +2641,9 @@ private void showRootMenu() {
                         if (viewSidebar != null) viewSidebar.setBackgroundColor(0xFFFFFFFF); // 侧边栏保持白或动态色都行
                         isDynamic = true;
                     }
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    Log.w(TAG, "Dynamic color load failed: " + e.getMessage());
+                }
             }
             
             if (!isDynamic) {
@@ -2728,24 +2700,21 @@ private void showRootMenu() {
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.title_view_mode))
-                .setSingleChoiceItems(items, currentViewMode, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int which) {
+                .setSingleChoiceItems(items, currentViewMode, (d, which) -> {
 // 更新模式
-                        currentViewMode = which;
-                        prefs.edit().putInt("view_mode", currentViewMode).apply(); // commit改apply更高效喵
+                    currentViewMode = which;
+                    prefs.edit().putInt("view_mode", currentViewMode).apply(); // commit改apply更高效喵
 
 // 【核心修改】安全刷新Adapter
-                        if (nbtAdapter != null) {
-                            nbtAdapter.setViewMode(currentViewMode);
-                        }
-                        if (nbtTreeAdapter != null) {
-                            nbtTreeAdapter.setViewMode(currentViewMode);
-                        }
-
-                        d.dismiss();
-                        toast(getString(R.string.toast_mode_changed));
+                    if (nbtAdapter != null) {
+                        nbtAdapter.setViewMode(currentViewMode);
                     }
+                    if (nbtTreeAdapter != null) {
+                        nbtTreeAdapter.setViewMode(currentViewMode);
+                    }
+
+                    d.dismiss();
+                    toast(getString(R.string.toast_mode_changed));
                 })
                 .show();
     }
@@ -2783,28 +2752,25 @@ private void showRootMenu() {
         final AtomicReference<Exception> errorRef = new AtomicReference<>();
 
         for (final File srcFile : fileList) {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        // 快速失败机制
-                        if (errorRef.get() != null) return; 
+            executor.submit(() -> {
+                try {
+                    // 快速失败机制
+                    if (errorRef.get() != null) return;
 
-                        File destFile = new File(target, srcFile.getName());
-                        
-                        if (srcFile.isDirectory()) {
-                            // 子文件夹：走单线程递归（避免线程池爆炸）
-                            // 且 db 文件夹下一般都是平铺文件，很少有子文件夹
-                            copyDirectory(srcFile, destFile); 
-                        } else {
-                            copyFile(srcFile, destFile);
-                        }
-                    } catch (Exception e) {
-                        errorRef.set(e);
-                    } finally {
-                        // 【生死关键】 无论复制成功与否，必须减计数器！
-                        latch.countDown(); 
+                    File destFile = new File(target, srcFile.getName());
+
+                    if (srcFile.isDirectory()) {
+                        // 子文件夹：走单线程递归（避免线程池爆炸）
+                        // 且 db 文件夹下一般都是平铺文件，很少有子文件夹
+                        copyDirectory(srcFile, destFile);
+                    } else {
+                        copyFile(srcFile, destFile);
                     }
+                } catch (Exception e) {
+                    errorRef.set(e);
+                } finally {
+                    // 【生死关键】 无论复制成功与否，必须减计数器！
+                    latch.countDown();
                 }
             });
         }
@@ -2833,26 +2799,22 @@ private void showRootMenu() {
         }
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_scanning), getString(R.string.msg_search_for_players), true);
         
-        new Thread(new Runnable(){
-            public void run(){
-                try {
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    // 1. 获取并转存为 final
-                    final List<String> rawList = db.listPlayerKeys();
-                    db.close();
-                    
-                    cachePlayerList = rawList; 
-                    
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            loading.dismiss();
-                            // 2. 这里的 rawList 已经是 final 的了
-                            showListDialogInternal(rawList, TYPE_PLAYER);
-                        }
-                    });
-                } catch(final Exception e){
-                    runOnUiThread(new Runnable(){ public void run(){loading.dismiss(); toast(e.toString());}});
-                }
+        new Thread(() -> {
+            try {
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+                // 1. 获取并转存为 final
+                final List<String> rawList = db.listPlayerKeys();
+                db.close();
+
+                cachePlayerList = rawList;
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    // 2. 这里的 rawList 已经是 final 的了
+                    showListDialogInternal(rawList, TYPE_PLAYER);
+                });
+            } catch(final Exception e){
+                runOnUiThread(() -> {loading.dismiss(); toast(e.toString());});
             }
         }).start();
     }
@@ -2891,91 +2853,74 @@ private void showRootMenu() {
         // 4. 既没草稿也没缓存，只能读硬盘
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_read), getString(R.string.msg_load) + finalKey, true);
         
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // 强制解锁
-                    if (currentWorkingDbPath != null) {
-                        File lockFile = new File(currentWorkingDbPath, "LOCK");
-                        if (lockFile.exists()) lockFile.delete();
-                    }
-
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    byte[] data = db.readSpecificKey(finalKey);
-                    db.close();
-                    
-                    final JsonObject jsonData = BedrockParser.parseBytes(data);
-                    
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            loading.dismiss();
-                            currentTargetKey = finalKey; 
-                            isEditingPlayer = true;
-                            
-                            navigationStack.clear(); 
-                            pathStack.clear();
-                            scrollPositionStack.clear();
-                            
-                            rootNbtData = jsonData;
-                            // 存入静态缓存
-                            nbtDataCache.put(finalKey, rootNbtData);
-                            
-                            updateAdapter(rootNbtData);
-                            
-                            if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current) + finalKey);
-                            toast(getString(R.string.toast_loaded) + finalKey);
-                        }
-                    });
-                } catch(final Exception e) {
-                    runOnUiThread(new Runnable(){ 
-                        public void run(){ 
-                            loading.dismiss(); 
-                            // 捕获空数据，询问创建
-                            if (e.getMessage() != null && e.getMessage().contains(getString(R.string.msg_data_is_empty))) {
-                                new AlertDialog.Builder(MainActivity.this)
-                                    .setTitle(getString(R.string.title_data_does_not_exist))
-                                        .setMessage(String.format(getString(R.string.msg_this_archive_has_not_generated_data_yet), finalKey))
-                                    .setPositiveButton(getString(R.string.btn_create_and_open), new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface d, int w) {
-                                            createNewGlobalData(finalKey);
-                                        }
-                                    })
-                                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                                    .show();
-                            } else {
-                                toast(getString(R.string.err_load_failed)+e.getMessage());
-                            }
-                        }
-                    });
+        new Thread(() -> {
+            try {
+                // 强制解锁
+                if (currentWorkingDbPath != null) {
+                    File lockFile = new File(currentWorkingDbPath, "LOCK");
+                    if (lockFile.exists()) lockFile.delete();
                 }
+
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+                byte[] data = db.readSpecificKey(finalKey);
+                db.close();
+
+                final JsonObject jsonData = BedrockParser.parseBytes(data);
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    currentTargetKey = finalKey;
+                    isEditingPlayer = true;
+
+                    navigationStack.clear();
+                    pathStack.clear();
+                    scrollPositionStack.clear();
+
+                    rootNbtData = jsonData;
+                    // 存入静态缓存
+                    nbtDataCache.put(finalKey, rootNbtData);
+
+                    updateAdapter(rootNbtData);
+
+                    if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current) + finalKey);
+                    toast(getString(R.string.toast_loaded) + finalKey);
+                });
+            } catch(final Exception e) {
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    // 捕获空数据，询问创建
+                    if (e.getMessage() != null && e.getMessage().contains(getString(R.string.msg_data_is_empty))) {
+                        new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.title_data_does_not_exist))
+                                .setMessage(String.format(getString(R.string.msg_this_archive_has_not_generated_data_yet), finalKey))
+                            .setPositiveButton(getString(R.string.btn_create_and_open), (d, w) -> createNewGlobalData(finalKey))
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show();
+                    } else {
+                        toast(getString(R.string.err_load_failed)+e.getMessage());
+                    }
+                });
             }
         }).start();
     }
 
 // 1. [复制玩家数据]
     private void copyPlayerJson(final String key) {
-        new Thread(new Runnable(){
-            public void run() {
-                try {
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    byte[] data = db.readSpecificKey(key);
-                    db.close();
-                    
-                    final String json = BedrockParser.parseBytes(data).toString();
-                    runOnUiThread(new Runnable(){
-                        public void run() {
-                            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                            android.content.ClipData clip = android.content.ClipData.newPlainText("PLAYER_DATA", json);
-                            cm.setPrimaryClip(clip);
-                            toast(getString(R.string.toast_player_data_copied_to_clipboard));
-                        }
-                    });
-                } catch(final Exception e) {
-                    runOnUiThread(new Runnable(){ public void run(){ toast(getString(R.string.toast_copy_failed)+e);}});
-                }
+        new Thread(() -> {
+            try {
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+                byte[] data = db.readSpecificKey(key);
+                db.close();
+
+                final String json = BedrockParser.parseBytes(data).toString();
+                runOnUiThread(() -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("PLAYER_DATA", json);
+                    cm.setPrimaryClip(clip);
+                    toast(getString(R.string.toast_player_data_copied_to_clipboard));
+                });
+            } catch(final Exception e) {
+                runOnUiThread(() -> toast(getString(R.string.toast_copy_failed)+e));
             }
         }).start();
     }
@@ -2984,41 +2929,40 @@ private void showRootMenu() {
 // 2. [粘贴并覆盖] (修正版)
     private void pastePlayerJson(final String targetKey, final Runnable onSuccess) {
         final android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-        if (!cm.hasPrimaryClip() || cm.getPrimaryClip().getItemCount() == 0) {
-            toast(getString(R.string.toast_clipboard_empty)); return;
+        if (!cm.hasPrimaryClip()) {
+            toast(getString(R.string.toast_clipboard_empty));
+            return;
+        }
+        ClipData clip = cm.getPrimaryClip();
+        if (clip == null || clip.getItemCount() == 0) {
+            toast(getString(R.string.toast_clipboard_empty));
+            return;
         }
         
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_override_warning))
             .setMessage(getString(R.string.msg_full_coverage) + targetKey + getString(R.string.msg_this_action_is_irreversible))
-            .setPositiveButton(getString(R.string.btn_cover), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    final String jsonStr = cm.getPrimaryClip().getItemAt(0).getText().toString();
-                    
-                    new Thread(new Runnable(){
-                        public void run() {
-                            try {
-                                JsonObject jo = JsonParser.parseString(jsonStr).getAsJsonObject();
-                                byte[] bytes = BedrockParser.writeToBytes(jo);
-                                
-                                // 【注意这里】重新创建一个新的 db 对象来操作，避免使用 final 的冲突
-                                PlayerDbManager localDb = new PlayerDbManager(currentWorkingDbPath);
-                                localDb.writeSpecificKey(targetKey, bytes); 
-                                localDb.close();
-                                
-                                runOnUiThread(new Runnable(){
-                                    public void run() {
-                                        toast(getString(R.string.toast_data_covered));
-                                        if(onSuccess!=null) onSuccess.run();
-                                    }
-                                });
-                            } catch(final Exception e) {
-                                runOnUiThread(new Runnable(){ public void run(){ toast(getString(R.string.toast_paste_failed)+e);}});
-                            }
-                        }
-                    }).start();
-                }
+            .setPositiveButton(getString(R.string.btn_cover), (d, w) -> {
+                final String jsonStr = cm.getPrimaryClip().getItemAt(0).getText().toString();
+
+                new Thread(() -> {
+                    try {
+                        JsonObject jo = JsonParser.parseString(jsonStr).getAsJsonObject();
+                        byte[] bytes = BedrockParser.writeToBytes(jo);
+
+                        // 【注意这里】重新创建一个新的 db 对象来操作，避免使用 final 的冲突
+                        PlayerDbManager localDb = new PlayerDbManager(currentWorkingDbPath);
+                        localDb.writeSpecificKey(targetKey, bytes);
+                        localDb.close();
+
+                        runOnUiThread(() -> {
+                            toast(getString(R.string.toast_data_covered));
+                            if(onSuccess!=null) onSuccess.run();
+                        });
+                    } catch(final Exception e) {
+                        runOnUiThread(() -> toast(getString(R.string.toast_paste_failed)+e));
+                    }
+                }).start();
             })
             .setNegativeButton(getString(R.string.btn_cancel), null).show();
     }
@@ -3029,32 +2973,25 @@ private void showRootMenu() {
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_remove_warning))
             .setMessage(getString(R.string.msg_confirm_deletion) + key + "？")
-            .setPositiveButton(getString(R.string.btn_delete), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    
-                    // 【技巧】把外部变量转为 final 本地变量，传给线程
-                    final String dbPath = currentWorkingDbPath;
-                    
-                    new Thread(new Runnable(){
-                        public void run() {
-                            try {
-                                PlayerDbManager db = new PlayerDbManager(dbPath); // 用 dbPath
-                                db.deleteKey(key); 
-                                db.close();
-                                
-                                runOnUiThread(new Runnable(){
-                                    public void run() {
-                                        toast(getString(R.string.toast_deleted) + key);
-                                        if(onSuccess!=null) onSuccess.run();
-                                    }
-                                });
-                            } catch(final Exception e) {
-                                runOnUiThread(new Runnable(){ public void run(){ toast(getString(R.string.toast_delete_failed)+e);}});
-                            }
-                        }
-                    }).start();
-                }
+            .setPositiveButton(getString(R.string.btn_delete), (d, w) -> {
+
+                // 【技巧】把外部变量转为 final 本地变量，传给线程
+                final String dbPath = currentWorkingDbPath;
+
+                new Thread(() -> {
+                    try {
+                        PlayerDbManager db = new PlayerDbManager(dbPath); // 用 dbPath
+                        db.deleteKey(key);
+                        db.close();
+
+                        runOnUiThread(() -> {
+                            toast(getString(R.string.toast_deleted) + key);
+                            if(onSuccess!=null) onSuccess.run();
+                        });
+                    } catch(final Exception e) {
+                        runOnUiThread(() -> toast(getString(R.string.toast_delete_failed)+e));
+                    }
+                }).start();
             }).setNegativeButton(getString(R.string.btn_cancel), null).show();
     }
 
@@ -3088,125 +3025,110 @@ private void showRootMenu() {
         
         final String[] ops = menuList.toArray(new String[0]);
         
-        new AlertDialog.Builder(this).setItems(ops, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                
-                // === 情况 A: 删除所有 (Index 2) ===
-                if (w == 2) {
-                    new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.title_high_energy_early_warning))
-                        .setMessage(getString(R.string.msg_delete_existing_ones_in_the_list) + currentList.size() + getString(R.string.msg_indivual) + typeName + getString(R.string.msg_the_operation_cannot_be_undone))
-                        .setPositiveButton(getString(R.string.btn_delete_all), new DialogInterface.OnClickListener() {
-                            @Override public void onClick(DialogInterface dd, int ww) {
-                                // 批量删除逻辑
-                                final ProgressDialog deleting = ProgressDialog.show(MainActivity.this, getString(R.string.msg_deleting), getString(R.string.msg_cleaning_up), true);
-                                final String dbPath = currentWorkingDbPath;
-                                
-                                new Thread(new Runnable(){
-                                    public void run(){
-                                        try {
-                                            PlayerDbManager db = new PlayerDbManager(dbPath);
-                                            // 遍历删除所有显示的 Key
-                                            for(String key : currentList) {
-                                                db.deleteKey(key);
-                                            }
-                                            db.close();
-                                            
-                                            runOnUiThread(new Runnable(){
-                                                public void run(){
-                                                    deleting.dismiss();
-                                                    currentList.clear(); // 清空列表
-                                                    
-                                                    // 【核心修复】判空 adapter，防止搜索模式下闪退
-                                                    if (adapter != null) {
-                                                        adapter.notifyDataSetChanged();
-                                                    } else {
-                                                        // 如果是从搜索进入(adapter为null)，清空缓存以强制刷新
-                                                        invalidateListCache(dataType);
-                                                    }
-                                                    
-                                                    toast(getString(R.string.toast_cleared_all) + typeName);
-                                                }
-                                            });
-                                        } catch(final Exception e){
-                                            runOnUiThread(new Runnable(){ public void run(){ deleting.dismiss(); toast(getString(R.string.toast_delete_failed)+e);}});
-                                        }
-                                    }
-                                }).start();
-                            }
-                        })
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show();
-                    return;
-                }
-                
-                // === 情况 B: 巨型拼图画 (Index 3, 仅地图模式) ===
-                if (dataType == TYPE_MAP && w == 3) {
-                    showPuzzleWarningDialog(); // 调用拼图配置方法
-                    return;
-                }
+        new AlertDialog.Builder(this).setItems(ops, (d, w) -> {
 
-                // === 情况 C: 新建或粘贴 (Index 0 or 1) ===
-                final String finalTypeName = typeName;
-                final String finalHintName = hintName;
-                final int mode = w; // 0=新建, 1=粘贴
-                
-                final EditText input = new EditText(MainActivity.this);
-                input.setHint(finalHintName); 
-                
+            // === 情况 A: 删除所有 (Index 2) ===
+            if (w == 2) {
                 new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getString(R.string.title_new) + finalTypeName + " Key")
-                    .setView(input)
-                    .setPositiveButton(getString(R.string.btn_create), new DialogInterface.OnClickListener() {
-                        @Override public void onClick(DialogInterface dd, int ww) {
-                            final String newKey = input.getText().toString();
-                            if(newKey.isEmpty()){ toast(getString(R.string.toast_key_cannot_be_empty)); return;}
-                            
-                            final String jsonContent;
-                            if (mode == 0) jsonContent = "{}";
-                            else {
-                                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                                if (!cm.hasPrimaryClip()) {toast(getString(R.string.toast_clipboard_empty)); return;}
-                                jsonContent = cm.getPrimaryClip().getItemAt(0).getText().toString();
-                            }
-                            
-                            final String dbPath = currentWorkingDbPath;
+                    .setTitle(getString(R.string.title_high_energy_early_warning))
+                    .setMessage(getString(R.string.msg_delete_existing_ones_in_the_list) + currentList.size() + getString(R.string.msg_indivual) + typeName + getString(R.string.msg_the_operation_cannot_be_undone))
+                    .setPositiveButton(getString(R.string.btn_delete_all), (dd, ww) -> {
+                        // 批量删除逻辑
+                        final ProgressDialog deleting = ProgressDialog.show(MainActivity.this, getString(R.string.msg_deleting), getString(R.string.msg_cleaning_up), true);
+                        final String dbPath = currentWorkingDbPath;
 
-                            new Thread(new Runnable(){
-                                public void run() {
-                                    try {
-                                        JsonObject jo = JsonParser.parseString(jsonContent).getAsJsonObject();
-                                        byte[] bytes = BedrockParser.writeToBytes(jo);
-                                        
-                                        PlayerDbManager localDb = new PlayerDbManager(dbPath);
-                                        localDb.writeSpecificKey(newKey, bytes);
-                                        localDb.close();
-                                        
-                                        runOnUiThread(new Runnable(){
-                                            public void run() {
-                                                // 如果列表中没有这个key才添加，防止显示重复
-                                                if (!currentList.contains(newKey)) {
-                                                    currentList.add(newKey);
-                                                    
-                                                    // 【核心修复】判空 adapter
-                                                    if (adapter != null) {
-                                                        adapter.notifyDataSetChanged();
-                                                    } else {
-                                                        invalidateListCache(dataType);
-                                                    }
-                                                }
-                                                toast(finalTypeName + getString(R.string.toast_yes_created));
-                                            }
-                                        });
-                                    } catch(final Exception e){
-                                        runOnUiThread(new Runnable(){ public void run(){ toast(getString(R.string.toast_creation_failed)+e);}});
+                        new Thread(() -> {
+                            try {
+                                PlayerDbManager db = new PlayerDbManager(dbPath);
+                                // 遍历删除所有显示的 Key
+                                for(String key : currentList) {
+                                    db.deleteKey(key);
+                                }
+                                db.close();
+
+                                runOnUiThread(() -> {
+                                    deleting.dismiss();
+                                    currentList.clear(); // 清空列表
+
+                                    // 【核心修复】判空 adapter，防止搜索模式下闪退
+                                    if (adapter != null) {
+                                        adapter.notifyDataSetChanged();
+                                    } else {
+                                        // 如果是从搜索进入(adapter为null)，清空缓存以强制刷新
+                                        invalidateListCache(dataType);
+                                    }
+
+                                    toast(getString(R.string.toast_cleared_all) + typeName);
+                                });
+                            } catch(final Exception e){
+                                runOnUiThread(() -> { deleting.dismiss(); toast(getString(R.string.toast_delete_failed)+e);});
+                            }
+                        }).start();
+                    })
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
+                    .show();
+                return;
+            }
+
+            // === 情况 B: 巨型拼图画 (Index 3, 仅地图模式) ===
+            if (dataType == TYPE_MAP && w == 3) {
+                showPuzzleWarningDialog(); // 调用拼图配置方法
+                return;
+            }
+
+            // === 情况 C: 新建或粘贴 (Index 0 or 1) ===
+            final String finalTypeName = typeName;
+            final String finalHintName = hintName;
+            final int mode = w; // 0=新建, 1=粘贴
+
+            final EditText input = new EditText(MainActivity.this);
+            input.setHint(finalHintName);
+
+            new AlertDialog.Builder(MainActivity.this)
+                .setTitle(getString(R.string.title_new) + finalTypeName + " Key")
+                .setView(input)
+                .setPositiveButton(getString(R.string.btn_create), (dd, ww) -> {
+                    final String newKey = input.getText().toString();
+                    if(newKey.isEmpty()){ toast(getString(R.string.toast_key_cannot_be_empty)); return;}
+
+                    final String jsonContent;
+                    if (mode == 0) jsonContent = "{}";
+                    else {
+                        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (!cm.hasPrimaryClip()) {toast(getString(R.string.toast_clipboard_empty)); return;}
+                        jsonContent = cm.getPrimaryClip().getItemAt(0).getText().toString(); //暂时忽略
+                    }
+
+                    final String dbPath = currentWorkingDbPath;
+
+                    new Thread(() -> {
+                        try {
+                            JsonObject jo = JsonParser.parseString(jsonContent).getAsJsonObject();
+                            byte[] bytes = BedrockParser.writeToBytes(jo);
+
+                            PlayerDbManager localDb = new PlayerDbManager(dbPath);
+                            localDb.writeSpecificKey(newKey, bytes);
+                            localDb.close();
+
+                            runOnUiThread(() -> {
+                                // 如果列表中没有这个key才添加，防止显示重复
+                                if (!currentList.contains(newKey)) {
+                                    currentList.add(newKey);
+
+                                    // 【核心修复】判空 adapter
+                                    if (adapter != null) {
+                                        adapter.notifyDataSetChanged();
+                                    } else {
+                                        invalidateListCache(dataType);
                                     }
                                 }
-                            }).start();
+                                toast(finalTypeName + getString(R.string.toast_yes_created));
+                            });
+                        } catch(final Exception e){
+                            runOnUiThread(() -> toast(getString(R.string.toast_creation_failed)+e));
                         }
-                    }).show();
-            }
+                    }).start();
+                }).show();
         }).show();
     }
     
@@ -3219,33 +3141,28 @@ private void showRootMenu() {
             .setTitle(getString(R.string.title_rename_key))
             .setMessage(getString(R.string.msg_move_data_to_new_key_and_delete_old_key))
             .setView(input)
-            .setPositiveButton(getString(R.string.title_rename), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    final String newKey = input.getText().toString().trim();
-                    if(newKey.isEmpty() || newKey.equals(oldKey)) return;
-                    
-                    final String dbPath = currentWorkingDbPath; // 传参 final
-                    
-                    new Thread(new Runnable(){
-                        public void run() {
-                            try {
-                                PlayerDbManager db = new PlayerDbManager(dbPath);
-                                // 1. 读旧
-                                byte[] data = db.readSpecificKey(oldKey);
-                                // 2. 写新
-                                db.writeSpecificKey(newKey, data);
-                                // 3. 删旧
-                                db.deleteKey(oldKey);
-                                db.close();
-                                
-                                runOnUiThread(onSuccess); // 回调刷新
-                            } catch(final Exception e) {
-                                runOnUiThread(new Runnable(){ public void run(){ toast(getString(R.string.toast_rename_failed_colon)+e);}});
-                            }
-                        }
-                    }).start();
-                }
+            .setPositiveButton(getString(R.string.title_rename), (d, w) -> {
+                final String newKey = input.getText().toString().trim();
+                if(newKey.isEmpty() || newKey.equals(oldKey)) return;
+
+                final String dbPath = currentWorkingDbPath; // 传参 final
+
+                new Thread(() -> {
+                    try {
+                        PlayerDbManager db = new PlayerDbManager(dbPath);
+                        // 1. 读旧
+                        byte[] data = db.readSpecificKey(oldKey);
+                        // 2. 写新
+                        db.writeSpecificKey(newKey, data);
+                        // 3. 删旧
+                        db.deleteKey(oldKey);
+                        db.close();
+
+                        runOnUiThread(onSuccess); // 回调刷新
+                    } catch(final Exception e) {
+                        runOnUiThread(() -> toast(getString(R.string.toast_rename_failed_colon)+e));
+                    }
+                }).start();
             })
             .setNegativeButton(getString(R.string.btn_cancel), null).show();
     }
@@ -3260,25 +3177,21 @@ private void showRootMenu() {
 
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_scanning), getString(R.string.msg_search_map_data), true);
         
-        new Thread(new Runnable(){
-            public void run(){
-                try {
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    List<String> rawList = db.listMapKeys();
-                    db.close();
-                    
-                    // 存入缓存
-                    cacheMapList = rawList;
-                    
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            loading.dismiss();
-                            showListDialogInternal(cacheMapList, TYPE_MAP);
-                        }
-                    });
-                } catch(final Exception e){
-                    runOnUiThread(new Runnable(){ public void run(){loading.dismiss(); toast(e.toString());}});
-                }
+        new Thread(() -> {
+            try {
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+                List<String> rawList = db.listMapKeys();
+                db.close();
+
+                // 存入缓存
+                cacheMapList = rawList;
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    showListDialogInternal(cacheMapList, TYPE_MAP);
+                });
+            } catch(final Exception e){
+                runOnUiThread(() -> {loading.dismiss(); toast(e.toString());});
             }
         }).start();
     }
@@ -3315,17 +3228,14 @@ private void showRootMenu() {
         if (key.equals("colors") && size >= 16384) {
             Button btnImport = new Button(this);
             btnImport.setText(getString(R.string.text_import_images_to_generate_map_images));
-            btnImport.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    // 暂存目标数组
-                    currentTargetMapArray = jsonArray;
-                    // 启动 SAF 选择器
-                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("image/*");
-                    startActivityForResult(intent, REQUEST_PICK_IMAGE_FOR_MAP);
-                }
+            btnImport.setOnClickListener(v -> {
+                // 暂存目标数组
+                currentTargetMapArray = jsonArray;
+                // 启动 SAF 选择器
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(intent, REQUEST_PICK_IMAGE_FOR_MAP);
             });
             layout.addView(btnImport);
         }
@@ -3334,38 +3244,27 @@ private void showRootMenu() {
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_manage_array) + key)
             .setView(layout) // 把刚才加了一堆东西的 layout 塞进去
-            .setPositiveButton(getString(R.string.btn_view_and_edit_clips), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    try {
-                        int start = Integer.parseInt(etStart.getText().toString());
-                        int count = Integer.parseInt(etCount.getText().toString());
-                        if (start < 0) start = 0;
-                        if (count > 2000) count = 2000; 
-                        if (start + count > size) count = size - start;
-                        
-                        showSubArrayEditDialog(key, jsonArray, start, count);
-                    } catch (NumberFormatException e) {
-                        toast(getString(R.string.toast_please_enter_valid_numbers));
-                    }
+            .setPositiveButton(getString(R.string.btn_view_and_edit_clips), (d, w) -> {
+                try {
+                    int start = Integer.parseInt(etStart.getText().toString());
+                    int count = Integer.parseInt(etCount.getText().toString());
+                    if (start < 0) start = 0;
+                    if (count > 2000) count = 2000;
+                    if (start + count > size) count = size - start;
+
+                    showSubArrayEditDialog(key, jsonArray, start, count);
+                } catch (NumberFormatException e) {
+                    toast(getString(R.string.toast_please_enter_valid_numbers));
                 }
             })
-            .setNeutralButton(getString(R.string.btn_full_export), new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface d, int w) {
-                    new Thread(new Runnable(){
-                        public void run(){
-                            final String content = jsonArray.toString();
-                            runOnUiThread(new Runnable(){
-                                public void run(){
-                                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Array", content));
-                                    toast(getString(R.string.toast_exported) + content.length() + getString(R.string.toast_characters_to_clipboard));
-                                }
-                            });
-                        }
-                    }).start();
-                }
-            })
+            .setNeutralButton(getString(R.string.btn_full_export), (d, w) -> new Thread(() -> {
+                final String content = jsonArray.toString();
+                runOnUiThread(() -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Array", content));
+                    toast(getString(R.string.toast_exported) + content.length() + getString(R.string.toast_characters_to_clipboard));
+                });
+            }).start())
             .setNegativeButton(getString(R.string.btn_close), null)
             .show();
     }
@@ -3389,30 +3288,27 @@ private void showRootMenu() {
             .setTitle(getString(R.string.title_edit_left_bracket) + start + " ~ " + (start + count - 1) + ")")
             .setView(input)
             .setMessage(getString(R.string.msg_comma_separated_format_click_save_after_modification))
-            .setPositiveButton(getString(R.string.btn_save_clip), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    try {
-                        JsonElement parsed = JsonParser.parseString(input.getText().toString());
-                        if (parsed.isJsonArray()) {
-                            JsonArray newPart = parsed.getAsJsonArray();
-                            if (newPart.size() != count) {
-                                toast(getString(R.string.toast_quantities_are_inconsistent_must_be_retained) + count + getString(R.string.toast_element_which_is_currently) + newPart.size());
-                                return; // 禁止修改数组长度（否则索引会对不上）
-                            }
-                            // 替换原数组中的内容
-                            for(int i = 0; i < count; i++) {
-                                originalArray.set(start + i, newPart.get(i));
-                            }
-                            
-                            // 刷新
-                            if(nbtAdapter!=null) nbtAdapter.notifyDataSetChanged();
-                            if(nbtTreeAdapter!=null) nbtTreeAdapter.notifyDataSetChanged();
-                            toast(getString(R.string.toast_clip_saved));
+            .setPositiveButton(getString(R.string.btn_save_clip), (d, w) -> {
+                try {
+                    JsonElement parsed = JsonParser.parseString(input.getText().toString());
+                    if (parsed.isJsonArray()) {
+                        JsonArray newPart = parsed.getAsJsonArray();
+                        if (newPart.size() != count) {
+                            toast(getString(R.string.toast_quantities_are_inconsistent_must_be_retained) + count + getString(R.string.toast_element_which_is_currently) + newPart.size());
+                            return; // 禁止修改数组长度（否则索引会对不上）
                         }
-                    } catch (Exception e) {
-                        toast(getString(R.string.err_format) + e.getMessage());
+                        // 替换原数组中的内容
+                        for(int i = 0; i < count; i++) {
+                            originalArray.set(start + i, newPart.get(i));
+                        }
+
+                        // 刷新
+                        if(nbtAdapter!=null) nbtAdapter.notifyDataSetChanged();
+                        if(nbtTreeAdapter!=null) nbtTreeAdapter.notifyDataSetChanged();
+                        toast(getString(R.string.toast_clip_saved));
                     }
+                } catch (Exception e) {
+                    toast(getString(R.string.err_format) + e.getMessage());
                 }
             })
             .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -3427,26 +3323,22 @@ private void showRootMenu() {
         }
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_scanning), getString(R.string.msg_search_village_data), true);
         
-        new Thread(new Runnable(){
-            public void run(){
-                try {
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    // 1. 获取并转存为 final 变量
-                    final List<String> rawList = db.listVillageKeys(); 
-                    db.close();
-                    
-                    cacheVillageList = rawList; 
-                    
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            loading.dismiss();
-                            // 2. 这里的 rawList 已经是 final 的了
-                            showListDialogInternal(rawList, TYPE_VILLAGE);
-                        }
-                    });
-                } catch(final Exception e){
-                    runOnUiThread(new Runnable(){ public void run(){loading.dismiss(); toast(e.toString());}});
-                }
+        new Thread(() -> {
+            try {
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+                // 1. 获取并转存为 final 变量
+                final List<String> rawList = db.listVillageKeys();
+                db.close();
+
+                cacheVillageList = rawList;
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    // 2. 这里的 rawList 已经是 final 的了
+                    showListDialogInternal(rawList, TYPE_VILLAGE);
+                });
+            } catch(final Exception e){
+                runOnUiThread(() -> {loading.dismiss(); toast(e.toString());});
             }
         }).start();
     }
@@ -3456,12 +3348,7 @@ private void showPuzzleWarningDialog() {
     new AlertDialog.Builder(this)
         .setTitle(getString(R.string.title_warning_inventory))
         .setMessage(getString(R.string.msg_warning_puzzle))
-        .setPositiveButton(getString(R.string.btn_i_understand_continue), new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                showPuzzleConfigDialog();
-            }
-        })
+        .setPositiveButton(getString(R.string.btn_i_understand_continue), (d, w) -> showPuzzleConfigDialog())
         .setNegativeButton(getString(R.string.btn_cancel), null)
         .show();
 }
@@ -3478,61 +3365,56 @@ private void showPuzzleWarningDialog() {
         
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_choose_puzzle_size))
-            .setItems(options, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    if (w == 0) { puzzleRows=1; puzzleCols=1; pickPuzzleImage(); }
-                    else if (w == 1) { puzzleRows=2; puzzleCols=2; pickPuzzleImage(); }
-                    else if (w == 2) { puzzleRows=3; puzzleCols=3; pickPuzzleImage(); }
-                    else if (w == 3) {
-                        // 自定义输入布局
-                        LinearLayout layout = new LinearLayout(MainActivity.this);
-                        layout.setOrientation(LinearLayout.HORIZONTAL);
-                        layout.setPadding(30, 20, 30, 0);
-                        
-                        final EditText etW = new EditText(MainActivity.this); 
-                        etW.setHint(getString(R.string.hint_width_col)); 
-                        etW.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-                        etW.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-                        
-                        final EditText etH = new EditText(MainActivity.this); 
-                        etH.setHint(getString(R.string.hint_height_row)); 
-                        etH.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-                        etH.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-                        
-                        layout.addView(etW); layout.addView(etH);
-                        
-                        new AlertDialog.Builder(MainActivity.this)
-                            .setTitle(getString(R.string.title_input_dimensions))
-                            .setView(layout)
-                            .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                                @Override public void onClick(DialogInterface dd, int ww) {
-                                    try {
-                                        String strW = etW.getText().toString();
-                                        String strH = etH.getText().toString();
-                                        
-                                        if (strW.isEmpty() || strH.isEmpty()) {
-                                            toast(getString(R.string.toast_please_enter_size)); return;
-                                        }
+            .setItems(options, (d, w) -> {
+                if (w == 0) { puzzleRows=1; puzzleCols=1; pickPuzzleImage(); }
+                else if (w == 1) { puzzleRows=2; puzzleCols=2; pickPuzzleImage(); }
+                else if (w == 2) { puzzleRows=3; puzzleCols=3; pickPuzzleImage(); }
+                else if (w == 3) {
+                    // 自定义输入布局
+                    LinearLayout layout = new LinearLayout(MainActivity.this);
+                    layout.setOrientation(LinearLayout.HORIZONTAL);
+                    layout.setPadding(30, 20, 30, 0);
 
-                                        puzzleCols = Integer.parseInt(strW);
-                                        puzzleRows = Integer.parseInt(strH);
-                                        
-                                        // 提示大尺寸
-                                        if (puzzleCols * puzzleRows > 100) {
-                                            // 使用 String.format 格式化字符串
-                                            String warning = getString(R.string.toast_huge_size_warning, (puzzleCols * puzzleRows));
-                                            toast(warning);
-                                        }
-                                        
-                                        pickPuzzleImage();
-                                        
-                                    } catch(Exception e) { 
-                                        toast(getString(R.string.toast_input_error) + e.getMessage()); 
-                                    }
+                    final EditText etW = new EditText(MainActivity.this);
+                    etW.setHint(getString(R.string.hint_width_col));
+                    etW.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+                    etW.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+
+                    final EditText etH = new EditText(MainActivity.this);
+                    etH.setHint(getString(R.string.hint_height_row));
+                    etH.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+                    etH.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+
+                    layout.addView(etW); layout.addView(etH);
+
+                    new AlertDialog.Builder(MainActivity.this)
+                        .setTitle(getString(R.string.title_input_dimensions))
+                        .setView(layout)
+                        .setPositiveButton(getString(R.string.btn_confirm), (dd, ww) -> {
+                            try {
+                                String strW = etW.getText().toString();
+                                String strH = etH.getText().toString();
+
+                                if (strW.isEmpty() || strH.isEmpty()) {
+                                    toast(getString(R.string.toast_please_enter_size)); return;
                                 }
-                            }).show();
-                    }
+
+                                puzzleCols = Integer.parseInt(strW);
+                                puzzleRows = Integer.parseInt(strH);
+
+                                // 提示大尺寸
+                                if (puzzleCols * puzzleRows > 100) {
+                                    // 使用 String.format 格式化字符串
+                                    String warning = getString(R.string.toast_huge_size_warning, (puzzleCols * puzzleRows));
+                                    toast(warning);
+                                }
+
+                                pickPuzzleImage();
+
+                            } catch(Exception e) {
+                                toast(getString(R.string.toast_input_error) + e.getMessage());
+                            }
+                        }).show();
                 }
             }).show();
     }
@@ -3549,350 +3431,350 @@ private void processPuzzleMap(final Uri imageUri) {
     final String currentFolderName = etWorldName.getText().toString();
     final ProgressDialog pd = ProgressDialog.show(this, getString(R.string.msg_in_preparation), getString(R.string.msg_analyzing_backpack), true);
 
-    new Thread(new Runnable() {
-        public void run() {
-            try {
-                // 1. 准备 DB 对象
-                final PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                byte[] playerData = db.readLocalPlayer();
-                List<String> mapKeys = db.listMapKeys();
+    new Thread(() -> {
+        try {
+            // 1. 准备 DB 对象
+            final PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+            byte[] playerData = db.readLocalPlayer();
+            List<String> mapKeys = db.listMapKeys();
 
-                // 2. 解析背包
-                JsonObject playerRoot = BedrockParser.parseBytes(playerData);
-                if (playerRoot == null) playerRoot = new JsonObject();
-                JsonObject invWrapper = playerRoot.getAsJsonObject("Inventory");
-                JsonArray inventory;
-                if (invWrapper == null) {
-                    invWrapper = new JsonObject();
-                    invWrapper.addProperty("t", 9);
-                    invWrapper.addProperty("itemType", 10);
-                    inventory = new JsonArray();
-                    invWrapper.add("v", inventory);
-                    playerRoot.add("Inventory", invWrapper);
-                } else {
-                    inventory = invWrapper.getAsJsonArray("v");
-                }
+            // 2. 解析背包
+            JsonObject playerRoot = BedrockParser.parseBytes(playerData);
+            if (playerRoot == null) playerRoot = new JsonObject();
+            JsonObject invWrapper = playerRoot.getAsJsonObject("Inventory");
+            JsonArray inventory;
+            if (invWrapper == null) {
+                invWrapper = new JsonObject();
+                invWrapper.addProperty("t", 9);
+                invWrapper.addProperty("itemType", 10);
+                inventory = new JsonArray();
+                invWrapper.add("v", inventory);
+                playerRoot.add("Inventory", invWrapper);
+            } else {
+                inventory = invWrapper.getAsJsonArray("v");
+            }
 
 // 3. 【修复】正确处理空槽位检测（识别空气/空物品）
 boolean[] occupiedSlots = new boolean[36]; // 0-35
 
 if (inventory != null) {
-    for (JsonElement item : inventory) {
-        try {
-            if (!item.isJsonObject()) continue;
-            JsonObject itemObj = item.getAsJsonObject();
-            
-            // 解包装获取实际内容
-            JsonObject itemContent = itemObj;
-            if (itemObj.has("v") && itemObj.get("v").isJsonObject()) {
-                itemContent = itemObj.getAsJsonObject("v");
+for (JsonElement item : inventory) {
+    try {
+        if (!item.isJsonObject()) continue;
+        JsonObject itemObj = item.getAsJsonObject();
+
+        // 解包装获取实际内容
+        JsonObject itemContent = itemObj;
+        if (itemObj.has("v") && itemObj.get("v").isJsonObject()) {
+            itemContent = itemObj.getAsJsonObject("v");
+        }
+
+        // 读取Slot位置
+        byte slot = -1;
+        if (itemContent.has("Slot")) {
+            JsonElement slotEl = itemContent.get("Slot");
+            if (slotEl.isJsonObject()) {
+                slot = slotEl.getAsJsonObject().get("v").getAsByte();
+            } else if (slotEl.isJsonPrimitive()) {
+                slot = slotEl.getAsByte();
             }
-            
-            // 读取Slot位置
-            byte slot = -1;
-            if (itemContent.has("Slot")) {
-                JsonElement slotEl = itemContent.get("Slot");
-                if (slotEl.isJsonObject()) {
-                    slot = slotEl.getAsJsonObject().get("v").getAsByte();
-                } else if (slotEl.isJsonPrimitive()) {
-                    slot = slotEl.getAsByte();
-                }
+        }
+        if (slot < 0 || slot >= 36) continue;
+
+        // 【关键】判断这个槽位是否真的被占用了（不是空气）
+        boolean isRealItem = true;
+
+        // 检查Name是否为空或空气
+        if (itemContent.has("Name")) {
+            JsonElement nameEl = itemContent.get("Name");
+            String name = "";
+            if (nameEl.isJsonObject() && nameEl.getAsJsonObject().has("v")) {
+                name = nameEl.getAsJsonObject().get("v").getAsString();
+            } else if (nameEl.isJsonPrimitive()) {
+                name = nameEl.getAsString();
             }
-            if (slot < 0 || slot >= 36) continue;
-            
-            // 【关键】判断这个槽位是否真的被占用了（不是空气）
-            boolean isRealItem = true;
-            
-            // 检查Name是否为空或空气
-            if (itemContent.has("Name")) {
-                JsonElement nameEl = itemContent.get("Name");
-                String name = "";
-                if (nameEl.isJsonObject() && nameEl.getAsJsonObject().has("v")) {
-                    name = nameEl.getAsJsonObject().get("v").getAsString();
-                } else if (nameEl.isJsonPrimitive()) {
-                    name = nameEl.getAsString();
-                }
-                if (name.isEmpty() || name.equals("minecraft:air")) {
-                    isRealItem = false;
-                }
+            if (name.isEmpty() || name.equals("minecraft:air")) {
+                isRealItem = false;
             }
-            
-            // 检查Count是否为0
-            if (isRealItem && itemContent.has("Count")) {
-                JsonElement countEl = itemContent.get("Count");
-                int count = 1; // 默认至少1个
-                if (countEl.isJsonObject() && countEl.getAsJsonObject().has("v")) {
-                    count = countEl.getAsJsonObject().get("v").getAsInt();
-                } else if (countEl.isJsonPrimitive()) {
-                    count = countEl.getAsInt();
-                }
-                if (count <= 0) {
-                    isRealItem = false;
-                }
+        }
+
+        // 检查Count是否为0
+        if (isRealItem && itemContent.has("Count")) {
+            JsonElement countEl = itemContent.get("Count");
+            int count = 1; // 默认至少1个
+            if (countEl.isJsonObject() && countEl.getAsJsonObject().has("v")) {
+                count = countEl.getAsJsonObject().get("v").getAsInt();
+            } else if (countEl.isJsonPrimitive()) {
+                count = countEl.getAsInt();
             }
-            
-            // 只有真正的物品才标记为占用
-            if (isRealItem) {
-                occupiedSlots[slot] = true;
+            if (count <= 0) {
+                isRealItem = false;
             }
-        } catch (Exception ignored) {}
-    }
+        }
+
+        // 只有真正的物品才标记为占用
+        if (isRealItem) {
+            occupiedSlots[slot] = true;
+        }
+    } catch (Exception ignored) {}
+}
 }
 
 // 寻找第一个空位
 byte freeSlot = -1;
 for (byte i = 0; i < 36; i++) {
-    if (!occupiedSlots[i]) {
-        freeSlot = i;
-        break;
-    }
+if (!occupiedSlots[i]) {
+    freeSlot = i;
+    break;
+}
 }
 
 if (freeSlot == -1) {
-    db.close();
-    throw new Exception(getString(R.string.msg_backpack_is_full_requires_at_least_1_open_space));
+db.close();
+throw new Exception(getString(R.string.msg_backpack_is_full_requires_at_least_1_open_space));
 }
 
 final byte finalFreeSlot = freeSlot;
 
-                // 4. 计算 ID
-                long maxMapId = -1;
-                for (String key : mapKeys) {
-                    String idStr = key.replace("map_", "");
-                    try {
-                        long id = Long.parseLong(idStr);
-                        if (id > maxMapId) maxMapId = id;
-                    } catch (Exception ignored) {}
-                }
-                final long startMapId = (maxMapId < 0) ? 0 : (maxMapId + 1);
-
-                // 5. 图片处理
-                java.io.InputStream is = getContentResolver().openInputStream(imageUri);
-                android.graphics.Bitmap rawSrc = android.graphics.BitmapFactory.decodeStream(is);
-                is.close();
-
-                if (rawSrc.getWidth() < puzzleCols || rawSrc.getHeight() < puzzleRows) {
-                    int newW = Math.max(rawSrc.getWidth(), puzzleCols);
-                    int newH = Math.max(rawSrc.getHeight(), puzzleRows);
-                    android.graphics.Bitmap scaledSrc = android.graphics.Bitmap.createScaledBitmap(rawSrc, newW, newH, true);
-                    rawSrc.recycle();
-                    rawSrc = scaledSrc;
-                }
-                final android.graphics.Bitmap src = rawSrc;
-
-                final int cellW = src.getWidth() / puzzleCols;
-                final int cellH = src.getHeight() / puzzleRows;
-                final int totalMaps = puzzleRows * puzzleCols;
-
-                final java.util.concurrent.ConcurrentHashMap<Integer, JsonObject> itemsMap =
-                    new java.util.concurrent.ConcurrentHashMap<Integer, JsonObject>();
-
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        pd.setMessage(getString(R.string.msg_high_performance_mode_starts) + totalMaps + getString(R.string.msg_map_write_to_database));
-                    }
-                });
-
-                int cores = Runtime.getRuntime().availableProcessors();
-                int threadCount = useMultiThreading ? Math.min(cores + 1, 8) : 1;
-                java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
-                final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(totalMaps);
-                final java.util.concurrent.atomic.AtomicReference<Throwable> errorRef =
-                    new java.util.concurrent.atomic.AtomicReference<Throwable>();
-
-                int globalIndex = 0;
-                for (int r = 0; r < puzzleRows; r++) {
-                    for (int c = 0; c < puzzleCols; c++) {
-                        final int fr = r;
-                        final int fc = c;
-                        final int fIndex = globalIndex;
-                        final long fMapId = startMapId + fIndex;
-
-                        executor.submit(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    if (errorRef.get() != null) return;
-
-                                    android.graphics.Bitmap chunk = android.graphics.Bitmap.createBitmap(
-                                        src, fc * cellW, fr * cellH, cellW, cellH);
-                                    android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(
-                                        chunk, 128, 128, true);
-
-                                    int[] pixels = new int[128 * 128];
-                                    scaled.getPixels(pixels, 0, 128, 0, 0, 128, 128);
-                                    
-                                    // RGBA 直写
-                                    JsonArray colorsArr = new JsonArray();
-                                    for (int p : pixels) {
-                                        colorsArr.add((byte) android.graphics.Color.red(p));
-                                        colorsArr.add((byte) android.graphics.Color.green(p));
-                                        colorsArr.add((byte) android.graphics.Color.blue(p));
-                                        colorsArr.add((byte) 255); // Alpha
-                                    }
-
-                                    JsonObject mapContent = new JsonObject();
-                                    JsonObject colorsTag = new JsonObject();
-                                    colorsTag.addProperty("t", 7);
-                                    colorsTag.add("v", colorsArr);
-                                    mapContent.add("colors", colorsTag);
-                                    
-                                    JsonObject decTag = new JsonObject();
-                                    decTag.addProperty("t", 9);
-                                    decTag.addProperty("itemType", 10);
-                                    decTag.add("v", new JsonArray());
-                                    mapContent.add("decorations", decTag);
-
-                                    mapContent.add("dimension", wrapTag(1, (byte) 0));
-                                    mapContent.add("fullyExplored", wrapTag(1, (byte) 1));
-                                    mapContent.add("mapLocked", wrapTag(1, (byte) 1));
-                                    mapContent.add("locked", wrapTag(1, (byte) 1));
-                                    mapContent.add("unlimitedTracking", wrapTag(1, (byte) 0));
-                                    mapContent.add("scale", wrapTag(1, (byte) 0));
-                                    mapContent.add("width", wrapTag(2, (short) 128));
-                                    mapContent.add("height", wrapTag(2, (short) 128));
-                                    mapContent.add("xCenter", wrapTag(3, 0));
-                                    mapContent.add("zCenter", wrapTag(3, 0));
-                                    mapContent.add("mapId", wrapTag(4, fMapId));
-                                    mapContent.add("parentMapId", wrapTag(4, -1L));
-
-                                    byte[] mapBytes = BedrockParser.writeToBytes(mapContent);
-
-                                    synchronized (db) {
-                                        db.writeSpecificKey("map_" + fMapId, mapBytes);
-                                    }
-
-                                    JsonObject itemContent = new JsonObject();
-                                    itemContent.add("Name", wrapTag(8, "minecraft:filled_map"));
-                                    itemContent.add("Count", wrapTag(1, (byte) 1));
-                                    itemContent.add("Damage", wrapTag(2, (short) 0));
-                                    itemContent.add("WasPickedUp", wrapTag(1, (byte) 0));
-
-                                    JsonObject tagTag = new JsonObject();
-                                    tagTag.addProperty("t", 10);
-                                    JsonObject tagContent = new JsonObject();
-                                    tagContent.add("map_uuid", wrapTag(4, fMapId));
-                                    tagContent.add("map_name_index", wrapTag(3, (int) fMapId));
-
-                                    JsonObject displayTag = new JsonObject();
-                                    displayTag.addProperty("t", 10);
-                                    JsonObject displayContent = new JsonObject();
-                                    displayContent.add("Name", wrapTag(8, "Puzzle " + (fr + 1) + "-" + (fc + 1)));
-                                    displayTag.add("v", displayContent);
-                                    tagContent.add("display", displayTag);
-                                    tagTag.add("v", tagContent);
-                                    itemContent.add("tag", tagTag);
-
-                                    itemsMap.put(fIndex, itemContent);
-
-                                    chunk.recycle();
-                                    scaled.recycle();
-                                } catch (Throwable e) {
-                                    errorRef.set(e);
-                                } finally {
-                                    latch.countDown();
-                                }
-                            }
-                        });
-                        globalIndex++;
-                    }
-                }
-
+            // 4. 计算 ID
+            long maxMapId = -1;
+            for (String key : mapKeys) {
+                String idStr = key.replace("map_", "");
                 try {
-                    latch.await();
-                } catch (InterruptedException e) {
-                    throw new Exception(getString(R.string.msg_interrupted));
-                }
-                executor.shutdown();
+                    long id = Long.parseLong(idStr);
+                    if (id > maxMapId) maxMapId = id;
+                } catch (Exception ignored) {}
+            }
+            final long startMapId = (maxMapId < 0) ? 0 : (maxMapId + 1);
 
-                if (errorRef.get() != null) {
-                    throw new Exception(getString(R.string.msg_processing_error_maybe_the_image_is_too_large) + ": " + errorRef.get().getMessage());
+            // 5. 图片处理
+            java.io.InputStream is = getContentResolver().openInputStream(imageUri);
+            android.graphics.Bitmap rawSrc = android.graphics.BitmapFactory.decodeStream(is);
+            is.close(); //暂时忽略
+
+            if (rawSrc.getWidth() < puzzleCols || rawSrc.getHeight() < puzzleRows) {
+                int newW = Math.max(rawSrc.getWidth(), puzzleCols);
+                int newH = Math.max(rawSrc.getHeight(), puzzleRows);
+                android.graphics.Bitmap scaledSrc = android.graphics.Bitmap.createScaledBitmap(rawSrc, newW, newH, true);
+                rawSrc.recycle();
+                rawSrc = scaledSrc;
+            }
+            final android.graphics.Bitmap src = rawSrc;
+
+            final int cellW = src.getWidth() / puzzleCols;
+            final int cellH = src.getHeight() / puzzleRows;
+            final int totalMaps = puzzleRows * puzzleCols;
+
+            final java.util.concurrent.ConcurrentHashMap<Integer, JsonObject> itemsMap =
+                    new java.util.concurrent.ConcurrentHashMap<>();
+
+            runOnUiThread(() -> pd.setMessage(getString(R.string.msg_high_performance_mode_starts) + totalMaps + getString(R.string.msg_map_write_to_database)));
+
+            int cores = Runtime.getRuntime().availableProcessors();
+            int threadCount = useMultiThreading ? Math.min(cores + 1, 8) : 1;
+            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+            final CountDownLatch latch = new CountDownLatch(totalMaps);
+            final AtomicReference<Throwable> errorRef =
+                    new AtomicReference<>();
+
+            int globalIndex = 0;
+            for (int r = 0; r < puzzleRows; r++) {
+                for (int c = 0; c < puzzleCols; c++) {
+                    final int fr = r;
+                    final int fc = c;
+                    final int fIndex = globalIndex;
+                    final long fMapId = startMapId + fIndex;
+
+                    executor.submit(() -> {
+                        try {
+                            if (errorRef.get() != null) return;
+
+                            android.graphics.Bitmap chunk = android.graphics.Bitmap.createBitmap(
+                                src, fc * cellW, fr * cellH, cellW, cellH);
+                            android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(
+                                chunk, 128, 128, true);
+
+                            int[] pixels = new int[128 * 128];
+                            scaled.getPixels(pixels, 0, 128, 0, 0, 128, 128);
+
+                            // RGBA 直写
+                            JsonArray colorsArr = new JsonArray();
+                            for (int p : pixels) {
+                                colorsArr.add((byte) Color.red(p));
+                                colorsArr.add((byte) Color.green(p));
+                                colorsArr.add((byte) Color.blue(p));
+                                colorsArr.add((byte) 255); // Alpha
+                            }
+
+                            JsonObject mapContent = new JsonObject();
+                            JsonObject colorsTag = new JsonObject();
+                            colorsTag.addProperty("t", 7);
+                            colorsTag.add("v", colorsArr);
+                            mapContent.add("colors", colorsTag);
+
+                            JsonObject decTag = new JsonObject();
+                            decTag.addProperty("t", 9);
+                            decTag.addProperty("itemType", 10);
+                            decTag.add("v", new JsonArray());
+                            mapContent.add("decorations", decTag);
+
+                            mapContent.add("dimension", wrapTag(1, (byte) 0));
+                            mapContent.add("fullyExplored", wrapTag(1, (byte) 1));
+                            mapContent.add("mapLocked", wrapTag(1, (byte) 1));
+                            mapContent.add("locked", wrapTag(1, (byte) 1));
+                            mapContent.add("unlimitedTracking", wrapTag(1, (byte) 0));
+                            mapContent.add("scale", wrapTag(1, (byte) 0));
+                            mapContent.add("width", wrapTag(2, (short) 128));
+                            mapContent.add("height", wrapTag(2, (short) 128));
+                            mapContent.add("xCenter", wrapTag(3, 0));
+                            mapContent.add("zCenter", wrapTag(3, 0));
+                            mapContent.add("mapId", wrapTag(4, fMapId));
+                            mapContent.add("parentMapId", wrapTag(4, -1L));
+
+                            byte[] mapBytes = BedrockParser.writeToBytes(mapContent);
+
+                            synchronized (db) {
+                                db.writeSpecificKey("map_" + fMapId, mapBytes);
+                            }
+
+                            JsonObject itemContent = new JsonObject();
+                            itemContent.add("Name", wrapTag(8, "minecraft:filled_map"));
+                            itemContent.add("Count", wrapTag(1, (byte) 1));
+                            itemContent.add("Damage", wrapTag(2, (short) 0));
+                            itemContent.add("WasPickedUp", wrapTag(1, (byte) 0));
+
+                            JsonObject tagTag = new JsonObject();
+                            tagTag.addProperty("t", 10);
+                            JsonObject tagContent = new JsonObject();
+                            tagContent.add("map_uuid", wrapTag(4, fMapId));
+                            tagContent.add("map_name_index", wrapTag(3, (int) fMapId));
+
+                            JsonObject displayTag = new JsonObject();
+                            displayTag.addProperty("t", 10);
+                            JsonObject displayContent = new JsonObject();
+                            displayContent.add("Name", wrapTag(8, "Puzzle " + (fr + 1) + "-" + (fc + 1)));
+                            displayTag.add("v", displayContent);
+                            tagContent.add("display", displayTag);
+                            tagTag.add("v", tagContent);
+                            itemContent.add("tag", tagTag);
+
+                            itemsMap.put(fIndex, itemContent);
+
+                            chunk.recycle();
+                            scaled.recycle();
+                        } catch (Throwable e) {
+                            errorRef.set(e);
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
+                    globalIndex++;
+                }
+            }
+
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new Exception(getString(R.string.msg_interrupted));
+            }
+            executor.shutdown();
+
+            if (errorRef.get() != null) {
+                throw new Exception(getString(R.string.msg_processing_error_maybe_the_image_is_too_large) + ": " + errorRef.get().getMessage());
+            }
+
+            src.recycle();
+
+            // 【核心修改】禁人塔式单链嵌套装箱
+            final int mapsPerLayer = 26;
+            final int totalLayers = (int) Math.ceil((double) totalMaps / mapsPerLayer);
+
+            // 从最底层开始构建（反向）
+            JsonObject currentContainer = null;
+
+            for (int layer = totalLayers - 1; layer >= 0; layer--) {
+                int startIdx = layer * mapsPerLayer;
+                int endIdx = Math.min(startIdx + mapsPerLayer, totalMaps);
+                int mapsInThisLayer = endIdx - startIdx;
+
+                // 创建这一层的盒子
+                JsonObject boxItem = new JsonObject();
+                boxItem.add("Name", wrapTag(8, "minecraft:undyed_shulker_box"));
+                boxItem.add("Count", wrapTag(1, (byte) 1));
+                boxItem.add("Damage", wrapTag(2, (short) 0));
+                boxItem.add("WasPickedUp", wrapTag(1, (byte) 0));
+
+                // Block标签
+                JsonObject blockTag = new JsonObject();
+                blockTag.addProperty("t", 10);
+                JsonObject blockContent = new JsonObject();
+                blockContent.add("name", wrapTag(8, "minecraft:undyed_shulker_box"));
+                JsonObject statesTag = new JsonObject();
+                statesTag.addProperty("t", 10);
+                statesTag.add("v", new JsonObject());
+                blockContent.add("states", statesTag);
+                blockContent.add("version", wrapTag(3, 18168865));
+                blockTag.add("v", blockContent);
+                boxItem.add("Block", blockTag);
+
+                // tag标签（包含Items）
+                JsonObject tagTag = new JsonObject();
+                tagTag.addProperty("t", 10);
+                JsonObject tagContent = new JsonObject();
+
+                JsonObject itemsListTag = new JsonObject();
+                itemsListTag.addProperty("t", 9);
+                itemsListTag.addProperty("itemType", 10);
+                JsonArray itemsArr = new JsonArray();
+
+                // Slot 0: 如果有下一层，放入子盒子
+                if (currentContainer != null) {
+                    JsonObject childBox = currentContainer.deepCopy();
+                    childBox.add("Slot", wrapTag(1, (byte) 0));
+                    itemsArr.add(childBox);
                 }
 
-                src.recycle();
-
-                // 【核心修改】禁人塔式单链嵌套装箱
-                final int mapsPerLayer = 26;
-                final int totalLayers = (int) Math.ceil((double) totalMaps / mapsPerLayer);
-                
-                // 从最底层开始构建（反向）
-                JsonObject currentContainer = null;
-                
-                for (int layer = totalLayers - 1; layer >= 0; layer--) {
-                    int startIdx = layer * mapsPerLayer;
-                    int endIdx = Math.min(startIdx + mapsPerLayer, totalMaps);
-                    int mapsInThisLayer = endIdx - startIdx;
-                    
-                    // 创建这一层的盒子
-                    JsonObject boxItem = new JsonObject();
-                    boxItem.add("Name", wrapTag(8, "minecraft:undyed_shulker_box"));
-                    boxItem.add("Count", wrapTag(1, (byte) 1));
-                    boxItem.add("Damage", wrapTag(2, (short) 0));
-                    boxItem.add("WasPickedUp", wrapTag(1, (byte) 0));
-                    
-                    // Block标签
-                    JsonObject blockTag = new JsonObject();
-                    blockTag.addProperty("t", 10);
-                    JsonObject blockContent = new JsonObject();
-                    blockContent.add("name", wrapTag(8, "minecraft:undyed_shulker_box"));
-                    JsonObject statesTag = new JsonObject();
-                    statesTag.addProperty("t", 10);
-                    statesTag.add("v", new JsonObject());
-                    blockContent.add("states", statesTag);
-                    blockContent.add("version", wrapTag(3, 18168865));
-                    blockTag.add("v", blockContent);
-                    boxItem.add("Block", blockTag);
-                    
-                    // tag标签（包含Items）
-                    JsonObject tagTag = new JsonObject();
-                    tagTag.addProperty("t", 10);
-                    JsonObject tagContent = new JsonObject();
-                    
-                    JsonObject itemsListTag = new JsonObject();
-                    itemsListTag.addProperty("t", 9);
-                    itemsListTag.addProperty("itemType", 10);
-                    JsonArray itemsArr = new JsonArray();
-                    
-                    // Slot 0: 如果有下一层，放入子盒子
-                    if (currentContainer != null) {
-                        JsonObject childBox = currentContainer.deepCopy();
-                        childBox.add("Slot", wrapTag(1, (byte) 0));
-                        itemsArr.add(childBox);
+                // Slot 1-26: 放入地图
+                for (int i = 0; i < mapsInThisLayer; i++) {
+                    int mapIdx = startIdx + i;
+                    JsonObject mapItem = itemsMap.get(mapIdx);
+                    if (mapItem == null) {
+                        throw new Exception(getString(R.string.msg_slice_missing) + mapIdx);
                     }
-                    
-                    // Slot 1-26: 放入地图
-                    for (int i = 0; i < mapsInThisLayer; i++) {
-                        int mapIdx = startIdx + i;
-                        JsonObject mapItem = itemsMap.get(mapIdx).deepCopy();
-                        mapItem.add("Slot", wrapTag(1, (byte) (i + 1)));
-                        itemsArr.add(mapItem);
-                    }
-                    
-                    itemsListTag.add("v", itemsArr);
-                    tagContent.add("Items", itemsListTag);
-                    
-                    // 显示名称
-                    JsonObject displayTag = new JsonObject();
-                    displayTag.addProperty("t", 10);
-                    JsonObject displayContent = new JsonObject();
-                    if (layer == 0) {
-                        displayContent.add("Name", wrapTag(8, "Puzzle Set (" + totalMaps + " maps, " + totalLayers + " layers)"));
-                    } else {
-                        displayContent.add("Name", wrapTag(8, "Layer " + layer + " →"));
-                    }
-                    displayTag.add("v", displayContent);
-                    tagContent.add("display", displayTag);
-                    
-                    tagTag.add("v", tagContent);
-                    boxItem.add("tag", tagTag);
-                    
-                    currentContainer = boxItem;
+                    mapItem = mapItem.deepCopy();
+                    mapItem.add("Slot", wrapTag(1, (byte) (i + 1)));
+                    itemsArr.add(mapItem);
                 }
-                
+
+                itemsListTag.add("v", itemsArr);
+                tagContent.add("Items", itemsListTag);
+
+                // 显示名称
+                JsonObject displayTag = new JsonObject();
+                displayTag.addProperty("t", 10);
+                JsonObject displayContent = new JsonObject();
+                if (layer == 0) {
+                    displayContent.add("Name", wrapTag(8, "Puzzle Set (" + totalMaps + " maps, " + totalLayers + " layers)"));
+                } else {
+                    displayContent.add("Name", wrapTag(8, "Layer " + layer + " →"));
+                }
+                displayTag.add("v", displayContent);
+                tagContent.add("display", displayTag);
+
+                tagTag.add("v", tagContent);
+                boxItem.add("tag", tagTag);
+
+                currentContainer = boxItem;
+            }
+
 // 最终的顶层盒子放入找到的空位（不再是硬编码的Slot 0）
-JsonObject finalBox = currentContainer.deepCopy();
+            if (currentContainer == null) {
+                throw new Exception("装箱失败：容器为空");
+            }
+            JsonObject finalBox = currentContainer.deepCopy();
 finalBox.add("Slot", wrapTag(1, finalFreeSlot)); // 使用找到的空位
-inventory.add(finalBox);
+inventory.add(finalBox); //暂时忽略
+
 
 // 保存玩家数据
 byte[] newPlayerData = BedrockParser.writeToBytes(playerRoot);
@@ -3905,45 +3787,40 @@ final JsonObject finalPlayerRoot = playerRoot;
 final long finalStartId = startMapId;
 final int finalTotalLayers = totalLayers;
 
-runOnUiThread(new Runnable() {
-    public void run() {
-        pd.dismiss();
-        String msg = getString(R.string.msg_success) + totalMaps + getString(R.string.msg_maps_have_been_packed) +
-                getString(R.string.msg_nesting_depth) + finalTotalLayers + getString(R.string.msg_layer) +
-                getString(R.string.msg_backpack_only_1_slot) +
-                getString(R.string.msg_start_id)+ finalStartId + "+\n\n" +
-                getString(R.string.open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes);
-        toast(msg);
-        
-        cacheMapList = null;
-        isEditingPlayer = true;
-        currentTargetKey = "~local_player";
-        // 【修改这里】使用 final 变量
-        rootNbtData = finalPlayerRoot;
-        nbtDataCache.put("~local_player", finalPlayerRoot);
-        navigationStack.clear();
-        pathStack.clear();
-        scrollPositionStack.clear();
-        updateAdapter(rootNbtData);
-        if (tvCurrentPath != null)
-            tvCurrentPath.setText(getString(R.string.text_player_data_has_been_modified));
-    }
+runOnUiThread(() -> {
+    pd.dismiss();
+    String msg = getString(R.string.msg_success) + totalMaps + getString(R.string.msg_maps_have_been_packed) +
+            getString(R.string.msg_nesting_depth) + finalTotalLayers + getString(R.string.msg_layer) +
+            getString(R.string.msg_backpack_only_1_slot) +
+            getString(R.string.msg_start_id)+ finalStartId + "+\n\n" +
+            getString(R.string.open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes);
+    toast(msg);
+
+    cacheMapList = null;
+    isEditingPlayer = true;
+    currentTargetKey = "~local_player";
+    // 【修改这里】使用 final 变量
+    rootNbtData = finalPlayerRoot;
+    nbtDataCache.put("~local_player", finalPlayerRoot);
+    navigationStack.clear();
+    pathStack.clear();
+    scrollPositionStack.clear();
+    updateAdapter(rootNbtData);
+    if (tvCurrentPath != null)
+        tvCurrentPath.setText(getString(R.string.text_player_data_has_been_modified));
 });
 
-            } catch (final Exception e) {
-                e.printStackTrace();
-                final String fullStack = getFullStackTrace(e);
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        pd.dismiss();
-                        new AlertDialog.Builder(MainActivity.this)
-                            .setTitle(getString(R.string.title_operation_failed))
-                            .setMessage(fullStack)
-                            .setPositiveButton(getString(R.string.btn_close), null)
-                            .show();
-                    }
-                });
-            }
+        } catch (final Exception e) {
+            e.printStackTrace();
+            final String fullStack = getFullStackTrace(e);
+            runOnUiThread(() -> {
+                pd.dismiss();
+                new AlertDialog.Builder(MainActivity.this)
+                    .setTitle(getString(R.string.title_operation_failed))
+                    .setMessage(fullStack)
+                    .setPositiveButton(getString(R.string.btn_close), null)
+                    .show();
+            });
         }
     }).start();
 }
@@ -4143,100 +4020,83 @@ runOnUiThread(new Runnable() {
         tvTitle.setText(baseTitle + " (" + dataList.size() + ")");
         
         // === [修改] 批量删除按钮点击事件 ===
-        btnBatchDelete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // 1. 如果当前不是选择模式 -> 开启选择模式
-                if (!adapter.isSelectionMode()) {
-                    adapter.setSelectionMode(true);
-                    toast(getString(R.string.toast_please_check_the_items_you_want_to_delete));
-                    return;
-                }
-                
-                // 2. 如果已经是选择模式 -> 检查是否有选中项
-                final List<String> toDelete = adapter.getSelectedList();
-                
-                // 如果没选任何东西，再次点击垃圾桶视为“取消/退出模式”
-                if (toDelete.isEmpty()) {
-                    adapter.setSelectionMode(false);
-                    toast(getString(R.string.toast_exited_from_batch_management));
-                    return;
-                }
-                
-                // 3. 有选中项 -> 弹出确认删除
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle(getString(R.string.title_batch_delete))
-                    .setMessage(getString(R.string.msg_are_you_sure_you_want_to_delete_the_selected) + toDelete.size() + getString(R.string.msg_item_this_action_is_irreversible))
-                    .setPositiveButton(getString(R.string.btn_delete), new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d, int w) {
-                            final ProgressDialog pd = ProgressDialog.show(MainActivity.this, getString(R.string.msg_processing_ing), getString(R.string.msg_are_deleting), true);
-                            final String dbPath = currentWorkingDbPath;
-                            
-                            new Thread(new Runnable(){
-                                public void run(){
-                                    try {
-                                        PlayerDbManager db = new PlayerDbManager(dbPath);
-                                        for(String key : toDelete) {
-                                            db.deleteKey(key);
-                                        }
-                                        db.close();
-                                        
-                                        runOnUiThread(new Runnable(){
-                                            public void run(){
-                                                pd.dismiss();
-                                                for(String key : toDelete) {
-                                                    adapter.remove(key); 
-                                                    dataList.remove(key); 
-                                                }
-                                                // 删除完成后，自动退出选择模式
-                                                adapter.setSelectionMode(false);
-                                                
-                                                tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
-                                                toast(getString(R.string.toast_successfully_deleted) + toDelete.size() + getString(R.string.toast_deleted_item));
-                                            }
-                                        });
-                                    } catch(Exception e) {
-                                        final String errorMsg = e.toString();
-                                        runOnUiThread(new Runnable(){ public void run(){ pd.dismiss(); toast(getString(R.string.toast_delete_failed)+errorMsg); }});
-                                    }
-                                }
-                            }).start();
-                        }
-                    })
-                    .setNegativeButton(getString(R.string.btn_cancel), null)
-                    .show();
+        btnBatchDelete.setOnClickListener(v -> {
+            // 1. 如果当前不是选择模式 -> 开启选择模式
+            if (!adapter.isSelectionMode()) {
+                adapter.setSelectionMode(true);
+                toast(getString(R.string.toast_please_check_the_items_you_want_to_delete));
+                return;
             }
+
+            // 2. 如果已经是选择模式 -> 检查是否有选中项
+            final List<String> toDelete = adapter.getSelectedList();
+
+            // 如果没选任何东西，再次点击垃圾桶视为“取消/退出模式”
+            if (toDelete.isEmpty()) {
+                adapter.setSelectionMode(false);
+                toast(getString(R.string.toast_exited_from_batch_management));
+                return;
+            }
+
+            // 3. 有选中项 -> 弹出确认删除
+            new AlertDialog.Builder(MainActivity.this)
+                .setTitle(getString(R.string.title_batch_delete))
+                .setMessage(getString(R.string.msg_are_you_sure_you_want_to_delete_the_selected) + toDelete.size() + getString(R.string.msg_item_this_action_is_irreversible))
+                .setPositiveButton(getString(R.string.btn_delete), (d, w) -> {
+                    final ProgressDialog pd = ProgressDialog.show(MainActivity.this, getString(R.string.msg_processing_ing), getString(R.string.msg_are_deleting), true);
+                    final String dbPath = currentWorkingDbPath;
+
+                    new Thread(() -> {
+                        try {
+                            PlayerDbManager db = new PlayerDbManager(dbPath);
+                            for(String key : toDelete) {
+                                db.deleteKey(key);
+                            }
+                            db.close();
+
+                            runOnUiThread(() -> {
+                                pd.dismiss();
+                                for(String key : toDelete) {
+                                    adapter.remove(key);
+                                    dataList.remove(key);
+                                }
+                                // 删除完成后，自动退出选择模式
+                                adapter.setSelectionMode(false);
+
+                                tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
+                                toast(getString(R.string.toast_successfully_deleted) + toDelete.size() + getString(R.string.toast_deleted_item));
+                            });
+                        } catch(Exception e) {
+                            final String errorMsg = e.toString();
+                            runOnUiThread(() -> { pd.dismiss(); toast(getString(R.string.toast_delete_failed)+errorMsg); });
+                        }
+                    }).start();
+                })
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show();
         });
 
         // 搜索按钮
-        btnSearch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (searchContainer.getVisibility() == View.VISIBLE) {
-                    searchContainer.setVisibility(View.GONE);
-                    etSearch.setText(""); 
-                    adapter.getFilter().filter(null); 
+        btnSearch.setOnClickListener(v -> {
+            if (searchContainer.getVisibility() == View.VISIBLE) {
+                searchContainer.setVisibility(View.GONE);
+                etSearch.setText("");
+                adapter.getFilter().filter(null);
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+            } else {
+                searchContainer.setVisibility(View.VISIBLE);
+                etSearch.setFocusable(true);
+                etSearch.setFocusableInTouchMode(true);
+                etSearch.requestFocus();
+                etSearch.postDelayed(() -> {
                     android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-                } else {
-                    searchContainer.setVisibility(View.VISIBLE);
-                    etSearch.setFocusable(true);
-                    etSearch.setFocusableInTouchMode(true);
-                    etSearch.requestFocus();
-                    etSearch.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                            if (imm != null) imm.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0);
-                        }
-                    }, 200);
-                }
+                    if (imm != null) imm.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0);
+                }, 200);
             }
         });
         
-        btnClear.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { etSearch.setText(""); }
-        });
+        btnClear.setOnClickListener(v -> etSearch.setText(""));
         
         etSearch.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -4250,79 +4110,64 @@ runOnUiThread(new Runnable() {
 
         final AlertDialog dialog = new AlertDialog.Builder(MainActivity.this)
             .setCustomTitle(customTitleView)
-            .setNeutralButton(getString(R.string.btn_more_actions), new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface d, int which) {
-                    showPlayerRootMenu(dataList, null, type); 
-                }
-            })
+            .setNeutralButton(getString(R.string.btn_more_actions), (d, which) -> showPlayerRootMenu(dataList, null, type))
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .setView(container)
             .create();
-            
-        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override public void onShow(DialogInterface d) {
-                dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-                dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+
+        dialog.setOnShowListener(d -> {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+                window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
             }
         });
 
         // 列表点击事件 (为了更好的体验，在选择模式下，点击文字也相当于勾选)
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override public void onItemClick(AdapterView<?> p, View v, int pos, long id) {
-                String selectedKey = adapter.getItem(pos);
-                
-                // 【核心优化】如果是选择模式，点击行 = 勾选/取消勾选
-                if (adapter.isSelectionMode()) {
-                    android.widget.CheckBox cb = v.findViewById(R.id.cb_item_select);
-                    cb.performClick(); // 模拟点击 CheckBox
-                    return; // 不进入编辑
-                }
-                
-                // 正常模式：加载编辑
-                loadSpecificPlayer(selectedKey); 
-                dialog.dismiss();
-                View sidebar = findViewById(R.id.custom_sidebar_container);
-                if (sidebar != null) sidebar.setVisibility(View.GONE);
+        listView.setOnItemClickListener((p, v, pos, id) -> {
+            String selectedKey = adapter.getItem(pos);
+
+            // 【核心优化】如果是选择模式，点击行 = 勾选/取消勾选
+            if (adapter.isSelectionMode()) {
+                CheckBox cb = v.findViewById(R.id.cb_item_select);
+                cb.performClick(); // 模拟点击 CheckBox
+                return; // 不进入编辑
             }
+
+            // 正常模式：加载编辑
+            loadSpecificPlayer(selectedKey);
+            dialog.dismiss();
+            View sidebar = findViewById(R.id.custom_sidebar_container);
+            if (sidebar != null) sidebar.setVisibility(View.GONE);
         });
 
         // 列表长按 (保留)
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override public boolean onItemLongClick(AdapterView<?> p, View v, final int pos, long id) {
-                // 如果在选择模式，长按不触发菜单，避免冲突
-                if (adapter.isSelectionMode()) return false;
-                
-                final String targetKey = adapter.getItem(pos);
-                String[] ops = {getString(R.string.msg_list_long_press_copy_data_json), getString(R.string.msg_list_long_press_paste_overlay), getString(R.string.msg_list_long_press_rename), getString(R.string.msg_list_long_press_delete)};
-                
-                new AlertDialog.Builder(MainActivity.this).setTitle(getString(R.string.title_manage_prefix) + targetKey)
-                    .setItems(ops, new DialogInterface.OnClickListener() {
-                        @Override public void onClick(DialogInterface d, int w) {
-                            if (w == 0) copyPlayerJson(targetKey);
-                            else if (w == 1) pastePlayerJson(targetKey, new Runnable(){ 
-                                public void run() { loadSpecificPlayer(targetKey); dialog.dismiss(); }
-                            });
-                            else if (w == 2) renamePlayerKey(targetKey, new Runnable(){ 
-                                public void run() { 
-                                    invalidateListCache(type); 
-                                    dialog.dismiss(); 
-                                    if(type==TYPE_MAP) showMapListDialog();
-                                    else if(type==TYPE_VILLAGE) showVillageListDialog();
-                                    else showMultiPlayerDialog();
-                                    toast(getString(R.string.toast_rename_successful)); 
-                                }
-                            });
-                            else if (w == 3) deletePlayerKey(targetKey, new Runnable(){ 
-                                public void run() { 
-                                    adapter.remove(targetKey);
-                                    dataList.remove(targetKey);
-                                    tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
-                                }
-                            });
-                        }
-                    }).show();
-                return true;
-            }
+        listView.setOnItemLongClickListener((p, v, pos, id) -> {
+            // 如果在选择模式，长按不触发菜单，避免冲突
+            if (adapter.isSelectionMode()) return false;
+
+            final String targetKey = adapter.getItem(pos);
+            String[] ops = {getString(R.string.msg_list_long_press_copy_data_json), getString(R.string.msg_list_long_press_paste_overlay), getString(R.string.msg_list_long_press_rename), getString(R.string.msg_list_long_press_delete)};
+
+            new AlertDialog.Builder(MainActivity.this).setTitle(getString(R.string.title_manage_prefix) + targetKey)
+                .setItems(ops, (d, w) -> {
+                    if (w == 0) copyPlayerJson(targetKey);
+                    else if (w == 1) pastePlayerJson(targetKey, () -> { loadSpecificPlayer(targetKey); dialog.dismiss(); });
+                    else if (w == 2) renamePlayerKey(targetKey, () -> {
+                        invalidateListCache(type);
+                        dialog.dismiss();
+                        if(type==TYPE_MAP) showMapListDialog();
+                        else if(type==TYPE_VILLAGE) showVillageListDialog();
+                        else showMultiPlayerDialog();
+                        toast(getString(R.string.toast_rename_successful));
+                    });
+                    else if (w == 3) deletePlayerKey(targetKey, () -> {
+                        adapter.remove(targetKey);
+                        dataList.remove(targetKey);
+                        tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
+                    });
+                }).show();
+            return true;
         });
         
         dialog.show();
@@ -4391,12 +4236,9 @@ runOnUiThread(new Runnable() {
             }
             
             // 复选框点击事件
-            cb.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (cb.isChecked()) selectedItems.add(currentKey);
-                    else selectedItems.remove(currentKey);
-                }
+            cb.setOnClickListener(v -> {
+                if (cb.isChecked()) selectedItems.add(currentKey);
+                else selectedItems.remove(currentKey);
             });
 
             return convertView;
@@ -4466,10 +4308,8 @@ runOnUiThread(new Runnable() {
             .setTitle(getString(R.string.title_search_nbt_data))
             .setView(container)
             .setPositiveButton(getString(R.string.btn_close), null)
-            .setNeutralButton(getString(R.string.btn_clear_filter), new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface d, int w) {
-                    if (nbtAdapter != null) nbtAdapter.filter(null);
-                }
+            .setNeutralButton(getString(R.string.btn_clear_filter), (d, w) -> {
+                if (nbtAdapter != null) nbtAdapter.filter(null);
             })
             .create();
 
@@ -4485,14 +4325,12 @@ runOnUiThread(new Runnable() {
         });
         
         // 自动弹键盘
-        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override public void onShow(DialogInterface d) {
-                etSearch.setFocusable(true);
-                etSearch.setFocusableInTouchMode(true);
-                etSearch.requestFocus();
-                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                if (imm != null) imm.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0);
-            }
+        dialog.setOnShowListener(d -> {
+            etSearch.setFocusable(true);
+            etSearch.setFocusableInTouchMode(true);
+            etSearch.requestFocus();
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.toggleSoftInput(android.view.inputmethod.InputMethodManager.SHOW_FORCED, 0);
         });
 
         dialog.show();
@@ -4601,15 +4439,12 @@ runOnUiThread(new Runnable() {
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_open_nbt_by_name))
             .setView(layout)
-            .setPositiveButton(getString(R.string.btn_confirm), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    String input = etKey.getText().toString();
-                    if (input.isEmpty()) { toast(getString(R.string.toast_input_cannot_be_empty)); return; }
-                    
-                    boolean isHex = cbHex.isChecked();
-                    loadCustomKey(input, isHex);
-                }
+            .setPositiveButton(getString(R.string.btn_confirm), (d, w) -> {
+                String input = etKey.getText().toString();
+                if (input.isEmpty()) { toast(getString(R.string.toast_input_cannot_be_empty)); return; }
+
+                boolean isHex = cbHex.isChecked();
+                loadCustomKey(input, isHex);
             })
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show();
@@ -4619,63 +4454,56 @@ runOnUiThread(new Runnable() {
     private void loadCustomKey(final String inputStr, final boolean isHex) {
         final ProgressDialog pd = ProgressDialog.show(this, getString(R.string.msg_read), getString(R.string.msg_querying), true);
         
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
-                    
-                    byte[] keyBytes;
-                    if (isHex) {
-                        // Hex 模式：将字符串转为 byte[]
-                        try {
-                            keyBytes = hexStringToByteArray(inputStr);
-                        } catch (Exception e) {
-                            throw new Exception(getString(R.string.msg_hex_format_error));
-                        }
-                    } else {
-                        // 普通文本模式：UTF-8
-                        keyBytes = inputStr.getBytes("UTF-8");
+        new Thread(() -> {
+            try {
+                PlayerDbManager db = new PlayerDbManager(currentWorkingDbPath);
+
+                byte[] keyBytes;
+                if (isHex) {
+                    // Hex 模式：将字符串转为 byte[]
+                    try {
+                        keyBytes = hexStringToByteArray(inputStr);
+                    } catch (Exception e) {
+                        throw new Exception(getString(R.string.msg_hex_format_error));
                     }
-                    
-                    // 读取数据
-                    byte[] data = db.readRawKey(keyBytes);
-                    db.close();
-                    
-                    // 解析 NBT
-                    final JsonObject json = BedrockParser.parseBytes(data);
-                    
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            pd.dismiss();
-                            
-                            // 更新界面
-                            isEditingPlayer = true;
-                            // 注意：如果是 Hex 模式，保存时可能需要特殊处理，
-                            // 但为了简单，这里暂时把 Key 设为输入值。
-                            // 如果是 Hex，保存逻辑可能会因为 writeSpecificKey 把 Hex 字符串当成普通字符串写回去而导致 Key 变动。
-                            // 这是一个已知限制，普通文本 Key 不受影响。
-                            currentTargetKey = inputStr; 
-                            
-                            rootNbtData = json;
-                            navigationStack.clear();
-                            pathStack.clear();
-                            scrollPositionStack.clear();
-                            updateAdapter(rootNbtData);
-                            
-                            if(tvCurrentPath != null) {
-                                String type = isHex ? "[Hex] " : "";
-                                tvCurrentPath.setText(getString(R.string.title_current) + type + inputStr);
-                            }
-                            toast(getString(R.string.toast_loading_successfully));
-                        }
-                    });
-                    
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable() { 
-                        @Override public void run() { pd.dismiss(); toast(getString(R.string.err_load_failed) + e.getMessage()); }
-                    });
+                } else {
+                    // 普通文本模式：UTF-8
+                    keyBytes = inputStr.getBytes("UTF-8");
                 }
+
+                // 读取数据
+                byte[] data = db.readRawKey(keyBytes);
+                db.close();
+
+                // 解析 NBT
+                final JsonObject json = BedrockParser.parseBytes(data);
+
+                runOnUiThread(() -> {
+                    pd.dismiss();
+
+                    // 更新界面
+                    isEditingPlayer = true;
+                    // 注意：如果是 Hex 模式，保存时可能需要特殊处理，
+                    // 但为了简单，这里暂时把 Key 设为输入值。
+                    // 如果是 Hex，保存逻辑可能会因为 writeSpecificKey 把 Hex 字符串当成普通字符串写回去而导致 Key 变动。
+                    // 这是一个已知限制，普通文本 Key 不受影响。
+                    currentTargetKey = inputStr;
+
+                    rootNbtData = json;
+                    navigationStack.clear();
+                    pathStack.clear();
+                    scrollPositionStack.clear();
+                    updateAdapter(rootNbtData);
+
+                    if(tvCurrentPath != null) {
+                        String type = isHex ? "[Hex] " : "";
+                        tvCurrentPath.setText(getString(R.string.title_current) + type + inputStr);
+                    }
+                    toast(getString(R.string.toast_loading_successfully));
+                });
+
+            } catch (final Exception e) {
+                runOnUiThread(() -> { pd.dismiss(); toast(getString(R.string.err_load_failed) + e.getMessage()); });
             }
         }).start();
     }
@@ -4687,18 +4515,10 @@ runOnUiThread(new Runnable() {
             .setMessage(getString(R.string.msg_corrupt_or_missing_leveldb_data_file_detected) +
                         getString(R.string.msg_have_you_tried_a_brute_force_repair) +
                         getString(R.string.msg_warning_repair_process_may_discard_unreadable_data_blocks))
-            .setPositiveButton(getString(R.string.btn_try_to_fix), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    performDbRepair(dbPath, folderName, originalSuccessTask);
-                }
-            })
-            .setNegativeButton(getString(R.string.btn_cancel), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface d, int w) {
-                    toast(getString(R.string.toast_operation_canceled_please_check_archive_integrity));
-                    // 可以在这里做一些清理工作，比如把那个坏的 working_db 删了
-                }
+            .setPositiveButton(getString(R.string.btn_try_to_fix), (d, w) -> performDbRepair(dbPath, folderName, originalSuccessTask))
+            .setNegativeButton(getString(R.string.btn_cancel), (d, w) -> {
+                toast(getString(R.string.toast_operation_canceled_please_check_archive_integrity));
+                // 可以在这里做一些清理工作，比如把那个坏的 working_db 删了
             })
             .setCancelable(false) // 禁止点击外部关闭，必须选一个
             .show();
@@ -4708,42 +4528,36 @@ runOnUiThread(new Runnable() {
     private void performDbRepair(final String dbPath, final String folderName, final Runnable originalSuccessTask) {
         final ProgressDialog pd = ProgressDialog.show(this, getString(R.string.msg_under_repair), getString(R.string.msg_trying_to_rebuild_data_index), true);
         
-        new Thread(new Runnable(){
-            public void run(){
-                try {
-                    // 调用静态修复方法
-                    PlayerDbManager.tryRepair(dbPath);
-                    
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            pd.dismiss();
-                            toast(getString(R.string.toast_repair_completed_trying_to_load_again));
-                            // 修复成功后，递归调用 loadPlayerData 重新走一遍流程
-                            // 注意：这里我们不需要重新复制文件了，直接用修好的 dbPath 
-                            // 但为了逻辑简单，重新调用 loadPlayerData 是最稳妥的（虽然会再次触发复制逻辑，但无伤大雅）
-                            // 更好的方式是直接跳到读取步骤，但鉴于 loadPlayerData 结构复杂，
-                            // 我们这里选择让用户手动重试或者自动重试
-                            
-                            // 这里的自动重试有点复杂，因为 loadPlayerData 会生成新的 working_db
-                            // 所以这里我们其实应该直接 再次尝试打开 DB 并显示
-                            
-                            // 简便方案：直接重新执行 loadPlayerData
-                            // 这里的风险是：重新复制会不会把刚才修好的文件覆盖了？
-                            // 答案是：会的！因为 loadPlayerData 会重新从源目录 cp。
-                            // 所以，修复必须是在 working_db 上修复，然后立即读取，不能重走 loadPlayerData。
-                            
-                            // === 修正方案：手动触发读取流程 ===
-                            retryLoadAfterRepair(dbPath, folderName);
-                        }
-                    });
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            pd.dismiss();
-                            toast(getString(R.string.toast_repair_failed) + e.getMessage());
-                        }
-                    });
-                }
+        new Thread(() -> {
+            try {
+                // 调用静态修复方法
+                PlayerDbManager.tryRepair(dbPath);
+
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    toast(getString(R.string.toast_repair_completed_trying_to_load_again));
+                    // 修复成功后，递归调用 loadPlayerData 重新走一遍流程
+                    // 注意：这里我们不需要重新复制文件了，直接用修好的 dbPath
+                    // 但为了逻辑简单，重新调用 loadPlayerData 是最稳妥的（虽然会再次触发复制逻辑，但无伤大雅）
+                    // 更好的方式是直接跳到读取步骤，但鉴于 loadPlayerData 结构复杂，
+                    // 我们这里选择让用户手动重试或者自动重试
+
+                    // 这里的自动重试有点复杂，因为 loadPlayerData 会生成新的 working_db
+                    // 所以这里我们其实应该直接 再次尝试打开 DB 并显示
+
+                    // 简便方案：直接重新执行 loadPlayerData
+                    // 这里的风险是：重新复制会不会把刚才修好的文件覆盖了？
+                    // 答案是：会的！因为 loadPlayerData 会重新从源目录 cp。
+                    // 所以，修复必须是在 working_db 上修复，然后立即读取，不能重走 loadPlayerData。
+
+                    // === 修正方案：手动触发读取流程 ===
+                    retryLoadAfterRepair(dbPath, folderName);
+                });
+            } catch (final Exception e) {
+                runOnUiThread(() -> {
+                    pd.dismiss();
+                    toast(getString(R.string.toast_repair_failed) + e.getMessage());
+                });
             }
         }).start();
     }
@@ -4751,35 +4565,31 @@ runOnUiThread(new Runnable() {
     // 【新增】修复成功后的重试逻辑 (复用 loadPlayerData 的后半部分)
     private void retryLoadAfterRepair(final String dbPath, final String folderName) {
         final ProgressDialog loading = ProgressDialog.show(this, getString(R.string.msg_retrying), getString(R.string.msg_reading_repaired_data), true);
-        new Thread(new Runnable(){
-            public void run(){
-                try {
-                    // 此时 dbPath 已经是修好的了，直接读
-                    PlayerDbManager dbManager = new PlayerDbManager(dbPath);
-                    byte[] data = dbManager.readLocalPlayer();
-                    dbManager.close();
-                    
-                    final JsonObject playerDataObj = BedrockParser.parseBytes(data);
-                    
-                    runOnUiThread(new Runnable(){
-                        public void run(){
-                            loading.dismiss();
-                            isEditingPlayer = true;
-                            navigationStack.clear(); pathStack.clear(); scrollPositionStack.clear();
-                            rootNbtData = playerDataObj;
-                            
-                            // 存入缓存
-                            nbtDataCache.put("~local_player", rootNbtData);
-                            
-                            updateAdapter(rootNbtData);
-                            toast(getString(R.string.toast_player_loaded_success));
-                            if (tvCurrentPath != null)
-                                tvCurrentPath.setText(getString(R.string.path_editing_player) + folderName + ")");
-                        }
-                    });
-                } catch (final Exception e) {
-                    runOnUiThread(new Runnable(){ public void run(){ loading.dismiss(); toast(getString(R.string.toast_retry_failed)+e.toString());}});
-                }
+        new Thread(() -> {
+            try {
+                // 此时 dbPath 已经是修好的了，直接读
+                PlayerDbManager dbManager = new PlayerDbManager(dbPath);
+                byte[] data = dbManager.readLocalPlayer();
+                dbManager.close();
+
+                final JsonObject playerDataObj = BedrockParser.parseBytes(data);
+
+                runOnUiThread(() -> {
+                    loading.dismiss();
+                    isEditingPlayer = true;
+                    navigationStack.clear(); pathStack.clear(); scrollPositionStack.clear();
+                    rootNbtData = playerDataObj;
+
+                    // 存入缓存
+                    nbtDataCache.put("~local_player", rootNbtData);
+
+                    updateAdapter(rootNbtData);
+                    toast(getString(R.string.toast_player_loaded_success));
+                    if (tvCurrentPath != null)
+                        tvCurrentPath.setText(getString(R.string.path_editing_player_format) + folderName + ")");
+                });
+            } catch (final Exception e) {
+                runOnUiThread(() -> { loading.dismiss(); toast(getString(R.string.toast_retry_failed)+e.toString());});
             }
         }).start();
     }
@@ -4862,7 +4672,7 @@ runOnUiThread(new Runnable() {
         final ListView listView = new ListView(this);
         // 使用 simple_list_item_2 可以显示两行文字 (Title + Subtitle) 但需要自定义 adapter
         // 这里为了简单，我们用 simple_list_item_1 配合换行符
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, displayList) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, displayList) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 // 小优化：让显示更好看一点，把字体改小
@@ -4880,29 +4690,23 @@ runOnUiThread(new Runnable() {
             .setNegativeButton(getString(R.string.btn_close), null)
             .create();
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String key = realKeys.get(position);
-                
-                // 尝试加载
-                // 这里的 loadSpecificPlayer 其实是通用的 loadByKey，直接复用
-                loadSpecificPlayer(key); 
-                
-                dialog.dismiss();
-            }
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String key = realKeys.get(position);
+
+            // 尝试加载
+            // 这里的 loadSpecificPlayer 其实是通用的 loadByKey，直接复用
+            loadSpecificPlayer(key);
+
+            dialog.dismiss();
         });
         
         // 可选：长按复制 Key
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> p, View v, int pos, long id) {
-                String key = realKeys.get(pos);
-                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                cm.setPrimaryClip(android.content.ClipData.newPlainText("Key", key));
-                toast(getString(R.string.toast_key_copied) + key);
-                return true;
-            }
+        listView.setOnItemLongClickListener((p, v, pos, id) -> {
+            String key = realKeys.get(pos);
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Key", key));
+            toast(getString(R.string.toast_key_copied) + key);
+            return true;
         });
 
         dialog.show();
@@ -4997,7 +4801,9 @@ runOnUiThread(new Runnable() {
                 String name = reader.readLine();
                 fis.close();
                 if (name != null && !name.trim().isEmpty()) return name;
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to read levelname.txt: " + e.getMessage());
+            }
         }
 
         // 2. 尝试 Shizuku 读取 (针对 Android/data)
@@ -5009,7 +4815,9 @@ runOnUiThread(new Runnable() {
                 String name = reader.readLine();
                 p.waitFor();
                 if (name != null && !name.trim().isEmpty()) return name;
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Shizuku read file failed: " + e.getMessage());
+            }
         }
 
         // 3. 读不到就返回 null
@@ -5076,8 +4884,9 @@ runOnUiThread(new Runnable() {
     private boolean tryRestoreSession(String sessionKey) {
         if (sessionCacheMap.containsKey(sessionKey)) {
             EditorSession session = sessionCacheMap.get(sessionKey);
-            
-            // 恢复变量
+            if (session == null) {
+                return false;
+            }
             rootNbtData = session.data;
             // 恢复栈 (拷贝回来)
             navigationStack.clear(); navigationStack.addAll(session.navStack);
@@ -5098,7 +4907,7 @@ runOnUiThread(new Runnable() {
             // 恢复列表滚动位置
             if (!scrollPositionStack.isEmpty()) {
                 final int pos = scrollPositionStack.peek();
-                nbtListView.post(new Runnable() { public void run() { nbtListView.setSelection(pos); } });
+                nbtListView.post(() -> nbtListView.setSelection(pos));
             }
 
             toast(getString(R.string.toast_unsaved_editing_session_restored));
@@ -5179,16 +4988,13 @@ private void showAppInfoDialog() {
     }
     
     if (aboutHeader != null) {
-        aboutHeader.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (aboutContent.getVisibility() == View.GONE) {
-                    aboutContent.setVisibility(View.VISIBLE);
-                    aboutExpand.setText("▲");
-                } else {
-                    aboutContent.setVisibility(View.GONE);
-                    aboutExpand.setText("▼");
-                }
+        aboutHeader.setOnClickListener(v -> {
+            if (aboutContent != null && aboutContent.getVisibility() == View.GONE) {
+                aboutContent.setVisibility(View.VISIBLE);
+                aboutExpand.setText("▲");
+            } else {
+                if (aboutContent != null && aboutContent.getVisibility() == View.GONE);
+                aboutExpand.setText("▼");
             }
         });
     }
@@ -5199,16 +5005,13 @@ private void showAppInfoDialog() {
     final TextView settingsExpand = dialogView.findViewById(R.id.tv_settings_expand);
     
     if (settingsHeader != null) {
-        settingsHeader.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (settingsContent.getVisibility() == View.GONE) {
-                    settingsContent.setVisibility(View.VISIBLE);
-                    settingsExpand.setText("▲");
-                } else {
-                    settingsContent.setVisibility(View.GONE);
-                    settingsExpand.setText("▼");
-                }
+        settingsHeader.setOnClickListener(v -> {
+            if (settingsContent.getVisibility() == View.GONE) {
+                settingsContent.setVisibility(View.VISIBLE);
+                settingsExpand.setText("▲");
+            } else {
+                settingsContent.setVisibility(View.GONE);
+                settingsExpand.setText("▼");
             }
         });
     }
@@ -5219,14 +5022,11 @@ private void showAppInfoDialog() {
     CheckBox cbMulti = dialogView.findViewById(R.id.cb_dialog_multithread);
     if (cbMulti != null) {
         cbMulti.setChecked(useMultiThreading);
-        cbMulti.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(android.widget.CompoundButton buttonView, boolean isChecked) {
-                useMultiThreading = isChecked;
-                prefs.edit().putBoolean("use_multithread", isChecked).commit();
-                toast(isChecked ? getString(R.string.toast_multi_thread_acceleration_enabled) 
-                              : getString(R.string.toast_switched_to_single_threaded_stable_mode));
-            }
+        cbMulti.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            useMultiThreading = isChecked;
+            prefs.edit().putBoolean("use_multithread", isChecked).apply();
+            toast(isChecked ? getString(R.string.toast_multi_thread_acceleration_enabled)
+                          : getString(R.string.toast_switched_to_single_threaded_stable_mode));
         });
     }
     
@@ -5234,13 +5034,10 @@ private void showAppInfoDialog() {
     CheckBox cbShizuku = dialogView.findViewById(R.id.cb_dialog_shizuku);
     if (cbShizuku != null) {
         cbShizuku.setChecked(useShizuku);
-        cbShizuku.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(android.widget.CompoundButton buttonView, boolean isChecked) {
-                useShizuku = isChecked;
-                prefs.edit().putBoolean("use_shizuku", isChecked).commit();
-                toast(isChecked ? getString(R.string.toast_shizuku_enabled) : getString(R.string.toast_shizuku_disabled));
-            }
+        cbShizuku.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            useShizuku = isChecked;
+            prefs.edit().putBoolean("use_shizuku", isChecked).apply();
+            toast(isChecked ? getString(R.string.toast_shizuku_enabled) : getString(R.string.toast_shizuku_disabled));
         });
     }
     
@@ -5248,15 +5045,12 @@ private void showAppInfoDialog() {
     Button btnTheme = dialogView.findViewById(R.id.btn_dialog_theme);
     if (btnTheme != null) {
         btnTheme.setText(isNightMode ? getString(R.string.action_switch_day) : getString(R.string.action_switch_night));
-        btnTheme.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                isNightMode = !isNightMode;
-                prefs.edit().putBoolean("night_mode", isNightMode).commit();
-                applyTheme();
-                dialog.dismiss(); // 关闭弹窗重建
-                recreate();
-            }
+        btnTheme.setOnClickListener(v -> {
+            isNightMode = !isNightMode;
+            prefs.edit().putBoolean("night_mode", isNightMode).apply();
+            applyTheme();
+            dialog.dismiss(); // 关闭弹窗重建
+            recreate();
         });
     }
     
@@ -5264,21 +5058,18 @@ private void showAppInfoDialog() {
     Button btnLang = dialogView.findViewById(R.id.btn_dialog_lang);
     if (btnLang != null) {
         btnLang.setText("zh".equals(currentLang) ? getString(R.string.switch_to_english) : getString(R.string.switch_to_chinese));
-        btnLang.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if ("zh".equals(currentLang)) currentLang = "en";
-                else currentLang = "zh";
-                prefs.edit().putString("app_language", currentLang).commit();
-                
-                // 暂存数据
-                tempNbtData = rootNbtData;
-                tempTargetKey = currentTargetKey;
-                
-                NbtTranslator.reset();
-                dialog.dismiss();
-                recreate();
-            }
+        btnLang.setOnClickListener(v -> {
+            if ("zh".equals(currentLang)) currentLang = "en";
+            else currentLang = "zh";
+            prefs.edit().putString("app_language", currentLang).apply();
+
+            // 暂存数据
+            tempNbtData = rootNbtData;
+            tempTargetKey = currentTargetKey;
+
+            NbtTranslator.reset();
+            dialog.dismiss();
+            recreate();
         });
     }
 
@@ -5288,29 +5079,26 @@ final long[] lastClickTime = {0};
 final View headerLayout = dialogView.findViewById(R.id.in_app_icon); // 确保XML中有这个ID
 
 if (headerLayout != null) {
-    headerLayout.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            long currentTime = System.currentTimeMillis();
-            
-            // 重置计数（如果超过2秒未点击）
-            if (currentTime - lastClickTime[0] >5000) {
-                clickCount[0] = 0;
-            }
-            lastClickTime[0] = currentTime;
-            
-            clickCount[0]++;
-            
-            // 显示点击进度（可选，第5次后显示提示）
-            if (clickCount[0] == 5) {
-                toast("再点击5次开启开发者选项...");
-            }
-            
-            // 达到10次，显示调试菜单
-            if (clickCount[0] >= 10) {
-                clickCount[0] = 0; // 重置
-                showDebugMenu(); // 显示调试菜单
-            }
+    headerLayout.setOnClickListener(v -> {
+        long currentTime = System.currentTimeMillis();
+
+        // 重置计数（如果超过2秒未点击）
+        if (currentTime - lastClickTime[0] >5000) {
+            clickCount[0] = 0;
+        }
+        lastClickTime[0] = currentTime;
+
+        clickCount[0]++;
+
+        // 显示点击进度（可选，第5次后显示提示）
+        if (clickCount[0] == 5) {
+            toast("再点击5次开启开发者选项...");
+        }
+
+        // 达到10次，显示调试菜单
+        if (clickCount[0] >= 10) {
+            clickCount[0] = 0; // 重置
+            showDebugMenu(); // 显示调试菜单
         }
     });
 }
@@ -5481,12 +5269,12 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
     List<AutocompleteEntry> displayList = new ArrayList<>(allItems);
     
     // 适配器
-    final ArrayAdapter<AutocompleteEntry> adapter = new ArrayAdapter<AutocompleteEntry>(this, 
-        android.R.layout.simple_list_item_2, displayList) {
-        
+    final ArrayAdapter<AutocompleteEntry> adapter = new ArrayAdapter<>(this,
+            android.R.layout.simple_list_item_2, displayList) {
+
         // 【修复2】：缓存 Filter 实例，避免每次 getFilter 都创建新对象导致异步线程冲突
         private Filter mFilter;
-        
+
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             if (convertView == null) {
@@ -5495,19 +5283,28 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
             AutocompleteEntry item = getItem(position);
             TextView tv1 = convertView.findViewById(android.R.id.text1);
             TextView tv2 = convertView.findViewById(android.R.id.text2);
-            
+
             // 主标题
             String label = "";
+            if (item == null) return convertView;
             switch (item.category) {
-                case "block": label = getString(R.string.title_block_label); break;
-                case "item": label = getString(R.string.title_item_label); break;
-                case "effect": label = getString(R.string.title_effect_label); break;
-                case "enchant": label = getString(R.string.title_enchant_label); break;
+                case "block":
+                    label = getString(R.string.title_block_label);
+                    break;
+                case "item":
+                    label = getString(R.string.title_item_label);
+                    break;
+                case "effect":
+                    label = getString(R.string.title_effect_label);
+                    break;
+                case "enchant":
+                    label = getString(R.string.title_enchant_label);
+                    break;
             }
             tv1.setText(label + item.name);
             tv1.setTextColor(Color.parseColor("#333333"));
             tv1.setTextSize(15);
-            
+
             // 副标题
             String subtitle;
             if ("effect".equals(item.category) || "enchant".equals(item.category)) {
@@ -5518,10 +5315,10 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
             tv2.setText(subtitle);
             tv2.setTextColor(Color.parseColor("#666666"));
             tv2.setTextSize(12);
-            
+
             return convertView;
         }
-        
+
         @Override
         public Filter getFilter() {
             // 【修复2】：单例模式返回 Filter
@@ -5531,38 +5328,38 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
                     protected FilterResults performFiltering(CharSequence constraint) {
                         FilterResults results = new FilterResults();
                         List<AutocompleteEntry> filtered = new ArrayList<>();
-                        
+
                         // constraint 为空时，返回完整的 allItems (这里 allItems 始终是完整的，因为没被破坏)
                         if (constraint == null || constraint.length() == 0) {
                             filtered.addAll(allItems);
                         } else {
                             String pattern = constraint.toString().toLowerCase().trim();
-                            
+
                             // 永远在完整的 allItems 里查找
                             for (AutocompleteEntry item : allItems) {
                                 boolean match = false;
-                                
+
                                 if (item.namespace.toLowerCase().equals(pattern) ||
-                                    (item.id != null && item.id.equals(pattern))) {
+                                        (item.id != null && item.id.equals(pattern))) {
                                     match = true;
                                 } else if (item.name.toLowerCase().contains(pattern)) {
                                     match = true;
                                 } else if (item.namespace.toLowerCase().contains(pattern)) {
                                     match = true;
-                                } else if ((item.category.equals("effect") || item.category.equals("enchant")) 
-                                         && item.id != null && item.id.contains(pattern)) {
+                                } else if ((item.category.equals("effect") || item.category.equals("enchant"))
+                                        && item.id != null && item.id.contains(pattern)) {
                                     match = true;
                                 }
-                                
+
                                 if (match) filtered.add(item);
                             }
                         }
-                        
+
                         results.values = filtered;
                         results.count = filtered.size();
                         return results;
                     }
-                    
+
                     @Override
                     protected void publishResults(CharSequence constraint, FilterResults results) {
                         clear(); // 这里清空的是 displayList 副本
@@ -5579,12 +5376,9 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
     
     lvSuggestions.setAdapter(adapter);
     
-    btnClear.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            etSearch.setText(""); 
-            // 只要把文本设空，TextWatcher 会自动触发过滤，Filter 就会把完整数据塞回来
-        }
+    btnClear.setOnClickListener(v -> {
+        etSearch.setText("");
+        // 只要把文本设空，TextWatcher 会自动触发过滤，Filter 就会把完整数据塞回来
     });
     
     // 创建对话框
@@ -5618,16 +5412,13 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
     });
     
     // 列表点击
-    lvSuggestions.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            AutocompleteEntry selected = adapter.getItem(position);
-            if (selected != null) {
-                targetInput.setText(selected.getFillValue());
-                targetInput.setSelection(targetInput.getText().length());
-            }
-            dialog.dismiss(); 
+    lvSuggestions.setOnItemClickListener((parent, view, position, id) -> {
+        AutocompleteEntry selected = adapter.getItem(position);
+        if (selected != null) {
+            targetInput.setText(selected.getFillValue());
+            targetInput.setSelection(targetInput.getText().length());
         }
+        dialog.dismiss();
     });
 }
 
@@ -5642,23 +5433,20 @@ private void showDebugMenu() {
     
     new AlertDialog.Builder(this)
         .setTitle("🔧 开发者调试菜单")
-        .setItems(options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0: // 崩溃测试
-                        performCrashTest();
-                        break;
-                    case 1: // 显示日志
-                        showLogViewer();
-                        break;
-                    case 2: // 复制日志
-                        copyLogsToClipboard();
-                        break;
-                    case 3: // 导出日志
-                        exportLogsToFile();
-                        break;
-                }
+        .setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0: // 崩溃测试
+                    performCrashTest();
+                    break;
+                case 1: // 显示日志
+                    showLogViewer();
+                    break;
+                case 2: // 复制日志
+                    copyLogsToClipboard();
+                    break;
+                case 3: // 导出日志
+                    exportLogsToFile();
+                    break;
             }
         })
         .setNegativeButton("关闭", null)
@@ -5670,17 +5458,11 @@ private void performCrashTest() {
     new AlertDialog.Builder(this)
         .setTitle("⚠️ 确认")
         .setMessage("即将模拟一次应用崩溃，用于测试崩溃处理机制。\n\n是否继续？")
-        .setPositiveButton("立即崩溃", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                // 延迟1秒后抛出异常，让对话框先关闭
-                new android.os.Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        throw new RuntimeException("【测试】手动触发的崩溃 - 用于验证 CrashHandler 是否正常工作");
-                    }
-                }, 1000);
-            }
+        .setPositiveButton("立即崩溃", (d, w) -> {
+            // 延迟1秒后抛出异常，让对话框先关闭
+            new android.os.Handler().postDelayed(() -> {
+                throw new RuntimeException("【测试】手动触发的崩溃 - 用于验证 CrashHandler 是否正常工作");
+            }, 1000);
         })
         .setNegativeButton("取消", null)
         .show();
@@ -5696,14 +5478,9 @@ private void showLogViewer() {
         File crashDir = new File(getExternalFilesDir(null), "CrashLogs");
         if (crashDir.exists() && crashDir.listFiles() != null) {
             File[] files = crashDir.listFiles();
-            if (files.length > 0) {
+            if (files != null && files.length > 0) {
                 // 读取最新的日志
-                Arrays.sort(files, new Comparator<File>() {
-                    @Override
-                    public int compare(File f1, File f2) {
-                        return Long.compare(f2.lastModified(), f1.lastModified());
-                    }
-                });
+                Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
                 
                 File latest = files[0];
                 logs.append("最新崩溃日志: ").append(latest.getName()).append("\n\n");
@@ -5756,12 +5533,7 @@ private void showLogViewer() {
     new AlertDialog.Builder(this)
         .setTitle("📋 日志查看器")
         .setView(scrollView)
-        .setPositiveButton("复制", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                copyLogsToClipboard();
-            }
-        })
+        .setPositiveButton("复制", (d, w) -> copyLogsToClipboard())
         .setNegativeButton("关闭", null)
         .show();
 }
@@ -5775,12 +5547,7 @@ private void copyLogsToClipboard() {
         File crashDir = new File(getExternalFilesDir(null), "CrashLogs");
         if (crashDir.exists() && crashDir.listFiles() != null) {
             File[] files = crashDir.listFiles();
-            Arrays.sort(files, new Comparator<File>() {
-                @Override
-                public int compare(File f1, File f2) {
-                    return Long.compare(f2.lastModified(), f1.lastModified());
-                }
-            });
+            Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
             
             for (File file : files) {
                 allLogs.append("===== ").append(file.getName()).append(" =====\n");
@@ -5813,74 +5580,52 @@ private void copyLogsToClipboard() {
 
 // 4. 导出日志到文件
 private void exportLogsToFile() {
-    new Thread(new Runnable() {
-        @Override
-        public void run() {
-            try {
-                // 源目录
-                File crashDir = new File(getExternalFilesDir(null), "CrashLogs");
-                if (!crashDir.exists() || crashDir.listFiles() == null || crashDir.listFiles().length == 0) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            toast("没有日志可导出");
-                        }
-                    });
-                    return;
-                }
-                
-                // 目标文件（导出到 Download）
-                String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
-                    .format(new java.util.Date());
-                File exportFile = new File("/storage/emulated/0/Download/NbtEditor_Logs_" + timeStamp + ".txt");
-                
-                java.io.FileWriter writer = new java.io.FileWriter(exportFile);
-                
-                // 【修正】使用字符串拼接，而不是链式 append
-                writer.write("===== NBT Editor 日志导出 =====\n");
-                writer.write("导出时间: " + timeStamp + "\n\n");
-                
-                File[] files = crashDir.listFiles();
-                Arrays.sort(files, new Comparator<File>() {
-                    @Override
-                    public int compare(File f1, File f2) {
-                        return Long.compare(f2.lastModified(), f1.lastModified());
-                    }
-                });
-                
-                for (File file : files) {
-                    // 【修正】字符串拼接
-                    writer.write("===== " + file.getName() + " =====\n");
-                    
-                    java.io.BufferedReader reader = new java.io.BufferedReader(
-                        new java.io.FileReader(file));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        writer.write(line + "\n"); // 【修正】使用 + 拼接
-                    }
-                    reader.close();
-                    writer.write("\n\n");
-                }
-                
-                writer.close();
-                
-                final String path = exportFile.getAbsolutePath();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        toast("日志已导出到: " + path);
-                    }
-                });
-                
-            } catch (Exception e) {
-                final String error = e.getMessage();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        toast("导出失败: " + error);
-                    }
-                });
+    new Thread(() -> {
+        try {
+            // 源目录
+            File crashDir = new File(getExternalFilesDir(null), "CrashLogs");
+            File[] files = crashDir.listFiles();
+            if (!crashDir.exists() || files == null || files.length == 0) {
+                runOnUiThread(() -> toast("没有日志可导出"));
+                return;
             }
+
+            // 目标文件（导出到 Download）
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+                    .format(new Date());
+            File exportFile = new File("/storage/emulated/0/Download/NbtEditor_Logs_" + timeStamp + ".txt");
+
+            java.io.FileWriter writer = new java.io.FileWriter(exportFile);
+
+            // 【修正】使用字符串拼接，而不是链式 append
+            writer.write("===== NBT Editor 日志导出 =====\n");
+            writer.write("导出时间: " + timeStamp + "\n\n");
+
+            files = crashDir.listFiles();
+            Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+
+            for (File file : files) {
+                // 【修正】字符串拼接
+                writer.write("===== " + file.getName() + " =====\n");
+
+                BufferedReader reader = new BufferedReader(
+                        new java.io.FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    writer.write(line + "\n"); // 【修正】使用 + 拼接
+                }
+                reader.close();
+                writer.write("\n\n");
+            }
+
+            writer.close();
+
+            final String path = exportFile.getAbsolutePath();
+            runOnUiThread(() -> toast("日志已导出到: " + path));
+
+        } catch (Exception e) {
+            final String error = e.getMessage();
+            runOnUiThread(() -> toast("导出失败: " + error));
         }
     }).start();
 }

@@ -207,6 +207,7 @@
     <string name="msg_search_for_players">搜索玩家...</string>
     <string name="msg_search_map_data">搜索地图数据...</string>
     <string name="msg_search_village_data">搜索村庄数据...</string>
+    <string name="msg_slice_missing">缺失的地图</string>
     <string name="msg_start_id">起始ID: </string>
     <string name="msg_success">🎉 成功！\n</string>
     <string name="msg_the_data_corresponding_to_this_key_was_not_found">未找到该键对应的数据</string>
@@ -226,7 +227,7 @@
     <string name="path_current_level">当前：世界数据 (level.dat)</string>
     <string name="path_current_player">当前：玩家数据 (~local_player)</string>
     <string name="path_custom">自定义路径</string>
-    <string name="path_editing_player">正在编辑：玩家数据 (</string>
+    <string name="path_editing_player_format">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="path_legacy">旧版路径 (games/com.mojang...)</string>
     <string name="path_prefix">路径: /</string>
     <string name="path_restored_player">已恢复备份 (玩家)</string>

@@ -136,7 +136,7 @@
     <string name="toast_copied">已复制到剪贴板</string>
     <string name="title_read_player">读取玩家</string>
     <string name="toast_player_loaded_success">玩家数据加载成功！</string>
-    <string name="path_editing_player">正在编辑：玩家数据 (</string>
+    <string name="path_editing_player_format">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="btn_understood">知道了</string>
     <string name="title_load_failed">加载失败</string>
     <string name="msg_load_failed_advice">无法读取数据\n\n💡 可能的解决方案：\n1. 确保该存档曾经进入过游戏（生成了数据）\n2. 存档曾被 Blocktopograph 或 澜诺(naroX) 修改过，NBT编辑器无法加载\n3. 有概率可能无法加载，不确定原因\n\n详细错误:\n</string>
@@ -435,4 +435,5 @@
 <string name="title_effect_label">[效果] </string>
 <string name="title_enchant_label">[附魔] </string>
 <string name="title_choose">选择</string>
+<string name="msg_slice_missing">缺失的地图</string>
 </resources>

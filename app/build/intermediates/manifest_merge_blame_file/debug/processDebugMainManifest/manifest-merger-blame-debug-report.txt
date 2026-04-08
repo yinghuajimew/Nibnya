@@ -8,7 +8,7 @@
 7-->D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
 8        android:minSdkVersion="23"
 8-->D:\NBTeditor\app\src\main\AndroidManifest.xml:8:9-35
-9        android:targetSdkVersion="35" />
+9        android:targetSdkVersion="33" />
 9-->D:\NBTeditor\app\src\main\AndroidManifest.xml:9:9-38
 10    <!-- Shizuku 权限 -->
 11    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
