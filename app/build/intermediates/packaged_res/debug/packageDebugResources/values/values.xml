@@ -14,7 +14,7 @@
     <string name="box_use_shizuku">🔐 Use Shizuku for file access (disable for direct access on supported systems)</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_check_perm">Check permissions</string>
-    <string name="btn_choose">🔍 choose</string>
+    <string name="btn_choose">Select %1$s</string>
     <string name="btn_clean_cache">clear cache</string>
     <string name="btn_clear">Clear</string>
     <string name="btn_clear_all">🧹 Clear with one click</string>
@@ -91,6 +91,7 @@
     <string name="key_game_mode_survive">0: Survive</string>
     <string name="key_game_mode_watch">3: spectate</string>
     <string name="key_game_time">game time</string>
+    <string name="key_seed_display">🌱 %1$s</string>
     <string name="key_thunderstorm_rainfall_mtimes">%1$d seconds (%2$.1f minutes)</string>
     <string name="key_time_tick_calculation">%.1f days</string>
     <string name="key_world_generator_type_end">4: The End?</string>
@@ -103,7 +104,7 @@
     <string name="label_editor">JSON data editing:</string>
     <string name="label_player_data">Player data</string>
     <string name="long_press_here_to_open_the_root_menu">long press here to open the root menu</string>
-    <string name="mag_village_data">Village data</string>
+    <string name="mag_village_data">Village data (%1$d)</string>
     <string name="menu_add_child">Add child</string>
     <string name="menu_copy">copy</string>
     <string name="menu_del_backup">Delete backup</string>
@@ -180,7 +181,7 @@
     <string name="msg_load_failed_advice">Unable to read data\n\n💡 Possible solutions:\n1 Make sure that the archive has been entered into the game (data is generated)\n2 The archive has been modified by Blocktopograph or naroX, and the NBT editor cannot load it\n3 There is a possibility that it cannot be loaded, but we are not sure why\n\nDetailed error:</string>
     <string name="msg_loading">loading</string>
     <string name="msg_map">map</string>
-    <string name="msg_map_data">map data</string>
+    <string name="msg_map_data">map data (%1$d)</string>
     <string name="msg_map_write_to_database">Map -> Write to database</string>
     <string name="msg_maps_have_been_packed"> Maps have been put into the backpack\n</string>
     <string name="msg_move_data_to_new_key_and_delete_old_key">This will move the data to the new key and delete the old key</string>
@@ -188,7 +189,7 @@
     <string name="msg_nesting_depth">Nesting depth: </string>
     <string name="msg_parsing_archive_information">Parsing archive information...</string>
     <string name="msg_paste_as_new">📋 Paste as new</string>
-    <string name="msg_player_data">Player data</string>
+    <string name="msg_player_data">Player data (%1$d)</string>
     <string name="msg_player_data_not_found">Player data not found (~local_player)</string>
     <string name="msg_potion">Effect:</string>
     <string name="msg_processing">deal with...</string>
@@ -229,7 +230,7 @@ Would you like to create a new empty data set?</string>
     <string name="path_current_level">Current: world data (level.dat)</string>
     <string name="path_current_player">Current: Player data (~local_player)</string>
     <string name="path_custom">Custom path</string>
-    <string name="path_editing_player_format">Editing: Player Data (~local_player) (%1$s)</string>
+    <string name="path_editing_player">Editing: Player Data (~local_player) (%1$s)</string>
     <string name="path_legacy">Old version path (games/com.mojang...)</string>
     <string name="path_prefix">Path: /</string>
     <string name="path_restored_player">Backup restored (player)</string>
@@ -243,10 +244,9 @@ Would you like to create a new empty data set?</string>
     <string name="switch_to_chinese">切换中文</string>
     <string name="switch_to_english">Switch to English</string>
     <string name="text_data_name">Data name</string>
-    <string name="text_direct_editing_will_cause_freezing_please_select_an_operation">elements\nDirect editing will cause freezing, please choose the operation:</string>
     <string name="text_enter_keyword_search">Enter keyword search...</string>
     <string name="text_here_is_the_translation">here is the translation</string>
-    <string name="text_huge_array_detected">Huge array detected, total</string>
+    <string name="text_huge_array_detected">A giant array has been detected, containing %1$d elements.\n Direct editing will cause the program to freeze. Please select an operation:</string>
     <string name="text_import_images_to_generate_map_images">🖼️ Import images to generate map images</string>
     <string name="text_loading_new_save">Loading new archive...</string>
     <string name="text_newly_created">(newly created)</string>
@@ -266,7 +266,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_choose">Choose</string>
     <string name="title_choose_puzzle_size">Choose puzzle size</string>
     <string name="title_clear_confirm">Confirm clearing</string>
-    <string name="title_current">current:</string>
+    <string name="title_current">Current: %1$s</string>
     <string name="title_data">data</string>
     <string name="title_data_does_not_exist">Data does not exist</string>
     <string name="title_database_corruption">⚠️ Database corruption</string>

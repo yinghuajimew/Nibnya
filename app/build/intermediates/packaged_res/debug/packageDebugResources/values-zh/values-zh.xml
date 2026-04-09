@@ -14,7 +14,7 @@
     <string name="box_use_shizuku">🔐 使用 Shizuku 访问文件（禁用在支持的系统上可直接读写）</string>
     <string name="btn_cancel">取消</string>
     <string name="btn_check_perm">检查权限</string>
-    <string name="btn_choose">🔍 选择</string>
+    <string name="btn_choose">🔍 选择%1$s</string>
     <string name="btn_clean_cache">清理缓存</string>
     <string name="btn_clear">清空</string>
     <string name="btn_clear_all">🧹 一键清空</string>
@@ -91,6 +91,7 @@
     <string name="key_game_mode_survive">0: 生存</string>
     <string name="key_game_mode_watch">3: 旁观</string>
     <string name="key_game_time">游戏时间</string>
+    <string name="key_seed_display">🌱 %1$s</string>
     <string name="key_thunderstorm_rainfall_mtimes">%1$d 秒 (%2$.1f 分)</string>
     <string name="key_time_tick_calculation">%.1f 天</string>
     <string name="key_world_generator_type_end">4: 末地?</string>
@@ -103,7 +104,7 @@
     <string name="label_editor">JSON 数据编辑：</string>
     <string name="label_player_data">玩家数据</string>
     <string name="long_press_here_to_open_the_root_menu">长按此处打开根菜单</string>
-    <string name="mag_village_data">村庄数据</string>
+    <string name="mag_village_data">村庄数据 (%1$d)</string>
     <string name="menu_add_child">添加子项</string>
     <string name="menu_copy">复制</string>
     <string name="menu_del_backup">删除备份</string>
@@ -180,7 +181,7 @@
     <string name="msg_load_failed_advice">无法读取数据\n\n💡 可能的解决方案：\n1. 确保该存档曾经进入过游戏（生成了数据）\n2. 存档曾被 Blocktopograph 或 澜诺(naroX) 修改过，NBT编辑器无法加载\n3. 有概率可能无法加载，不确定原因\n\n详细错误:\n</string>
     <string name="msg_loading">加载中</string>
     <string name="msg_map">地图</string>
-    <string name="msg_map_data">地图数据</string>
+    <string name="msg_map_data">地图数据 (%1$d)</string>
     <string name="msg_map_write_to_database"> 张地图 -> 写入数据库</string>
     <string name="msg_maps_have_been_packed"> 张地图已放入背包\n</string>
     <string name="msg_move_data_to_new_key_and_delete_old_key">这将移动数据到新 Key，并删除旧 Key</string>
@@ -188,7 +189,7 @@
     <string name="msg_nesting_depth">嵌套深度: </string>
     <string name="msg_parsing_archive_information">正在解析存档信息...</string>
     <string name="msg_paste_as_new">📋 粘贴为新</string>
-    <string name="msg_player_data">玩家数据</string>
+    <string name="msg_player_data">玩家数据 (%1$d)</string>
     <string name="msg_player_data_not_found">未找到玩家数据 (~local_player)</string>
     <string name="msg_potion">效果: </string>
     <string name="msg_processing">处理...</string>
@@ -227,7 +228,7 @@
     <string name="path_current_level">当前：世界数据 (level.dat)</string>
     <string name="path_current_player">当前：玩家数据 (~local_player)</string>
     <string name="path_custom">自定义路径</string>
-    <string name="path_editing_player_format">当前: 玩家数据 (~local_player) (%1$s)</string>
+    <string name="path_editing_player">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="path_legacy">旧版路径 (games/com.mojang...)</string>
     <string name="path_prefix">路径: /</string>
     <string name="path_restored_player">已恢复备份 (玩家)</string>
@@ -241,10 +242,9 @@
     <string name="switch_to_chinese">切换中文</string>
     <string name="switch_to_english">Switch to English</string>
     <string name="text_data_name">数据名</string>
-    <string name="text_direct_editing_will_cause_freezing_please_select_an_operation">个元素\n直接编辑会导致卡死，请选择操作：</string>
     <string name="text_enter_keyword_search">输入关键词搜索...</string>
     <string name="text_here_is_the_translation">这里是翻译</string>
-    <string name="text_huge_array_detected">检测到巨型数组，共有 </string>
+    <string name="text_huge_array_detected">检测到巨型数组，共有 %1$d 个元素\n直接编辑会导致卡死，请选择操作：</string>
     <string name="text_import_images_to_generate_map_images">🖼️ 导入图片生成地图画</string>
     <string name="text_loading_new_save">正在加载新存档...</string>
     <string name="text_newly_created"> (新创建)</string>
@@ -264,7 +264,7 @@
     <string name="title_choose">选择</string>
     <string name="title_choose_puzzle_size">选择拼图规模</string>
     <string name="title_clear_confirm">确认清空</string>
-    <string name="title_current">当前: </string>
+    <string name="title_current">当前: %1$s</string>
     <string name="title_data">数据</string>
     <string name="title_data_does_not_exist">数据不存在</string>
     <string name="title_database_corruption">⚠️ 数据库损坏</string>

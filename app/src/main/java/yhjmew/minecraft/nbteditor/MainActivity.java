@@ -2,68 +2,65 @@ package yhjmew.minecraft.nbteditor;
 
 import static android.content.ContentValues.TAG;
 
-import androidx.annotation.NonNull;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ClipData;
-import android.content.DialogInterface;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter; // 必需
+import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.Filter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.content.Context;
-import android.widget.BaseAdapter;
-import android.widget.Filter;
-import android.graphics.Color;
-import android.widget.ScrollView;
+
+import androidx.annotation.NonNull;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import rikka.shizuku.Shizuku;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Stack;
-import java.io.StringWriter;
-import java.io.PrintWriter;
-
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
-import android.widget.CheckBox;
+import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
 
@@ -143,8 +140,8 @@ private int lastTreeClickPosition = -1; // 记录树状图最后点击的位置
 // 会话缓存：Key(比如 "~local_player" 或 "level.dat") -> Session
     private final java.util.Map<String, EditorSession> sessionCacheMap = new java.util.HashMap<>();
 private boolean useShizuku = true; // 默认启用 Shizuku
-    View sidebarContainer = null;
-    View sidebar = null;
+    View sidebarContainer = null;   //之后决定
+    View sidebar = null;   //之后决定
 
     // --- 路径常量 ---
     private static final String PATH_STANDARD = "/storage/emulated/0/Android/data/com.mojang.minecraftpe/files/games/com.mojang/minecraftWorlds/";
@@ -283,7 +280,7 @@ if (btnExitFull != null) {
     });
 }
 
-View.OnClickListener selectListener = v -> showWorldSelector();
+View.OnClickListener selectListener = v -> showWorldSelector();   //之后决定
 
 btnCopy.setOnClickListener(v -> {
     String currentFolder = etWorldName.getText().toString().trim();
@@ -680,7 +677,7 @@ if (viewMask != null) {
                     int[] pixels = new int[128 * 128];
                     finalBitmap.getPixels(pixels, 0, 128, 0, 0, 128, 128);
 
-                    for (int i = 0; i < pixels.length; i++) {
+                    for (int i = 0; i < pixels.length; i++) {   //无需更改
                         int color = pixels[i];
                         byte r = (byte) Color.red(color);
                         byte g = (byte) Color.green(color);
@@ -720,7 +717,7 @@ if (viewMask != null) {
         }
 
 // 【新增】处理 SAF 路径选择
-    if (requestCode == REQUEST_SAF_PATH && resultCode == RESULT_OK && data != null) {
+    if (requestCode == REQUEST_SAF_PATH && resultCode == RESULT_OK && data != null) {   //无需更改
         Uri treeUri = data.getData();
         if (treeUri != null) {
             // 持久化授权
@@ -1382,7 +1379,7 @@ private void loadPlayerData(final String folderName, final Runnable onSuccess) {
 
                     // 更新路径显示
                     if (tvCurrentPath != null)
-                        tvCurrentPath.setText(getString(R.string.path_editing_player_format, folderName));
+                        tvCurrentPath.setText(getString(R.string.path_editing_player, folderName));
                 });
 
 } catch (final Exception e) {
@@ -2061,7 +2058,7 @@ private void updateAdapter(JsonObject data) {
 
 // 更新顶部路径标题 (修复树状图标题显示错误的 Bug)
     private void updatePathTitle() {
-        String titleText = "";
+        String titleText;
         
         if (isTreeMode) {
             // === 树状图模式 ===
@@ -2139,7 +2136,6 @@ private void showEditValueDialog(final String key, final JsonObject item) {
         String dt = detectAutocompleteType(key, parent, grandParent);
         if (!"all".equals(dt)) {
             detectedType = dt;
-            showAutocomplete = true;
         }
     }
 
@@ -2157,7 +2153,7 @@ private void showEditValueDialog(final String key, final JsonObject item) {
         layout.addView(input);
         
         Button btnAutocomplete = new Button(this);
-        btnAutocomplete.setText(getString(R.string.btn_choose) + getTypeLabel(finalDataType));
+        btnAutocomplete.setText(getString(R.string.btn_choose, getTypeLabel(finalDataType)));
         btnAutocomplete.setTextColor(Color.parseColor("#2196F3"));
         btnAutocomplete.setBackgroundColor(Color.TRANSPARENT);
         btnAutocomplete.setOnClickListener(v -> showAutocompleteDialog(input, finalDataType, input.getText().toString()));
@@ -2202,30 +2198,19 @@ private void showEditValueDialog(final String key, final JsonObject item) {
 
     // 辅助：获取类型名称显示在标题里，方便识别
     private String getTypeName(int type) {
-        switch (type) {
-            case 1:
-                return "Byte";
-            case 2:
-                return "Short";
-            case 3:
-                return "Int";
-            case 4:
-                return "Long";
-            case 5:
-                return "Float";
-            case 6:
-                return "Double";
-            case 7:
-                return "ByteArray";
-            case 8:
-                return "String";
-            case 11:
-                return "IntArray";
-            case 12:
-                return "LongArray";
-            default:
-                return "Unknown";
-        }
+        return switch (type) {
+            case 1 -> "Byte";
+            case 2 -> "Short";
+            case 3 -> "Int";
+            case 4 -> "Long";
+            case 5 -> "Float";
+            case 6 -> "Double";
+            case 7 -> "ByteArray";
+            case 8 -> "String";
+            case 11 -> "IntArray";
+            case 12 -> "LongArray";
+            default -> "Unknown";
+        };
     }
 
 // 长按菜单逻辑 (完整修复版：列表和树状图都支持)
@@ -2445,20 +2430,6 @@ private void refreshAfterTreeEdit() {
                 }).show();
     }
 
-    private void showRenameDialog(final String oldKey, final JsonObject itemData) {
-        final EditText input = new EditText(this);
-        input.setText(oldKey);
-        new AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input).setPositiveButton(getString(R.string.btn_confirm), (d, w) -> {
-            String newKey = input.getText().toString();
-            if (!newKey.isEmpty() && !nbtAdapter.getData().has(newKey)) {
-                nbtAdapter.getData().remove(oldKey);
-                nbtAdapter.getData().add(newKey, itemData);
-                nbtAdapter.refreshKeys();
-            }
-        }).show();
-    }
-
-// 根菜单 (长按顶部标题或点击全屏右上角触发)
 private void showRootMenu() {
     // 【修复】兼容树状图模式，使用 final 声明
     final JsonObject current;
@@ -2581,24 +2552,7 @@ private void showRootMenu() {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
     }
 
-// 设置语言的核心方法
-    private void setAppLanguage(String langCode) {
-        java.util.Locale locale;
-        // 如果是英语，就设为 ENGLISH，否则设为 CHINESE
-        if ("en".equals(langCode)) {
-            locale = java.util.Locale.ENGLISH;
-        } else {
-            locale = java.util.Locale.CHINESE;
-        }
-
-        // 强制更新系统的配置
-        java.util.Locale.setDefault(locale);
-        android.content.res.Configuration config = new android.content.res.Configuration();
-        config.locale = locale;
-        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
-    }
-
-// 放到 MainActivity 类的最下方
+    // 放到 MainActivity 类的最下方
 // 终极修复版 applyTheme (放在类末尾)
     private void applyTheme() {
         // 直接使用全局变量 viewMainContent，不再临时 findViewById
@@ -2634,6 +2588,7 @@ private void showRootMenu() {
             // 尝试 Android 12 动态色
             if (android.os.Build.VERSION.SDK_INT >= 31) {
                 try {
+                    @SuppressWarnings("DiscouragedApi")
                     int colorId = getResources().getIdentifier("system_neutral1_100", "color", "android");
                     if (colorId != 0) {
                         int dynamicColor = getResources().getColor(colorId);
@@ -2846,7 +2801,7 @@ private void showRootMenu() {
             
             updateAdapter(rootNbtData);
             
-            if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current) + finalKey);
+            if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current, finalKey));
             return;
         }
 
@@ -2882,7 +2837,7 @@ private void showRootMenu() {
 
                     updateAdapter(rootNbtData);
 
-                    if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current) + finalKey);
+                    if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current, finalKey));
                     toast(getString(R.string.toast_loaded) + finalKey);
                 });
             } catch(final Exception e) {
@@ -2996,7 +2951,11 @@ private void showRootMenu() {
     }
 
 // 修复后的新建逻辑 (支持新建、粘贴、批量删除、拼图、国际化、防闪退)
-    private void showPlayerRootMenu(final List<String> currentList, final ArrayAdapter adapter, final int dataType) {
+private void showPlayerRootMenu(final List<String> currentList, final ArrayAdapter adapter, final int dataType) {  //???
+
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
         
         final String typeName;
         final String hintName;
@@ -3011,15 +2970,15 @@ private void showRootMenu() {
         menuList.add(getString(R.string.msg_delete_all_data_in_the_list)); 
 
         if (dataType == TYPE_MAP) {
-            typeName = getString(R.string.msg_map_data); 
+            typeName = getString(R.string.msg_map_data);
             hintName = getString(R.string.msg_for_example_map);
             // Index 3: [新增] 只有地图模式才有拼图功能
             menuList.add(getString(R.string.msg_create_a_giant_jigsaw_puzzle)); 
         } else if (dataType == TYPE_VILLAGE) {
-            typeName = getString(R.string.mag_village_data); 
+            typeName = getString(R.string.mag_village_data);
             hintName = getString(R.string.msg_for_example_village);
         } else {
-            typeName = getString(R.string.msg_player_data); 
+            typeName = getString(R.string.msg_player_data);
             hintName = getString(R.string.msg_for_example_player);
         }
         
@@ -3077,8 +3036,8 @@ private void showRootMenu() {
             }
 
             // === 情况 C: 新建或粘贴 (Index 0 or 1) ===
-            final String finalTypeName = typeName;
-            final String finalHintName = hintName;
+            final String finalTypeName = typeName;   //忽略
+            final String finalHintName = hintName;  //忽略
             final int mode = w; // 0=新建, 1=粘贴
 
             final EditText input = new EditText(MainActivity.this);
@@ -3207,7 +3166,7 @@ private void showRootMenu() {
         layout.setPadding(50, 30, 50, 0);
         
         final TextView tvInfo = new TextView(this);
-        tvInfo.setText(getString(R.string.text_huge_array_detected) + size + getString(R.string.text_direct_editing_will_cause_freezing_please_select_an_operation));
+        tvInfo.setText(getString(R.string.text_huge_array_detected, size));
         tvInfo.setTextSize(16);
         layout.addView(tvInfo);
         
@@ -3221,7 +3180,7 @@ private void showRootMenu() {
         final EditText etCount = new EditText(this); 
         etCount.setHint(getString(R.string.text_number_of_views_recommended_200));
         etCount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        etCount.setText("200");
+        etCount.setText("200");   //忽略
         layout.addView(etCount);
 
         // 【核心修改】在此处添加图片导入按钮
@@ -3270,7 +3229,7 @@ private void showRootMenu() {
     }
 
     // 分页后的实际编辑窗口
-    private void showSubArrayEditDialog(final String key, final JsonArray originalArray, final int start, final int count) {
+    private void showSubArrayEditDialog(final String key, final JsonArray originalArray, final int start, final int count) { //保留key
         // 截取数据构建显示的字符串
         StringBuilder sb = new StringBuilder();
         sb.append("[");
@@ -3428,7 +3387,7 @@ private void showPuzzleWarningDialog() {
 
 // 核心引擎：生成拼图（禁人塔式单链嵌套 - Slot 0递归放盒子）
 private void processPuzzleMap(final Uri imageUri) {
-    final String currentFolderName = etWorldName.getText().toString();
+    etWorldName.getText().toString();  //忽略
     final ProgressDialog pd = ProgressDialog.show(this, getString(R.string.msg_in_preparation), getString(R.string.msg_analyzing_backpack), true);
 
     new Thread(() -> {
@@ -3784,8 +3743,8 @@ db.close();
 // 【添加这行】声明为 final，供内部类使用
 final JsonObject finalPlayerRoot = playerRoot;
 
-final long finalStartId = startMapId;
-final int finalTotalLayers = totalLayers;
+final long finalStartId = startMapId;   //忽略
+final int finalTotalLayers = totalLayers;   //忽略
 
 runOnUiThread(() -> {
     pd.dismiss();
@@ -3811,7 +3770,7 @@ runOnUiThread(() -> {
 });
 
         } catch (final Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Map generation failed", e);
             final String fullStack = getFullStackTrace(e);
             runOnUiThread(() -> {
                 pd.dismiss();
@@ -3824,82 +3783,6 @@ runOnUiThread(() -> {
         }
     }).start();
 }
-
-// 递归打包引擎 (修复版：去除内部 List 的双重包装)
-    private List<JsonObject> recursivePackItems(List<JsonObject> items, int limit, int layer) {
-        // 递归终止条件
-        if (items.size() <= limit) {
-            return items;
-        }
-
-        List<JsonObject> packedContainers = new ArrayList<>();
-        int containerCount = (int) Math.ceil((double) items.size() / 27.0);
-
-        for (int i = 0; i < containerCount; i++) {
-            // 1. 创建容器物品 (箱子)
-            JsonObject chestItem = new JsonObject();
-            chestItem.add("Name", wrapTag(8, "minecraft:chest")); 
-            chestItem.add("Count", wrapTag(1, (byte) 1));
-            chestItem.add("Damage", wrapTag(2, (short) 0));
-            chestItem.add("WasPickedUp", wrapTag(1, (byte) 0));
-
-            // 2. 补全 Block 标签
-            JsonObject blockTag = new JsonObject();
-            blockTag.addProperty("t", 10);
-            JsonObject blockContent = new JsonObject();
-            blockContent.add("name", wrapTag(8, "minecraft:chest"));
-            JsonObject statesTag = new JsonObject(); statesTag.addProperty("t", 10); statesTag.add("v", new JsonObject());
-            blockContent.add("states", statesTag);
-            blockContent.add("version", wrapTag(3, 18168865));
-            blockTag.add("v", blockContent);
-            chestItem.add("Block", blockTag);
-
-            // 3. 填充容器内容
-            JsonObject tagTag = new JsonObject(); tagTag.addProperty("t", 10);
-            JsonObject tagContent = new JsonObject();
-
-            JsonObject itemsListTag = new JsonObject();
-            itemsListTag.addProperty("t", 9); 
-            itemsListTag.addProperty("itemType", 10); 
-            JsonArray itemsArr = new JsonArray();
-
-            int start = i * 27;
-            int end = Math.min(start + 27, items.size());
-
-            for (int k = start; k < end; k++) {
-                // 取出物品 (注意：items 里的已经是 Content 对象了)
-                JsonObject innerItem = items.get(k); 
-                
-                // 修改 Slot 为箱子内的位置 (0-26)
-                // 注意：这里需要确保 innerItem 是独立的引用，防止多层引用问题
-                // 但由于我们是层层新建的，这里直接改 Slot 没问题
-                innerItem.add("Slot", wrapTag(1, (byte) (k - start)));
-                
-                // 【核心修复】直接添加 innerItem，不要加 wrapper！
-                // BedrockParser 写 List 时会自动处理
-                itemsArr.add(innerItem);
-            }
-
-            itemsListTag.add("v", itemsArr);
-            tagContent.add("Items", itemsListTag);
-
-            // 4. 命名
-            JsonObject displayTag = new JsonObject(); displayTag.addProperty("t", 10);
-            JsonObject displayContent = new JsonObject();
-            // 命名格式：Storage Layer 1 - Box 1
-            displayContent.add("Name", wrapTag(8, "Storage L" + layer + " - Box " + (i + 1)));
-            displayTag.add("v", displayContent);
-            tagContent.add("display", displayTag);
-
-            tagTag.add("v", tagContent);
-            chestItem.add("tag", tagTag);
-
-            packedContainers.add(chestItem);
-        }
-        
-        // 继续递归，看看打包后的箱子是否能放进背包
-        return recursivePackItems(packedContainers, limit, layer + 1);
-    }
 
     // 辅助方法：快速创建 {t:?, v:?} 对象
     private JsonObject wrapTag(int type, Object value) {
@@ -4008,7 +3891,8 @@ runOnUiThread(() -> {
         listView.setEmptyView(emptyView);
 
         LayoutInflater inflater = LayoutInflater.from(this);
-        View customTitleView = inflater.inflate(R.layout.dialog_title_with_search, null);
+        ViewGroup parent = findViewById(android.R.id.content); // 获取当前窗口内容视图
+        View customTitleView = inflater.inflate(R.layout.dialog_title_with_search, parent, false);
         
         final TextView tvTitle = customTitleView.findViewById(R.id.tv_dialog_title);
         final Button btnSearch = customTitleView.findViewById(R.id.btn_search_toggle);
@@ -4016,8 +3900,8 @@ runOnUiThread(() -> {
         final EditText etSearch = customTitleView.findViewById(R.id.et_search_input);
         final android.view.View btnClear = customTitleView.findViewById(R.id.btn_clear_search);
         final Button btnBatchDelete = customTitleView.findViewById(R.id.btn_batch_delete);
-        
-        tvTitle.setText(baseTitle + " (" + dataList.size() + ")");
+
+        tvTitle.setText(String.format(baseTitle, dataList.size()));
         
         // === [修改] 批量删除按钮点击事件 ===
         btnBatchDelete.setOnClickListener(v -> {
@@ -4063,7 +3947,7 @@ runOnUiThread(() -> {
                                 // 删除完成后，自动退出选择模式
                                 adapter.setSelectionMode(false);
 
-                                tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
+                                tvTitle.setText(String.format(baseTitle, dataList.size()));
                                 toast(getString(R.string.toast_successfully_deleted) + toDelete.size() + getString(R.string.toast_deleted_item));
                             });
                         } catch(Exception e) {
@@ -4102,7 +3986,7 @@ runOnUiThread(() -> {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 adapter.getFilter().filter(s);
-                if (s.length() > 0) btnClear.setVisibility(View.VISIBLE);
+                if (s.length() > 0) btnClear.setVisibility(View.VISIBLE);   //忽略
                 else btnClear.setVisibility(View.GONE);
             }
             @Override public void afterTextChanged(android.text.Editable s) {}
@@ -4164,7 +4048,7 @@ runOnUiThread(() -> {
                     else if (w == 3) deletePlayerKey(targetKey, () -> {
                         adapter.remove(targetKey);
                         dataList.remove(targetKey);
-                        tvTitle.setText(baseTitle + " (" + adapter.getCount() + ")");
+                        tvTitle.setText(String.format(baseTitle, dataList.size()));
                     });
                 }).show();
             return true;
@@ -4174,10 +4058,10 @@ runOnUiThread(() -> {
     }
 
 // === 自定义模糊搜索适配器 (支持多选+模式切换版) ===
-    private class FuzzyArrayAdapter extends BaseAdapter implements android.widget.Filterable {
-        private List<String> originalList;
+    private static class FuzzyArrayAdapter extends BaseAdapter implements android.widget.Filterable {
+        private final List<String> originalList;
         private List<String> displayedList;
-        private LayoutInflater inflater;
+        private final LayoutInflater inflater;
         
         public java.util.HashSet<String> selectedItems = new java.util.HashSet<>();
         
@@ -4254,20 +4138,15 @@ runOnUiThread(() -> {
         public List<String> getSelectedList() {
             return new ArrayList<>(selectedItems);
         }
-        
-        public void clearSelection() {
-            selectedItems.clear();
-            notifyDataSetChanged();
-        }
 
-        @Override
+    @Override
         public android.widget.Filter getFilter() {
             return new android.widget.Filter() {
                 @Override
                 protected FilterResults performFiltering(CharSequence constraint) {
                     FilterResults results = new FilterResults();
                     List<String> filtered = new ArrayList<>();
-                    if (constraint == null || constraint.length() == 0) {
+                    if (constraint == null || constraint.length() == 0) {  //忽略
                         filtered.addAll(originalList);
                     } else {
                         String pattern = constraint.toString().toLowerCase().trim();
@@ -4468,7 +4347,7 @@ runOnUiThread(() -> {
                     }
                 } else {
                     // 普通文本模式：UTF-8
-                    keyBytes = inputStr.getBytes("UTF-8");
+                    keyBytes = inputStr.getBytes(StandardCharsets.UTF_8);
                 }
 
                 // 读取数据
@@ -4497,7 +4376,7 @@ runOnUiThread(() -> {
 
                     if(tvCurrentPath != null) {
                         String type = isHex ? "[Hex] " : "";
-                        tvCurrentPath.setText(getString(R.string.title_current) + type + inputStr);
+                        tvCurrentPath.setText(getString(R.string.title_current, type + inputStr));
                     }
                     toast(getString(R.string.toast_loading_successfully));
                 });
@@ -4525,7 +4404,7 @@ runOnUiThread(() -> {
     }
 
     // 【新增】执行修复并自动重试
-    private void performDbRepair(final String dbPath, final String folderName, final Runnable originalSuccessTask) {
+    private void performDbRepair(final String dbPath, final String folderName, final Runnable originalSuccessTask) {  //保留originalSuccessTask
         final ProgressDialog pd = ProgressDialog.show(this, getString(R.string.msg_under_repair), getString(R.string.msg_trying_to_rebuild_data_index), true);
         
         new Thread(() -> {
@@ -4586,10 +4465,10 @@ runOnUiThread(() -> {
                     updateAdapter(rootNbtData);
                     toast(getString(R.string.toast_player_loaded_success));
                     if (tvCurrentPath != null)
-                        tvCurrentPath.setText(getString(R.string.path_editing_player_format) + folderName + ")");
+                        tvCurrentPath.setText(getString(R.string.path_editing_player, folderName));
                 });
             } catch (final Exception e) {
-                runOnUiThread(() -> { loading.dismiss(); toast(getString(R.string.toast_retry_failed)+e.toString());});
+                runOnUiThread(() -> { loading.dismiss(); toast(getString(R.string.toast_retry_failed)+ e);});
             }
         }).start();
     }
@@ -4673,8 +4552,9 @@ runOnUiThread(() -> {
         // 使用 simple_list_item_2 可以显示两行文字 (Title + Subtitle) 但需要自定义 adapter
         // 这里为了简单，我们用 simple_list_item_1 配合换行符
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, displayList) {
+            @NonNull
             @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
+            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
                 // 小优化：让显示更好看一点，把字体改小
                 TextView view = (TextView) super.getView(position, convertView, parent);
                 view.setTextSize(14); // 稍微小一点
@@ -4730,7 +4610,7 @@ runOnUiThread(() -> {
         
         updateAdapter(rootNbtData);
         
-        if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current) + key + getString(R.string.text_newly_created));
+        if(tvCurrentPath!=null) tvCurrentPath.setText(getString(R.string.title_current, key + getString(R.string.text_newly_created)));
         
         // 只有当你点击保存时，才会真正写入数据库
         toast(getString(R.string.toast_empty_data_has_been_created_please_edit_and_save));
@@ -4774,14 +4654,14 @@ runOnUiThread(() -> {
 
             // 如果读到了种子，显示小字
             if (seedStr != null && !seedStr.isEmpty()) {
-                tvSeed.setText("🌱 " + seedStr);
+                tvSeed.setText(getString(R.string.key_seed_display, seedStr));
                 tvSeed.setVisibility(View.VISIBLE);
             } else {
                 tvSeed.setVisibility(View.GONE);
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error loading world info", e);
             // 出错时恢复默认
             tvName.setText(getString(R.string.app_name));
             tvSeed.setVisibility(View.GONE);
@@ -4993,7 +4873,6 @@ private void showAppInfoDialog() {
                 aboutContent.setVisibility(View.VISIBLE);
                 aboutExpand.setText("▲");
             } else {
-                if (aboutContent != null && aboutContent.getVisibility() == View.GONE);
                 aboutExpand.setText("▼");
             }
         });
@@ -5129,6 +5008,7 @@ private static class AutocompleteEntry {
         return namespace; // 带minecraft:的namespace
     }
     
+    @NonNull
     @Override
     public String toString() {
         return name;
@@ -5161,7 +5041,7 @@ private List<AutocompleteEntry> loadAutocompleteData(String dataType) {
                 break;
         }
     } catch (Exception e) {
-        e.printStackTrace();
+        Log.e(TAG, "Failed to load autocomplete data: " + dataType, e);
     }
     
     return list;
@@ -5224,18 +5104,18 @@ private String detectAutocompleteType(String key, String parent, String grandPar
 
 // 获取类型显示标签
 private String getTypeLabel(String type) {
-    switch (type) {
-        case "item": return getString(R.string.title_item);
-        case "block": return getString(R.string.title_block);
-        case "effect": return getString(R.string.title_effect);
-        case "enchant": return getString(R.string.title_enchant);
-        case "all": return getString(R.string.title_all);
-        default: return getString(R.string.title_data);
-    }
+    return switch (type) {
+        case "item" -> getString(R.string.title_item);
+        case "block" -> getString(R.string.title_block);
+        case "effect" -> getString(R.string.title_effect);
+        case "enchant" -> getString(R.string.title_enchant);
+        case "all" -> getString(R.string.title_all);
+        default -> getString(R.string.title_data);
+    };
 }
 
 // 【新增】统一的自动填充对话框
-private void showAutocompleteDialog(final EditText targetInput, final String dataType, final String currentValue) {
+private void showAutocompleteDialog(final EditText targetInput, final String dataType, final String currentValue) {   //?
     // 创建布局
     LinearLayout layout = new LinearLayout(this);
     layout.setOrientation(LinearLayout.VERTICAL);
@@ -5275,8 +5155,9 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
         // 【修复2】：缓存 Filter 实例，避免每次 getFilter 都创建新对象导致异步线程冲突
         private Filter mFilter;
 
+        @NonNull
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, @NonNull ViewGroup parent) {
             if (convertView == null) {
                 convertView = getLayoutInflater().inflate(android.R.layout.simple_list_item_2, parent, false);
             }
@@ -5287,21 +5168,14 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
             // 主标题
             String label = "";
             if (item == null) return convertView;
-            switch (item.category) {
-                case "block":
-                    label = getString(R.string.title_block_label);
-                    break;
-                case "item":
-                    label = getString(R.string.title_item_label);
-                    break;
-                case "effect":
-                    label = getString(R.string.title_effect_label);
-                    break;
-                case "enchant":
-                    label = getString(R.string.title_enchant_label);
-                    break;
-            }
-            tv1.setText(label + item.name);
+            label = switch (item.category) {
+                case "block" -> getString(R.string.title_block_label);
+                case "item" -> getString(R.string.title_item_label);
+                case "effect" -> getString(R.string.title_effect_label);
+                case "enchant" -> getString(R.string.title_enchant_label);
+                default -> label;
+            };
+            tv1.setText(String.format("%s %s", label, item.name));
             tv1.setTextColor(Color.parseColor("#333333"));
             tv1.setTextSize(15);
 
@@ -5319,6 +5193,7 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
             return convertView;
         }
 
+        @NonNull
         @Override
         public Filter getFilter() {
             // 【修复2】：单例模式返回 Filter
@@ -5330,7 +5205,7 @@ private void showAutocompleteDialog(final EditText targetInput, final String dat
                         List<AutocompleteEntry> filtered = new ArrayList<>();
 
                         // constraint 为空时，返回完整的 allItems (这里 allItems 始终是完整的，因为没被破坏)
-                        if (constraint == null || constraint.length() == 0) {
+                        if (constraint == null || constraint.length() == 0) {   //忽略
                             filtered.addAll(allItems);
                         } else {
                             String pattern = constraint.toString().toLowerCase().trim();
@@ -5547,6 +5422,9 @@ private void copyLogsToClipboard() {
         File crashDir = new File(getExternalFilesDir(null), "CrashLogs");
         if (crashDir.exists() && crashDir.listFiles() != null) {
             File[] files = crashDir.listFiles();
+            if (files == null || files.length == 0) {
+                return;
+            }
             Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
             
             for (File file : files) {
@@ -5562,7 +5440,7 @@ private void copyLogsToClipboard() {
             }
         }
         
-        if (allLogs.length() == 0) {
+        if (allLogs.length() == 0) {   //忽略
             toast("没有日志可复制");
             return;
         }
@@ -5602,6 +5480,9 @@ private void exportLogsToFile() {
             writer.write("导出时间: " + timeStamp + "\n\n");
 
             files = crashDir.listFiles();
+            if (files == null || files.length == 0) {
+                return;
+            }
             Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
 
             for (File file : files) {

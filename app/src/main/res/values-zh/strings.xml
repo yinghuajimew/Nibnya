@@ -136,7 +136,7 @@
     <string name="toast_copied">已复制到剪贴板</string>
     <string name="title_read_player">读取玩家</string>
     <string name="toast_player_loaded_success">玩家数据加载成功！</string>
-    <string name="path_editing_player_format">当前: 玩家数据 (~local_player) (%1$s)</string>
+    <string name="path_editing_player">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="btn_understood">知道了</string>
     <string name="title_load_failed">加载失败</string>
     <string name="msg_load_failed_advice">无法读取数据\n\n💡 可能的解决方案：\n1. 确保该存档曾经进入过游戏（生成了数据）\n2. 存档曾被 Blocktopograph 或 澜诺(naroX) 修改过，NBT编辑器无法加载\n3. 有概率可能无法加载，不确定原因\n\n详细错误:\n</string>
@@ -198,7 +198,7 @@
     <string name="title_dendrogram">树状图: </string>
     <string name="title_treemap_player_data">树状图: 玩家数据 (~local_player)</string>
     <string name="title_treemap_world_data">树状图: 世界数据 (level.dat)</string>
-    <string name="title_current">当前: </string>
+    <string name="title_current">当前: %1$s</string>
     <string name="msg_copy_process_interrupted">复制过程中断</string>
     <string name="msg_search_for_players">搜索玩家...</string>
     <string name="msg_read">读取中</string>
@@ -223,12 +223,12 @@
     <string name="msg_map">地图</string>
     <string name="msg_paste_as_new">📋 粘贴为新</string>
     <string name="msg_delete_all_data_in_the_list">🗑️ [危险] 删除列表中的所有数据</string>
-    <string name="msg_map_data">地图数据</string>
+    <string name="msg_map_data">地图数据 (%1$d)</string>
     <string name="msg_for_example_map">例如: map_123</string>
     <string name="msg_create_a_giant_jigsaw_puzzle">🧩 创建巨型拼图画 (自动导入背包)</string>
-    <string name="mag_village_data">村庄数据</string>
+    <string name="mag_village_data">村庄数据 (%1$d)</string>
     <string name="msg_for_example_village">例如: VILLAGE_Overworld_xxx</string>
-    <string name="msg_player_data">玩家数据</string>
+    <string name="msg_player_data">玩家数据 (%1$d)</string>
     <string name="msg_for_example_player">例如: player_uuid</string>
     <string name="title_high_energy_early_warning">⚠️ 高能预警</string>
     <string name="msg_delete_existing_ones_in_the_list">你确定要删除列表里现有的 </string>
@@ -246,8 +246,7 @@
     <string name="msg_move_data_to_new_key_and_delete_old_key">这将移动数据到新 Key，并删除旧 Key</string>
     <string name="toast_rename_failed_colon">重命名失败: </string>
     <string name="msg_search_map_data">搜索地图数据...</string>
-    <string name="text_huge_array_detected">检测到巨型数组，共有 </string>
-    <string name="text_direct_editing_will_cause_freezing_please_select_an_operation">个元素\n直接编辑会导致卡死，请选择操作：</string>
+    <string name="text_huge_array_detected">检测到巨型数组，共有 %1$d 个元素\n直接编辑会导致卡死，请选择操作：</string>
     <string name="text_starting_position_eg_0">起始位置 (例如: 0)</string>
     <string name="text_number_of_views_recommended_200">查看数量 (建议: 200)</string>
     <string name="text_import_images_to_generate_map_images">🖼️ 导入图片生成地图画</string>
@@ -421,7 +420,7 @@
 <string name="about_header">关于</string>
 <string name="settings_header">设置</string>
 <string name="long_press_here_to_open_the_root_menu">长按此处打开根菜单</string>
-<string name="btn_choose">🔍 选择</string>
+<string name="btn_choose">🔍 选择%1$s</string>
 <string name="title_item">物品</string>
 <string name="title_block">方块</string>
 <string name="title_effect">药水效果</string>
@@ -436,4 +435,5 @@
 <string name="title_enchant_label">[附魔] </string>
 <string name="title_choose">选择</string>
 <string name="msg_slice_missing">缺失的地图</string>
+    <string name="key_seed_display">🌱 %1$s</string>
 </resources>

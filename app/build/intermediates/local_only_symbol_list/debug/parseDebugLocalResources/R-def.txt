@@ -169,6 +169,7 @@ string key_game_mode_default
 string key_game_mode_survive
 string key_game_mode_watch
 string key_game_time
+string key_seed_display
 string key_thunderstorm_rainfall_mtimes
 string key_time_tick_calculation
 string key_world_generator_type_end
@@ -305,7 +306,7 @@ string open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes
 string path_current_level
 string path_current_player
 string path_custom
-string path_editing_player_format
+string path_editing_player
 string path_legacy
 string path_prefix
 string path_restored_player
@@ -319,7 +320,6 @@ string settings_header
 string switch_to_chinese
 string switch_to_english
 string text_data_name
-string text_direct_editing_will_cause_freezing_please_select_an_operation
 string text_enter_keyword_search
 string text_here_is_the_translation
 string text_huge_array_detected
