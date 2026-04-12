@@ -2050,7 +2050,7 @@ private void updateAdapter(JsonObject data) {
                 }
             }
             // 传入上下文
-            nbtAdapter.setPathContext(parent, grandParent);
+            nbtAdapter.setPathContext(grandParent);
             
             nbtListView.setAdapter(nbtAdapter);
         }

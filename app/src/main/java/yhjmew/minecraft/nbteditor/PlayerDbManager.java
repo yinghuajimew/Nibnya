@@ -13,7 +13,7 @@ import com.litl.leveldb.Iterator;
 public class PlayerDbManager {
 
     private DB db;
-    private File dbFolder;
+    private final File dbFolder;
 
     // 加载 so 库
     static {
@@ -26,7 +26,7 @@ public class PlayerDbManager {
         }
     }
 
-    public PlayerDbManager(String dbFolderPath) throws Exception {
+    public PlayerDbManager(String dbFolderPath) {
         this.dbFolder = new File(dbFolderPath);
         if (!dbFolder.exists()) {
             dbFolder.mkdirs();
@@ -76,8 +76,7 @@ public class PlayerDbManager {
         
         if (value == null) {
             // 兜底遍历查找
-            Iterator iterator = db.iterator();
-            try {
+            try (Iterator iterator = db.iterator()) {
                 iterator.seekToFirst();
                 while (iterator.isValid()) {
                     String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
@@ -86,8 +85,6 @@ public class PlayerDbManager {
                     }
                     iterator.next();
                 }
-            } finally {
-                iterator.close();
             }
             throw new Exception(NbtTranslator.getString(R.string.msg_player_data_not_found));
         }
@@ -138,21 +135,18 @@ public class PlayerDbManager {
         if (db == null) 
             throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
         List<String> list = new ArrayList<>();
-        
-        Iterator iterator = db.iterator();
-        try {
+
+        try (Iterator iterator = db.iterator()) {
             byte[] prefix = "map_".getBytes(StandardCharsets.UTF_8);
             iterator.seek(prefix);
-            
-            while(iterator.isValid()) {
+
+            while (iterator.isValid()) {
                 byte[] keyBytes = iterator.getKey();
                 String keyStr = new String(keyBytes, StandardCharsets.UTF_8);
                 if (!keyStr.startsWith("map_")) break;
                 list.add(keyStr);
                 iterator.next();
             }
-        } finally {
-            iterator.close();
         }
         Collections.sort(list); 
         return list;
@@ -162,20 +156,17 @@ public class PlayerDbManager {
         if (db == null) 
             throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
         List<String> list = new ArrayList<>();
-        
-        Iterator iterator = db.iterator();
-        try {
+
+        try (Iterator iterator = db.iterator()) {
             byte[] prefix = "VILLAGE_".getBytes(StandardCharsets.UTF_8);
             iterator.seek(prefix);
-            
-            while(iterator.isValid()) {
+
+            while (iterator.isValid()) {
                 String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
                 if (!keyStr.startsWith("VILLAGE_")) break;
                 list.add(keyStr);
                 iterator.next();
             }
-        } finally {
-            iterator.close();
         }
         Collections.sort(list);
         return list;
@@ -186,23 +177,20 @@ public class PlayerDbManager {
             throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
         List<String> players = new ArrayList<>();
         players.add("~local_player");
-        
-        Iterator iterator = db.iterator();
-        try {
+
+        try (Iterator iterator = db.iterator()) {
             byte[] prefix = "player".getBytes(StandardCharsets.UTF_8);
             iterator.seek(prefix);
-            
-            while(iterator.isValid()) {
+
+            while (iterator.isValid()) {
                 String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
                 if (!keyStr.startsWith("player")) break;
-                
+
                 if (keyStr.startsWith("player_") || keyStr.equals("player")) {
                     players.add(keyStr);
                 }
                 iterator.next();
             }
-        } finally {
-            iterator.close();
         }
         Collections.sort(players);
         return players;

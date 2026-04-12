@@ -51,9 +51,9 @@ public class NbtTreeAdapter extends BaseAdapter {
         }
     }
 
-    private Context context;
-    private Node rootNode;
-    private List<Node> visibleNodes;
+    private final Context context;
+    private final Node rootNode;
+    private final List<Node> visibleNodes;
 
     public NbtTreeAdapter(Context context, JsonObject rootData) {
         this.context = context;
@@ -423,7 +423,7 @@ public JsonObject getParentContainer(int position) {
     
     // 获取父节点的 value（应该是 Compound 类型）
     JsonElement parentValue = node.parent.value;
-    if (parentValue != null && parentValue.isJsonObject()) {
+    if (parentValue.isJsonObject()) {
         JsonObject parentObj = parentValue.getAsJsonObject();
         // 解包装获取实际的 Compound 内容
         if (parentObj.has("v") && parentObj.get("v").isJsonObject()) {

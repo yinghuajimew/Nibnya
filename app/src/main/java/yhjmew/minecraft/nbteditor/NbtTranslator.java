@@ -1,6 +1,11 @@
 package yhjmew.minecraft.nbteditor;
 
+import static android.content.ContentValues.TAG;
+
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.util.Log;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.InputStream;
@@ -22,6 +27,7 @@ public class NbtTranslator {
     private static boolean isLoaded = false;
 
     // 【核心修复】保存全局 Context，以便静态方法使用 getString
+    @SuppressLint("StaticFieldLeak")
     private static Context mContext;
 
     // 通用 JSON 结构
@@ -62,7 +68,7 @@ public class NbtTranslator {
             String folder = lang.equals("zh") ? "zh/" : "en/";
 
             // 2. 加载文件 (注意：路径变成了 "zh/key_translation.json")
-            loadKeyMap(context, gson, folder + "key_translation.json", keyDesc);
+            loadKeyMap(context, gson, folder + "key_translation.json");
 
             loadStringMap(context, gson, folder + "item_translation.json", itemDesc);
             loadStringMap(context, gson, folder + "block_translation.json", itemDesc);
@@ -79,7 +85,7 @@ public class NbtTranslator {
 
             isLoaded = true;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w("NbtTranslator", "Translation load failed", e);
         }
     }
 
@@ -89,13 +95,14 @@ public class NbtTranslator {
         return mContext.getString(resId, formatArgs);
     }
 
-    private static void loadKeyMap(Context ctx, Gson gson, String file, Map<String, String> map) {
+    private static void loadKeyMap(Context ctx, Gson gson, String file) {
         try {
             InputStream is = ctx.getAssets().open(file);
             List<JsonKeyItem> list = gson.fromJson(new InputStreamReader(is), new TypeToken<
                     List<JsonKeyItem>>() {}.getType());
-            for (JsonKeyItem item : list) if (item.name != null) map.put(item.name, item.brief);
+            for (JsonKeyItem item : list) if (item.name != null) NbtTranslator.keyDesc.put(item.name, item.brief);
         } catch (Exception e) {
+            Log.w(TAG, "Failed to load translation file: " + file, e);
         }
     }
 
@@ -109,6 +116,7 @@ public class NbtTranslator {
                 if (item.namespace != null) map.put(item.namespace, item.name);
             }
         } catch (Exception e) {
+            Log.w(TAG, "Failed to load translation file: " + file, e);
         }
     }
 
@@ -122,6 +130,7 @@ public class NbtTranslator {
                 if (item.namespace != null) map.put(item.namespace, item.name);
             }
         } catch (Exception e) {
+            Log.w(TAG, "Failed to load translation file: " + file, e);
         }
     }
 
@@ -290,6 +299,7 @@ public class NbtTranslator {
             }
 
         } catch (Exception e) {
+            Log.w(TAG, "Boolean parsing failed for key: " + key, e);
         }
         return null;
     }
@@ -363,7 +373,7 @@ public class NbtTranslator {
         if (key.startsWith("allow") || key.startsWith("Allow")) return true;
         if (key.contains("Enabled")) return true;
 
-        if (key.equals("pvp") || key.equals("mobgriefing") || key.equals("keepinventory") ||
+        return key.equals("pvp") || key.equals("mobgriefing") || key.equals("keepinventory") ||
                 key.equals("naturalregeneration") || key.equals("tntexplodes") || key.equals("respawnblocksexplode") ||
                 key.equals("commandblockoutput") || key.equals("sendcommandfeedback") ||
                 key.equals("recipesunlock") || key.equals("immutableWorld") ||
@@ -371,10 +381,7 @@ public class NbtTranslator {
                 key.equals("Saddled") || key.equals("Sheared") || key.equals("Sitting") ||
                 key.equals("Chested") || key.equals("ShowBottom") || key.equals("LootDropped") ||
                 key.equals("WasPickedUp") || key.equals("Dead") || key.equals("MultiplayerGame") ||
-                key.equals("LANBroadcast")) {
-            return true;
-        }
-        return false;
+                key.equals("LANBroadcast");
     }
 
     private static int toInt(String val) {

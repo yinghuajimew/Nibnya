@@ -23,8 +23,8 @@ public class NbtAdapter extends BaseAdapter {
     public static final int MODE_SMART = 2;
     public static final int MODE_SIMPLE = 3;
 
-    private Context context;
-    private JsonObject rootJson;
+    private final Context context;
+    private final JsonObject rootJson;
 
     // 【核心】我们需要两个列表：一个存原始所有Key，一个存当前显示的Key
     private List<String> originalKeys; // 原始全量数据
@@ -38,11 +38,10 @@ public class NbtAdapter extends BaseAdapter {
         refreshKeys();
     }
 
-    private String currentParentKey = ""; // 当前所在的父文件夹名
+    // 当前所在的父文件夹名
     private String currentGrandParentKey = ""; // 爷爷文件夹名 (用于判断 list -> index -> content)
 
-    public void setPathContext(String parent, String grandParent) {
-        this.currentParentKey = parent;
+    public void setPathContext(String grandParent) {
         this.currentGrandParentKey = grandParent;
         notifyDataSetChanged();
     }
@@ -114,10 +113,6 @@ public class NbtAdapter extends BaseAdapter {
 
     public JsonObject getData() {
         return rootJson;
-    }
-
-    public String getJsonString() {
-        return rootJson != null ? rootJson.toString() : "{}";
     }
 
     @Override

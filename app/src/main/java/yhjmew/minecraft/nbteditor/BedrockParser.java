@@ -25,7 +25,7 @@ public class BedrockParser {
         JsonObject rootWrapper = (JsonObject) readTagPayload(dis, 10);
         fis.close();
 
-        if (rootWrapper.has("v")) {
+        if (rootWrapper != null && rootWrapper.has("v")) {
             return rootWrapper.getAsJsonObject("v");
         }
         return new JsonObject();
@@ -41,7 +41,7 @@ public class BedrockParser {
         JsonObject rootWrapper = (JsonObject) readTagPayload(dis, 10);
         bais.close();
 
-        if (rootWrapper.has("v")) {
+        if (rootWrapper != null && rootWrapper.has("v")) {
             return rootWrapper.getAsJsonObject("v");
         }
         return new JsonObject();
@@ -61,11 +61,11 @@ public class BedrockParser {
     }
 
     // 兼容旧接口：如果你一定要传字符串 (建议少用)
-    public static void write(String json, String destPath) throws Exception {
+    public static void write(String json, String destPath) throws Exception {   //存在
         write(new Gson().fromJson(json, JsonObject.class), destPath);
     }
 
-    public static byte[] writeToBytes(String json) throws Exception {
+    public static byte[] writeToBytes(String json) throws Exception {   //存在
         return writeToBytes(new Gson().fromJson(json, JsonObject.class));
     }
 
@@ -163,8 +163,7 @@ public class BedrockParser {
     }
 
     private static JsonElement extractValue(Object obj) {
-        if (obj instanceof JsonObject) {
-            JsonObject jo = (JsonObject) obj;
+        if (obj instanceof JsonObject jo) {
             if (jo.has("v")) return jo.get("v");
             return jo;
         }

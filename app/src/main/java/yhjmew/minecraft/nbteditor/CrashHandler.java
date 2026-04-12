@@ -1,13 +1,15 @@
 package yhjmew.minecraft.nbteditor;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,13 +18,13 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 
 /** 全局异常捕获器 当程序发生未捕获异常时，由该类接管程序，并记录发送错误报告 */
 public class CrashHandler implements Thread.UncaughtExceptionHandler {
 
     private static final String TAG = "CrashHandler";
+    @SuppressLint("StaticFieldLeak")
     private static CrashHandler instance;
     private Context mContext;
     private Thread.UncaughtExceptionHandler mDefaultHandler;
@@ -45,7 +47,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
     }
 
     @Override
-    public void uncaughtException(Thread thread, Throwable ex) {
+    public void uncaughtException(@NonNull Thread thread, @NonNull Throwable ex) {
         if (!handleException(ex) && mDefaultHandler != null) {
             // 如果用户没有处理则让系统默认的异常处理器来处理
             mDefaultHandler.uncaughtException(thread, ex);
@@ -119,7 +121,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
     private void saveCrashInfo2File(Throwable ex, String deviceInfo) {
         StringBuilder sb = new StringBuilder();
         sb.append("====== CRASH LOG ======\n");
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         String time = format.format(new Date());
         sb.append("Time: ").append(time).append("\n");
         sb.append(deviceInfo);
@@ -140,7 +142,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
 
         // 准备文件名和内容
         String logContent = sb.toString();
-        String fileName = "crash-" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date()) + ".log";
+        String fileName = "crash-" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + ".log";
 
         // === 1. 写入 App 私有目录 (Android/data/.../files/CrashLogs) ===
         // 这是保底方案，几乎总是能成功的
