@@ -1,205 +1,202 @@
-package yhjmew.minecraft.nbteditor;
+package yhjmew.minecraft.nbteditor
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.litl.leveldb.DB
+import yhjmew.minecraft.nbteditor.NbtTranslator.getString
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.util.Collections
 
 // Litl LevelDB JNI
-import com.litl.leveldb.DB;
-import com.litl.leveldb.Iterator;
+class PlayerDbManager(dbFolderPath: String) {
+    private var db: DB?
+    private val dbFolder: File
 
-public class PlayerDbManager {
-
-    private DB db;
-    private final File dbFolder;
-
-    // 加载 so 库
-    static {
-        try {
-            System.loadLibrary("leveldb");
-        } catch (UnsatisfiedLinkError e) {
-            try { 
-                System.loadLibrary("leveldbjni"); 
-            } catch (Throwable ignored) {}
-        }
-    }
-
-    public PlayerDbManager(String dbFolderPath) {
-        this.dbFolder = new File(dbFolderPath);
+    init {
+        this.dbFolder = File(dbFolderPath)
         if (!dbFolder.exists()) {
-            dbFolder.mkdirs();
+            dbFolder.mkdirs()
         }
 
         // 清理 LOCK 文件
-        File lockFile = new File(dbFolder, "LOCK");
+        val lockFile = File(dbFolder, "LOCK")
         if (lockFile.exists()) {
-            lockFile.delete();
+            lockFile.delete()
         }
 
         // Litl 版本的打开方式
-        this.db = new DB(dbFolder);
-        this.db.open();
+        this.db = DB(dbFolder)
+        this.db!!.open()
     }
 
-    public static void tryRepair(String dbFolderPath) throws Exception {
-        File folder = new File(dbFolderPath);
-        
-        // 清理 LOCK
-        File lockFile = new File(folder, "LOCK");
-        if (lockFile.exists()) {
-            lockFile.delete();
-        }
-        
-        // 清理 CURRENT
-        File currentFile = new File(folder, "CURRENT");
-        if (currentFile.exists()) {
-            currentFile.delete();
-        }
+    @Throws(Exception::class)
+    fun readLocalPlayer(): ByteArray? {
+        if (db == null) throw Exception(getString(R.string.msg_database_is_not_open))
 
-        try {
-            DB tempDb = new DB(folder);
-            tempDb.open();
-            tempDb.close();
-        } catch (Exception e) {
-            throw new Exception(NbtTranslator.getString(R.string.msg_the_repair_failed_and_the_data_was_completely_damaged) + e.getMessage());
-        }
-    }
+        val key: ByteArray? = "~local_player".toByteArray(StandardCharsets.UTF_8)
+        val value = db!!.get(key)
 
-    public byte[] readLocalPlayer() throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_is_not_open));
-        
-        byte[] key = "~local_player".getBytes(StandardCharsets.UTF_8);
-        byte[] value = db.get(key);
-        
         if (value == null) {
             // 兜底遍历查找
-            try (Iterator iterator = db.iterator()) {
-                iterator.seekToFirst();
+            db!!.iterator().use { iterator ->
+                iterator.seekToFirst()
                 while (iterator.isValid()) {
-                    String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
+                    val keyStr = String(iterator.getKey(), StandardCharsets.UTF_8)
                     if (keyStr.contains("local_player") || keyStr.contains("player_server")) {
-                        return iterator.getValue();
+                        return iterator.getValue()
                     }
-                    iterator.next();
+                    iterator.next()
                 }
             }
-            throw new Exception(NbtTranslator.getString(R.string.msg_player_data_not_found));
+            throw Exception(getString(R.string.msg_player_data_not_found))
         }
-        return value;
+        return value
     }
 
-    public byte[] readSpecificKey(String keyString) throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_dn_is_not_open));
-        byte[] keyBytes = keyString.getBytes(StandardCharsets.UTF_8);
-        byte[] val = db.get(keyBytes);
-        if (val == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_data_is_empty_colon) + keyString);
-        return val;
+    @Throws(Exception::class)
+    fun readSpecificKey(keyString: String): ByteArray {
+        if (db == null) throw Exception(getString(R.string.msg_dn_is_not_open))
+        val keyBytes: ByteArray? = keyString.toByteArray(StandardCharsets.UTF_8)
+        val `val` = db!!.get(keyBytes)
+        if (`val` == null) throw Exception(getString(R.string.msg_data_is_empty_colon) + keyString)
+        return `val`
     }
 
-    public byte[] readRawKey(byte[] keyBytes) throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_dn_is_not_open));
-        byte[] val = db.get(keyBytes);
-        if (val == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_the_data_corresponding_to_this_key_was_not_found));
-        return val;
+    @Throws(Exception::class)
+    fun readRawKey(keyBytes: ByteArray?): ByteArray {
+        if (db == null) throw Exception(getString(R.string.msg_dn_is_not_open))
+        val `val` = db!!.get(keyBytes)
+        if (`val` == null) throw Exception(getString(R.string.msg_the_data_corresponding_to_this_key_was_not_found))
+        return `val`
     }
 
-    public void writeLocalPlayer(byte[] nbtData) throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_is_not_open));
-        byte[] key = "~local_player".getBytes(StandardCharsets.UTF_8);
-        db.put(key, nbtData);
+    @Throws(Exception::class)
+    fun writeLocalPlayer(nbtData: ByteArray?) {
+        if (db == null) throw Exception(getString(R.string.msg_database_is_not_open))
+        val key: ByteArray? = "~local_player".toByteArray(StandardCharsets.UTF_8)
+        db!!.put(key, nbtData)
     }
 
-    public void writeSpecificKey(String keyStr, byte[] data) throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
-        byte[] k = keyStr.getBytes(StandardCharsets.UTF_8);
-        db.put(k, data);
+    @Throws(Exception::class)
+    fun writeSpecificKey(keyStr: String, data: ByteArray?) {
+        if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
+        val k: ByteArray? = keyStr.toByteArray(StandardCharsets.UTF_8)
+        db!!.put(k, data)
     }
 
-    public void deleteKey(String keyStr) throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
-        byte[] k = keyStr.getBytes(StandardCharsets.UTF_8);
-        db.delete(k);
+    @Throws(Exception::class)
+    fun deleteKey(keyStr: String) {
+        if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
+        val k: ByteArray? = keyStr.toByteArray(StandardCharsets.UTF_8)
+        db!!.delete(k)
     }
 
-    public List<String> listMapKeys() throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
-        List<String> list = new ArrayList<>();
+    @Throws(Exception::class)
+    fun listMapKeys(): MutableList<String?> {
+        if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
+        val list: MutableList<String?> = ArrayList<String?>()
 
-        try (Iterator iterator = db.iterator()) {
-            byte[] prefix = "map_".getBytes(StandardCharsets.UTF_8);
-            iterator.seek(prefix);
-
+        db!!.iterator().use { iterator ->
+            val prefix: ByteArray? = "map_".toByteArray(StandardCharsets.UTF_8)
+            iterator.seek(prefix)
             while (iterator.isValid()) {
-                byte[] keyBytes = iterator.getKey();
-                String keyStr = new String(keyBytes, StandardCharsets.UTF_8);
-                if (!keyStr.startsWith("map_")) break;
-                list.add(keyStr);
-                iterator.next();
+                val keyBytes = iterator.getKey()
+                val keyStr = kotlin.text.String(keyBytes!!, StandardCharsets.UTF_8)
+                if (!keyStr.startsWith("map_")) break
+                list.add(keyStr)
+                iterator.next()
             }
         }
-        Collections.sort(list); 
-        return list;
+        Collections.sort<String?>(list)
+        return list
     }
 
-    public List<String> listVillageKeys() throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
-        List<String> list = new ArrayList<>();
+    @Throws(Exception::class)
+    fun listVillageKeys(): MutableList<String?> {
+        if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
+        val list: MutableList<String?> = ArrayList<String?>()
 
-        try (Iterator iterator = db.iterator()) {
-            byte[] prefix = "VILLAGE_".getBytes(StandardCharsets.UTF_8);
-            iterator.seek(prefix);
-
+        db!!.iterator().use { iterator ->
+            val prefix: ByteArray? = "VILLAGE_".toByteArray(StandardCharsets.UTF_8)
+            iterator.seek(prefix)
             while (iterator.isValid()) {
-                String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
-                if (!keyStr.startsWith("VILLAGE_")) break;
-                list.add(keyStr);
-                iterator.next();
+                val keyStr = String(iterator.getKey(), StandardCharsets.UTF_8)
+                if (!keyStr.startsWith("VILLAGE_")) break
+                list.add(keyStr)
+                iterator.next()
             }
         }
-        Collections.sort(list);
-        return list;
+        Collections.sort<String?>(list)
+        return list
     }
 
-    public List<String> listPlayerKeys() throws Exception {
-        if (db == null) 
-            throw new Exception(NbtTranslator.getString(R.string.msg_database_shutdown));
-        List<String> players = new ArrayList<>();
-        players.add("~local_player");
+    @Throws(Exception::class)
+    fun listPlayerKeys(): MutableList<String?> {
+        if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
+        val players: MutableList<String?> = ArrayList<String?>()
+        players.add("~local_player")
 
-        try (Iterator iterator = db.iterator()) {
-            byte[] prefix = "player".getBytes(StandardCharsets.UTF_8);
-            iterator.seek(prefix);
-
+        db!!.iterator().use { iterator ->
+            val prefix: ByteArray? = "player".toByteArray(StandardCharsets.UTF_8)
+            iterator.seek(prefix)
             while (iterator.isValid()) {
-                String keyStr = new String(iterator.getKey(), StandardCharsets.UTF_8);
-                if (!keyStr.startsWith("player")) break;
+                val keyStr = String(iterator.getKey(), StandardCharsets.UTF_8)
+                if (!keyStr.startsWith("player")) break
 
-                if (keyStr.startsWith("player_") || keyStr.equals("player")) {
-                    players.add(keyStr);
+                if (keyStr.startsWith("player_") || keyStr == "player") {
+                    players.add(keyStr)
                 }
-                iterator.next();
+                iterator.next()
             }
         }
-        Collections.sort(players);
-        return players;
+        Collections.sort<String?>(players)
+        return players
     }
 
-    public void close() {
+    fun close() {
         if (db != null) {
-            db.close();
-            db = null;
+            db!!.close()
+            db = null
+        }
+    }
+
+    companion object {
+        // 加载 so 库
+        init {
+            try {
+                System.loadLibrary("leveldb")
+            } catch (e: UnsatisfiedLinkError) {
+                try {
+                    System.loadLibrary("leveldbjni")
+                } catch (ignored: Throwable) {
+                }
+            }
+        }
+
+        @Throws(Exception::class)
+        fun tryRepair(dbFolderPath: String) {
+            val folder = File(dbFolderPath)
+
+
+            // 清理 LOCK
+            val lockFile = File(folder, "LOCK")
+            if (lockFile.exists()) {
+                lockFile.delete()
+            }
+
+
+            // 清理 CURRENT
+            val currentFile = File(folder, "CURRENT")
+            if (currentFile.exists()) {
+                currentFile.delete()
+            }
+
+            try {
+                val tempDb = DB(folder)
+                tempDb.open()
+                tempDb.close()
+            } catch (e: Exception) {
+                throw Exception(getString(R.string.msg_the_repair_failed_and_the_data_was_completely_damaged) + e.message)
+            }
         }
     }
 }

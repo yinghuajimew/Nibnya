@@ -1,374 +1,425 @@
-package yhjmew.minecraft.nbteditor;
+package yhjmew.minecraft.nbteditor
 
-import com.google.gson.*;
-import java.io.*;
-import java.nio.charset.*;
-import java.util.*;
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.lang.Double
+import java.lang.Float
+import java.lang.Long
+import java.lang.Short
+import java.nio.charset.StandardCharsets
+import kotlin.Any
+import kotlin.Byte
+import kotlin.ByteArray
+import kotlin.Exception
+import kotlin.Int
+import kotlin.String
+import kotlin.Throws
+import kotlin.text.String
+import kotlin.text.toByteArray
 
-public class BedrockParser {
-
+object BedrockParser {
     // === 读取 (直接返回对象，不转String，省内存) ===
-    public static JsonObject parse(String filePath) throws Exception {
-        File file = new File(filePath);
-        if (!file.exists()) return new JsonObject();
-        FileInputStream fis = new FileInputStream(file);
-        DataInputStream dis = new DataInputStream(fis);
-        if (dis.available() > 8) dis.skipBytes(8); // 跳过头
+    @Throws(Exception::class)
+    fun parse(filePath: String): JsonObject? {
+        val file = File(filePath)
+        if (!file.exists()) return JsonObject()
+        val fis = FileInputStream(file)
+        val dis = DataInputStream(fis)
+        if (dis.available() > 8) dis.skipBytes(8) // 跳过头
 
-        int rootTagId = dis.readByte();
+
+        val rootTagId = dis.readByte().toInt()
         if (rootTagId != 10) {
-            fis.close();
-            return new JsonObject();
+            fis.close()
+            return JsonObject()
         }
-        readString(dis); // 跳过根名
+        readString(dis) // 跳过根名
 
-        JsonObject rootWrapper = (JsonObject) readTagPayload(dis, 10);
-        fis.close();
+        val rootWrapper = readTagPayload(dis, 10) as JsonObject?
+        fis.close()
 
         if (rootWrapper != null && rootWrapper.has("v")) {
-            return rootWrapper.getAsJsonObject("v");
+            return rootWrapper.getAsJsonObject("v")
         }
-        return new JsonObject();
+        return JsonObject()
     }
 
-    public static JsonObject parseBytes(byte[] data) throws Exception {
-        if (data == null) return new JsonObject();
-        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-        DataInputStream dis = new DataInputStream(bais);
-        int rootTagId = dis.readByte();
-        if (rootTagId != 10) return new JsonObject();
-        readString(dis);
-        JsonObject rootWrapper = (JsonObject) readTagPayload(dis, 10);
-        bais.close();
+    @Throws(Exception::class)
+    fun parseBytes(data: ByteArray?): JsonObject? {
+        if (data == null) return JsonObject()
+        val bais = ByteArrayInputStream(data)
+        val dis = DataInputStream(bais)
+        val rootTagId = dis.readByte().toInt()
+        if (rootTagId != 10) return JsonObject()
+        readString(dis)
+        val rootWrapper = readTagPayload(dis, 10) as JsonObject?
+        bais.close()
 
         if (rootWrapper != null && rootWrapper.has("v")) {
-            return rootWrapper.getAsJsonObject("v");
+            return rootWrapper.getAsJsonObject("v")
         }
-        return new JsonObject();
+        return JsonObject()
     }
 
     // === 写入 ===
-
     // 支持直接传入 JsonObject 写入，防止大字符串 OOM
-    public static void write(JsonObject rootJson, String destPath) throws Exception {
-        byte[] nbtBytes = writeToBytes(rootJson);
-        FileOutputStream fos = new FileOutputStream(destPath);
-        DataOutputStream fileDos = new DataOutputStream(fos);
-        writeIntLE(fileDos, 8);
-        writeIntLE(fileDos, nbtBytes.length);
-        fileDos.write(nbtBytes);
-        fos.close();
+    @Throws(Exception::class)
+    fun write(rootJson: JsonObject?, destPath: String?) {
+        val nbtBytes = writeToBytes(rootJson)
+        val fos = FileOutputStream(destPath)
+        val fileDos = DataOutputStream(fos)
+        writeIntLE(fileDos, 8)
+        writeIntLE(fileDos, nbtBytes.size)
+        fileDos.write(nbtBytes)
+        fos.close()
     }
 
     // 兼容旧接口：如果你一定要传字符串 (建议少用)
-    public static void write(String json, String destPath) throws Exception {   //存在
-        write(new Gson().fromJson(json, JsonObject.class), destPath);
+    @Throws(Exception::class)
+    fun write(json: String?, destPath: String?) {   //存在
+        write(Gson().fromJson<JsonObject?>(json, JsonObject::class.java), destPath)
     }
 
-    public static byte[] writeToBytes(String json) throws Exception {   //存在
-        return writeToBytes(new Gson().fromJson(json, JsonObject.class));
+    @Throws(Exception::class)
+    fun writeToBytes(json: String?): ByteArray {   //存在
+        return writeToBytes(Gson().fromJson<JsonObject?>(json, JsonObject::class.java))
     }
 
     // 核心写入逻辑
-    public static byte[] writeToBytes(JsonObject rootContent) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
+    @Throws(Exception::class)
+    fun writeToBytes(rootContent: JsonObject?): ByteArray {
+        val baos = ByteArrayOutputStream()
+        val dos = DataOutputStream(baos)
 
         // 重新包装回 Root Compound
-        JsonObject rootWrapper = new JsonObject();
-        rootWrapper.addProperty("t", 10);
-        rootWrapper.add("v", rootContent);
+        val rootWrapper = JsonObject()
+        rootWrapper.addProperty("t", 10)
+        rootWrapper.add("v", rootContent)
 
-        dos.writeByte(10);
-        writeString(dos, "");
-        writeTagPayload(dos, rootWrapper, 10);
-        return baos.toByteArray();
+        dos.writeByte(10)
+        writeString(dos, "")
+        writeTagPayload(dos, rootWrapper, 10)
+        return baos.toByteArray()
     }
 
     // --- 递归解析逻辑 ---
-    private static Object readTagPayload(DataInputStream dis, int typeId) throws IOException {
-        JsonObject wrapper = new JsonObject();
-        wrapper.addProperty("t", typeId);
-        switch (typeId) {
-            case 1:
-                wrapper.addProperty("v", dis.readByte());
-                return wrapper;
-            case 2:
-                wrapper.addProperty("v", readShortLE(dis));
-                return wrapper;
-            case 3:
-                wrapper.addProperty("v", readIntLE(dis));
-                return wrapper;
-            case 4:
-                wrapper.addProperty("v", readLongLE(dis));
-                return wrapper;
-            case 5:
-                wrapper.addProperty("v", readFloatLE(dis));
-                return wrapper;
-            case 6:
-                wrapper.addProperty("v", readDoubleLE(dis));
-                return wrapper;
-            case 7:
-                {
-                    int len = readIntLE(dis);
-                    JsonArray arr = new JsonArray();
-                    for (int i = 0; i < len; i++) arr.add(dis.readByte());
-                    wrapper.add("v", arr);
-                    return wrapper;
-                }
-            case 11:
-                {
-                    int len = readIntLE(dis);
-                    JsonArray arr = new JsonArray();
-                    for (int i = 0; i < len; i++) arr.add(readIntLE(dis));
-                    wrapper.add("v", arr);
-                    return wrapper;
-                }
-            case 12:
-                {
-                    int len = readIntLE(dis);
-                    JsonArray arr = new JsonArray();
-                    for (int i = 0; i < len; i++) arr.add(readLongLE(dis));
-                    wrapper.add("v", arr);
-                    return wrapper;
-                }
+    @Throws(IOException::class)
+    private fun readTagPayload(dis: DataInputStream, typeId: Int): Any? {
+        val wrapper = JsonObject()
+        wrapper.addProperty("t", typeId)
+        when (typeId) {
+            1 -> {
+                wrapper.addProperty("v", dis.readByte())
+                return wrapper
+            }
 
-            case 8:
-                wrapper.addProperty("v", readString(dis));
-                return wrapper;
+            2 -> {
+                wrapper.addProperty("v", readShortLE(dis))
+                return wrapper
+            }
 
-            case 10: // Compound
-                JsonObject compound = new JsonObject();
+            3 -> {
+                wrapper.addProperty("v", readIntLE(dis))
+                return wrapper
+            }
+
+            4 -> {
+                wrapper.addProperty("v", readLongLE(dis))
+                return wrapper
+            }
+
+            5 -> {
+                wrapper.addProperty("v", readFloatLE(dis))
+                return wrapper
+            }
+
+            6 -> {
+                wrapper.addProperty("v", readDoubleLE(dis))
+                return wrapper
+            }
+
+            7 -> {
+                val len = readIntLE(dis)
+                val arr = JsonArray()
+                var i = 0
+                while (i < len) {
+                    arr.add(dis.readByte())
+                    i++
+                }
+                wrapper.add("v", arr)
+                return wrapper
+            }
+
+            11 -> {
+                val len = readIntLE(dis)
+                val arr = JsonArray()
+                var i = 0
+                while (i < len) {
+                    arr.add(readIntLE(dis))
+                    i++
+                }
+                wrapper.add("v", arr)
+                return wrapper
+            }
+
+            12 -> {
+                val len = readIntLE(dis)
+                val arr = JsonArray()
+                var i = 0
+                while (i < len) {
+                    arr.add(readLongLE(dis))
+                    i++
+                }
+                wrapper.add("v", arr)
+                return wrapper
+            }
+
+            8 -> {
+                wrapper.addProperty("v", readString(dis))
+                return wrapper
+            }
+
+            10 -> {
+                val compound = JsonObject()
                 while (true) {
-                    int nextId = dis.readByte();
-                    if (nextId == 0) break;
-                    String name = readString(dis);
-                    compound.add(name, (JsonElement) readTagPayload(dis, nextId));
+                    val nextId = dis.readByte().toInt()
+                    if (nextId == 0) break
+                    val name = readString(dis)
+                    compound.add(name, readTagPayload(dis, nextId) as JsonElement?)
                 }
-                wrapper.add("v", compound);
-                return wrapper;
+                wrapper.add("v", compound)
+                return wrapper
+            }
 
-            case 9: // List
-                int itemType = dis.readByte();
-                int listSize = readIntLE(dis);
-                JsonArray list = new JsonArray();
-                wrapper.addProperty("itemType", itemType);
-                for (int i = 0; i < listSize; i++)
-                    list.add(extractValue(readTagPayload(dis, itemType)));
-                wrapper.add("v", list);
-                return wrapper;
-            default:
-                return null;
+            9 -> {
+                val itemType = dis.readByte().toInt()
+                val listSize = readIntLE(dis)
+                val list = JsonArray()
+                wrapper.addProperty("itemType", itemType)
+                val i = 0
+                while (i < listSize) {
+                    list.add(extractValue(readTagPayload(dis, itemType)))
+                    i++
+                }
+                wrapper.add("v", list)
+                return wrapper
+            }
+
+            else -> return null
         }
     }
 
-    private static JsonElement extractValue(Object obj) {
-        if (obj instanceof JsonObject jo) {
-            if (jo.has("v")) return jo.get("v");
-            return jo;
+    private fun extractValue(obj: Any?): JsonElement? {
+        if (obj is JsonObject) {
+            if (obj.has("v")) return obj.get("v")
+            return obj
         }
-        return null;
+        return null
     }
 
-    private static void writeTagPayload(DataOutputStream dos, JsonElement element, int typeId)
-            throws IOException {
-        JsonElement value = getRealValue(element);
-        switch (typeId) {
-            case 1:
-                dos.writeByte(getSafeByte(value));
-                break;
-            case 2:
-                writeShortLE(dos, getSafeShort(value));
-                break;
-            case 3:
-                writeIntLE(dos, getSafeInt(value));
-                break;
-            case 4:
-                writeLongLE(dos, getSafeLong(value));
-                break;
-            case 5:
-                writeFloatLE(dos, getSafeFloat(value));
-                break;
-            case 6:
-                writeDoubleLE(dos, getSafeDouble(value));
-                break;
-            case 7:
-                {
-                    JsonArray a = value.getAsJsonArray();
-                    writeIntLE(dos, a.size());
-                    for (JsonElement e : a) dos.writeByte(e.getAsByte());
-                    break;
-                }
-            case 11:
-                {
-                    JsonArray a = value.getAsJsonArray();
-                    writeIntLE(dos, a.size());
-                    for (JsonElement e : a) writeIntLE(dos, e.getAsInt());
-                    break;
-                }
-            case 12:
-                {
-                    JsonArray a = value.getAsJsonArray();
-                    writeIntLE(dos, a.size());
-                    for (JsonElement e : a) writeLongLE(dos, e.getAsLong());
-                    break;
-                }
-            case 8:
-                writeString(dos, value.isJsonPrimitive() ? value.getAsString() : "");
-                break;
+    @Throws(IOException::class)
+    private fun writeTagPayload(dos: DataOutputStream, element: JsonElement, typeId: Int) {
+        val value = getRealValue(element)
+        when (typeId) {
+            1 -> dos.writeByte(getSafeByte(value).toInt())
+            2 -> writeShortLE(dos, getSafeShort(value))
+            3 -> writeIntLE(dos, getSafeInt(value))
+            4 -> writeLongLE(dos, getSafeLong(value))
+            5 -> writeFloatLE(dos, getSafeFloat(value))
+            6 -> writeDoubleLE(dos, getSafeDouble(value))
+            7 -> {
+                val a = value.getAsJsonArray()
+                writeIntLE(dos, a.size())
+                for (e in a) dos.writeByte(e.getAsByte().toInt())
+            }
 
-            case 10:
-                JsonObject obj = new JsonObject();
+            11 -> {
+                val a = value.getAsJsonArray()
+                writeIntLE(dos, a.size())
+                for (e in a) writeIntLE(dos, e.getAsInt())
+            }
+
+            12 -> {
+                val a = value.getAsJsonArray()
+                writeIntLE(dos, a.size())
+                for (e in a) writeLongLE(dos, e.getAsLong())
+            }
+
+            8 -> writeString(dos, if (value.isJsonPrimitive()) value.getAsString() else "")
+            10 -> {
+                val obj = JsonObject()
                 if (element.isJsonObject()) {
-                    JsonObject temp = element.getAsJsonObject();
-                    if (temp.has("v") && temp.get("v").isJsonObject())
-                        obj = temp.getAsJsonObject("v");
-                    else obj = temp;
+                    val temp = element.getAsJsonObject()
+                    if (temp.has("v") && temp.get("v").isJsonObject()) obj =
+                        temp.getAsJsonObject("v")
+                    else obj = temp
                 }
 
-                for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-                    String name = entry.getKey();
-                    JsonElement valWrapper = entry.getValue();
-                    if (name.equals("t") || name.equals("v") || name.equals("itemType")) continue;
+                for (entry in obj.entrySet()) {
+                    val name = entry.key
+                    val valWrapper = entry.value
+                    if (name == "t" || name == "v" || name == "itemType") continue
 
-                    int t = 10;
-                    if (valWrapper.isJsonObject() && valWrapper.getAsJsonObject().has("t"))
-                        t = valWrapper.getAsJsonObject().get("t").getAsInt();
-                    else if (valWrapper.isJsonArray()) t = 9;
+                    var t = 10
+                    if (valWrapper.isJsonObject() && valWrapper.getAsJsonObject().has("t")) t =
+                        valWrapper.getAsJsonObject().get("t").getAsInt()
+                    else if (valWrapper.isJsonArray()) t = 9
 
-                    dos.writeByte(t);
-                    writeString(dos, name);
-                    writeTagPayload(dos, valWrapper, t);
+                    dos.writeByte(t)
+                    writeString(dos, name)
+                    writeTagPayload(dos, valWrapper, t)
                 }
-                dos.writeByte(0);
-                break;
+                dos.writeByte(0)
+            }
 
-            case 9:
-                JsonArray arr = new JsonArray();
-                int it = 1;
+            9 -> {
+                val arr = JsonArray()
+                val it = 1
                 if (element.isJsonObject()) {
-                    JsonObject wrap = element.getAsJsonObject();
-                    if (wrap.has("itemType")) it = wrap.get("itemType").getAsInt();
-                    if (wrap.has("v") && wrap.get("v").isJsonArray())
-                        arr = wrap.getAsJsonArray("v");
-                } else if (element.isJsonArray()) arr = element.getAsJsonArray();
+                    val wrap = element.getAsJsonObject()
+                    if (wrap.has("itemType")) it = wrap.get("itemType").getAsInt()
+                    if (wrap.has("v") && wrap.get("v").isJsonArray()) arr = wrap.getAsJsonArray("v")
+                } else if (element.isJsonArray()) arr = element.getAsJsonArray()
 
-                dos.writeByte(it);
-                writeIntLE(dos, arr.size());
-                for (JsonElement e : arr) {
-                    JsonObject temp = new JsonObject();
-                    temp.add("v", e);
-                    temp.addProperty("t", it);
-                    writeTagPayload(dos, temp, it);
+                dos.writeByte(it)
+                writeIntLE(dos, arr.size())
+                for (e in arr) {
+                    val temp = JsonObject()
+                    temp.add("v", e)
+                    temp.addProperty("t", it)
+                    writeTagPayload(dos, temp, it)
                 }
-                break;
+            }
         }
     }
 
-    private static JsonElement getRealValue(JsonElement el) {
-        if (el.isJsonObject() && el.getAsJsonObject().has("v") && el.getAsJsonObject().has("t"))
-            return el.getAsJsonObject().get("v");
-        return el;
+    private fun getRealValue(el: JsonElement): JsonElement {
+        if (el.isJsonObject() && el.getAsJsonObject().has("v") && el.getAsJsonObject()
+                .has("t")
+        ) return el.getAsJsonObject().get("v")
+        return el
     }
 
-    private static byte getSafeByte(JsonElement el) {
+    private fun getSafeByte(el: JsonElement): Byte {
         try {
-            return el.getAsByte();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsByte()
+        } catch (e: Exception) {
+            return 0
         }
     }
 
-    private static short getSafeShort(JsonElement el) {
+    private fun getSafeShort(el: JsonElement): Short {
         try {
-            return el.getAsShort();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsShort()
+        } catch (e: Exception) {
+            return 0
         }
     }
 
-    private static int getSafeInt(JsonElement el) {
+    private fun getSafeInt(el: JsonElement): Int {
         try {
-            return el.getAsInt();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsInt()
+        } catch (e: Exception) {
+            return 0
         }
     }
 
-    private static long getSafeLong(JsonElement el) {
+    private fun getSafeLong(el: JsonElement): Long {
         try {
-            return el.getAsLong();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsLong()
+        } catch (e: Exception) {
+            return 0
         }
     }
 
-    private static float getSafeFloat(JsonElement el) {
+    private fun getSafeFloat(el: JsonElement): Float {
         try {
-            return el.getAsFloat();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsFloat()
+        } catch (e: Exception) {
+            return 0f
         }
     }
 
-    private static double getSafeDouble(JsonElement el) {
+    private fun getSafeDouble(el: JsonElement): Double {
         try {
-            return el.getAsDouble();
-        } catch (Exception e) {
-            return 0;
+            return el.getAsDouble()
+        } catch (e: Exception) {
+            return 0.0
         }
     }
 
-    private static short readShortLE(DataInputStream s) throws IOException {
-        return Short.reverseBytes(s.readShort());
+    @Throws(IOException::class)
+    private fun readShortLE(s: DataInputStream): Short {
+        return Short.reverseBytes(s.readShort())
     }
 
-    private static int readIntLE(DataInputStream s) throws IOException {
-        return Integer.reverseBytes(s.readInt());
+    @Throws(IOException::class)
+    private fun readIntLE(s: DataInputStream): Int {
+        return Integer.reverseBytes(s.readInt())
     }
 
-    private static long readLongLE(DataInputStream s) throws IOException {
-        return Long.reverseBytes(s.readLong());
+    @Throws(IOException::class)
+    private fun readLongLE(s: DataInputStream): Long {
+        return Long.reverseBytes(s.readLong())
     }
 
-    private static float readFloatLE(DataInputStream s) throws IOException {
-        return Float.intBitsToFloat(readIntLE(s));
+    @Throws(IOException::class)
+    private fun readFloatLE(s: DataInputStream): Float {
+        return Float.intBitsToFloat(readIntLE(s))
     }
 
-    private static double readDoubleLE(DataInputStream s) throws IOException {
-        return Double.longBitsToDouble(readLongLE(s));
+    @Throws(IOException::class)
+    private fun readDoubleLE(s: DataInputStream): Double {
+        return Double.longBitsToDouble(readLongLE(s))
     }
 
-    private static String readString(DataInputStream s) throws IOException {
-        int len = readShortLE(s) & 0xFFFF;
-        byte[] b = new byte[len];
-        s.readFully(b);
-        return new String(b, StandardCharsets.UTF_8);
+    @Throws(IOException::class)
+    private fun readString(s: DataInputStream): String {
+        val len = readShortLE(s).toInt() and 0xFFFF
+        val b = ByteArray(len)
+        s.readFully(b)
+        return String(b, StandardCharsets.UTF_8)
     }
 
-    private static void writeShortLE(DataOutputStream s, short v) throws IOException {
-        s.writeShort(Short.reverseBytes(v));
+    @Throws(IOException::class)
+    private fun writeShortLE(s: DataOutputStream, v: kotlin.Short) {
+        s.writeShort(Short.reverseBytes(v).toInt())
     }
 
-    private static void writeIntLE(DataOutputStream s, int v) throws IOException {
-        s.writeInt(Integer.reverseBytes(v));
+    @Throws(IOException::class)
+    private fun writeIntLE(s: DataOutputStream, v: Int) {
+        s.writeInt(Integer.reverseBytes(v))
     }
 
-    private static void writeLongLE(DataOutputStream s, long v) throws IOException {
-        s.writeLong(Long.reverseBytes(v));
+    @Throws(IOException::class)
+    private fun writeLongLE(s: DataOutputStream, v: kotlin.Long) {
+        s.writeLong(Long.reverseBytes(v))
     }
 
-    private static void writeFloatLE(DataOutputStream s, float v) throws IOException {
-        writeIntLE(s, Float.floatToIntBits(v));
+    @Throws(IOException::class)
+    private fun writeFloatLE(s: DataOutputStream, v: kotlin.Float) {
+        writeIntLE(s, Float.floatToIntBits(v))
     }
 
-    private static void writeDoubleLE(DataOutputStream s, double v) throws IOException {
-        writeLongLE(s, Double.doubleToLongBits(v));
+    @Throws(IOException::class)
+    private fun writeDoubleLE(s: DataOutputStream, v: kotlin.Double) {
+        writeLongLE(s, Double.doubleToLongBits(v))
     }
 
-    private static void writeString(DataOutputStream s, String v) throws IOException {
-        byte[] b = v.getBytes(StandardCharsets.UTF_8);
-        writeShortLE(s, (short) b.length);
-        s.write(b);
+    @Throws(IOException::class)
+    private fun writeString(s: DataOutputStream, v: String) {
+        val b = v.toByteArray(StandardCharsets.UTF_8)
+        writeShortLE(s, b.size.toShort())
+        s.write(b)
     }
 }

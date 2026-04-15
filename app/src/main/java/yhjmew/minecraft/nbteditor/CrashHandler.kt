@@ -1,177 +1,176 @@
-package yhjmew.minecraft.nbteditor;
+package yhjmew.minecraft.nbteditor
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
-import android.os.Looper;
-import android.util.Log;
-import android.widget.Toast;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Looper
+import android.os.Process
+import android.util.Log
+import android.widget.Toast
+import java.io.File
+import java.io.FileOutputStream
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.io.Writer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-import androidx.annotation.NonNull;
+/** 全局异常捕获器 当程序发生未捕获异常时，由该类接管程序，并记录发送错误报告  */
+class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
+    private var mContext: Context? = null
+    private var mDefaultHandler: Thread.UncaughtExceptionHandler? = null
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
-/** 全局异常捕获器 当程序发生未捕获异常时，由该类接管程序，并记录发送错误报告 */
-public class CrashHandler implements Thread.UncaughtExceptionHandler {
-
-    private static final String TAG = "CrashHandler";
-    @SuppressLint("StaticFieldLeak")
-    private static CrashHandler instance;
-    private Context mContext;
-    private Thread.UncaughtExceptionHandler mDefaultHandler;
-
-    private CrashHandler() {}
-
-    public static CrashHandler getInstance() {
-        if (instance == null) {
-            instance = new CrashHandler();
-        }
-        return instance;
-    }
-
-    public void init(Context context) {
-        mContext = context;
+    fun init(context: Context) {
+        mContext = context
         // 获取系统默认的 UncaughtException 处理器
-        mDefaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+        mDefaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         // 设置该 CrashHandler 为程序的默认处理器
-        Thread.setDefaultUncaughtExceptionHandler(this);
+        Thread.setDefaultUncaughtExceptionHandler(this)
     }
 
-    @Override
-    public void uncaughtException(@NonNull Thread thread, @NonNull Throwable ex) {
+    override fun uncaughtException(thread: Thread, ex: Throwable) {
         if (!handleException(ex) && mDefaultHandler != null) {
             // 如果用户没有处理则让系统默认的异常处理器来处理
-            mDefaultHandler.uncaughtException(thread, ex);
+            mDefaultHandler!!.uncaughtException(thread, ex)
         } else {
             try {
                 // 给 Toast 留出显示时间
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                Log.e(TAG, "error : ", e);
+                Thread.sleep(3000)
+            } catch (e: InterruptedException) {
+                Log.e(TAG, "error : ", e)
             }
             // 退出程序
-            android.os.Process.killProcess(android.os.Process.myPid());
-            System.exit(1);
+            Process.killProcess(Process.myPid())
+            System.exit(1)
         }
     }
 
     /**
      * 自定义错误处理,收集错误信息 发送错误报告等操作均在此完成.
-     *
+     * 
      * @return true:如果处理了该异常信息;否则返回false.
      */
-    private boolean handleException(final Throwable ex) {
-        if (ex == null) return false;
+    private fun handleException(ex: Throwable?): Boolean {
+        if (ex == null) return false
 
-// 使用 Toast 来显示异常信息
-        new Thread() {
-            @Override
-            public void run() {
-                Looper.prepare();
-                String text = mContext.getString(R.string.toast_crash_collapse);
+        // 使用 Toast 来显示异常信息
+        object : Thread() {
+            override fun run() {
+                Looper.prepare()
+                val text = mContext!!.getString(R.string.toast_crash_collapse)
 
-                Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
-                Looper.loop();
+                Toast.makeText(mContext, text, Toast.LENGTH_LONG).show()
+                Looper.loop()
             }
-        }.start();
+        }.start()
 
         // 收集设备参数信息
-        String deviceInfo = collectDeviceInfo(mContext);
+        val deviceInfo = collectDeviceInfo(mContext!!)
 
         // 保存日志文件
-        saveCrashInfo2File(ex, deviceInfo);
+        saveCrashInfo2File(ex, deviceInfo)
 
-        return true;
+        return true
     }
 
     // 收集设备信息
-    private String collectDeviceInfo(Context ctx) {
-        StringBuilder sb = new StringBuilder();
+    private fun collectDeviceInfo(ctx: Context): String {
+        val sb = StringBuilder()
         try {
-            PackageManager pm = ctx.getPackageManager();
-            PackageInfo pi = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_ACTIVITIES);
+            val pm = ctx.getPackageManager()
+            val pi = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_ACTIVITIES)
             if (pi != null) {
-                String versionName = pi.versionName == null ? "null" : pi.versionName;
-                String versionCode = pi.versionCode + "";
-                sb.append("App Version: ").append(versionName).append(" (").append(versionCode).append(")\n");
+                val versionName: String = (if (pi.versionName == null) "null" else pi.versionName)!!
+                val versionCode = pi.versionCode.toString() + ""
+                sb.append("App Version: ").append(versionName).append(" (").append(versionCode)
+                    .append(")\n")
             }
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Error collecting info", e);
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e(TAG, "Error collecting info", e)
         }
 
-        sb.append("OS Version: ").append(Build.VERSION.RELEASE).append("_").append(Build.VERSION.SDK_INT).append("\n");
-        sb.append("Vendor: ").append(Build.MANUFACTURER).append("\n");
-        sb.append("Model: ").append(Build.MODEL).append("\n");
-        sb.append("CPU ABI: ").append(Build.CPU_ABI).append("\n");
+        sb.append("OS Version: ").append(Build.VERSION.RELEASE).append("_")
+            .append(Build.VERSION.SDK_INT).append("\n")
+        sb.append("Vendor: ").append(Build.MANUFACTURER).append("\n")
+        sb.append("Model: ").append(Build.MODEL).append("\n")
+        sb.append("CPU ABI: ").append(Build.CPU_ABI).append("\n")
 
-        return sb.toString();
+        return sb.toString()
     }
 
     // 保存错误信息到文件中
     // 保存错误信息到文件中 (双重备份版：同时写入私有目录和公共目录)
-    private void saveCrashInfo2File(Throwable ex, String deviceInfo) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("====== CRASH LOG ======\n");
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        String time = format.format(new Date());
-        sb.append("Time: ").append(time).append("\n");
-        sb.append(deviceInfo);
-        sb.append("\n====== STACK TRACE ======\n");
+    private fun saveCrashInfo2File(ex: Throwable, deviceInfo: String?) {
+        val sb = StringBuilder()
+        sb.append("====== CRASH LOG ======\n")
+        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val time = format.format(Date())
+        sb.append("Time: ").append(time).append("\n")
+        sb.append(deviceInfo)
+        sb.append("\n====== STACK TRACE ======\n")
 
-        Writer writer = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(writer);
-        ex.printStackTrace(printWriter);
-        Throwable cause = ex.getCause();
+        val writer: Writer = StringWriter()
+        val printWriter = PrintWriter(writer)
+        ex.printStackTrace(printWriter)
+        var cause = ex.cause
         while (cause != null) {
-            cause.printStackTrace(printWriter);
-            cause = cause.getCause();
+            cause.printStackTrace(printWriter)
+            cause = cause.cause
         }
-        printWriter.close();
-        String result = writer.toString();
-        sb.append(result);
-        sb.append("\n=======================\n");
+        printWriter.close()
+        val result = writer.toString()
+        sb.append(result)
+        sb.append("\n=======================\n")
 
         // 准备文件名和内容
-        String logContent = sb.toString();
-        String fileName = "crash-" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()) + ".log";
+        val logContent = sb.toString()
+        val fileName =
+            "crash-" + SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date()) + ".log"
 
         // === 1. 写入 App 私有目录 (Android/data/.../files/CrashLogs) ===
         // 这是保底方案，几乎总是能成功的
         try {
-            File privateDir = new File(mContext.getExternalFilesDir(null), "CrashLogs");
-            if (!privateDir.exists()) privateDir.mkdirs();
+            val privateDir = File(mContext!!.getExternalFilesDir(null), "CrashLogs")
+            if (!privateDir.exists()) privateDir.mkdirs()
 
-            File privateFile = new File(privateDir, fileName);
-            FileOutputStream fos = new FileOutputStream(privateFile);
-            fos.write(logContent.getBytes());
-            fos.close();
-            Log.i(TAG, "Private Log saved: " + privateFile.getAbsolutePath());
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save private log", e);
+            val privateFile = File(privateDir, fileName)
+            val fos = FileOutputStream(privateFile)
+            fos.write(logContent.toByteArray())
+            fos.close()
+            Log.i(TAG, "Private Log saved: " + privateFile.getAbsolutePath())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save private log", e)
         }
 
         // === 2. 写入公共下载目录 (Download/NbtEditor_Data/Crash_Logs) ===
         // 方便用户直接查看，但可能会因为权限问题失败
         try {
-            File publicDir = new File("/storage/emulated/0/Download/NbtEditor_Data/Crash_Logs/");
-            if (!publicDir.exists()) publicDir.mkdirs();
+            val publicDir = File("/storage/emulated/0/Download/NbtEditor_Data/Crash_Logs/")
+            if (!publicDir.exists()) publicDir.mkdirs()
 
-            File publicFile = new File(publicDir, fileName);
-            FileOutputStream fos = new FileOutputStream(publicFile);
-            fos.write(logContent.getBytes());
-            fos.close();
-            Log.i(TAG, "Public Log saved: " + publicFile.getAbsolutePath());
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save public log (Permission denied?)", e);
+            val publicFile = File(publicDir, fileName)
+            val fos = FileOutputStream(publicFile)
+            fos.write(logContent.toByteArray())
+            fos.close()
+            Log.i(TAG, "Public Log saved: " + publicFile.getAbsolutePath())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save public log (Permission denied?)", e)
         }
+    }
+
+    companion object {
+        private const val TAG = "CrashHandler"
+
+        @SuppressLint("StaticFieldLeak")
+        var instance: CrashHandler? = null
+            get() {
+                if (field == null) {
+                    field = CrashHandler()
+                }
+                return field
+            }
+            private set
     }
 }
