@@ -206,7 +206,7 @@ object BedrockParser {
                 val listSize = readIntLE(dis)
                 val list = JsonArray()
                 wrapper.addProperty("itemType", itemType)
-                val i = 0
+                var i = 0
                 while (i < listSize) {
                     list.add(extractValue(readTagPayload(dis, itemType)))
                     i++
@@ -232,37 +232,73 @@ object BedrockParser {
         val value = getRealValue(element)
         when (typeId) {
             1 -> dos.writeByte(getSafeByte(value).toInt())
-            2 -> writeShortLE(dos, getSafeShort(value))
+            2 -> writeShortLE(dos, getSafeShort(value).toShort())
             3 -> writeIntLE(dos, getSafeInt(value))
-            4 -> writeLongLE(dos, getSafeLong(value))
-            5 -> writeFloatLE(dos, getSafeFloat(value))
-            6 -> writeDoubleLE(dos, getSafeDouble(value))
+            4 -> writeLongLE(dos, getSafeLong(value).toLong())
+            5 -> writeFloatLE(dos, getSafeFloat(value).toFloat())
+            6 -> writeDoubleLE(dos, getSafeDouble(value).toDouble())
             7 -> {
-                val a = value.getAsJsonArray()
+                val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) dos.writeByte(e.getAsByte().toInt())
+                for (e in a) dos.writeByte(e.asByte.toInt())
             }
 
             11 -> {
-                val a = value.getAsJsonArray()
+                val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) writeIntLE(dos, e.getAsInt())
+                for (e in a) writeIntLE(dos, e.asInt)
             }
 
             12 -> {
-                val a = value.getAsJsonArray()
+                val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) writeLongLE(dos, e.getAsLong())
+                for (e in a) writeLongLE(dos, e.asLong)
             }
 
-            8 -> writeString(dos, if (value.isJsonPrimitive()) value.getAsString() else "")
+            8 -> writeString(dos, if (value.isJsonPrimitive) value.asString else "")
             10 -> {
                 val obj = JsonObject()
-                if (element.isJsonObject()) {
-                    val temp = element.getAsJsonObject()
-                    if (temp.has("v") && temp.get("v").isJsonObject()) obj =
-                        temp.getAsJsonObject("v")
-                    else obj = temp
+                if (element.isJsonObject) {
+                    val temp = element.asJsonObject
+                    if (temp.has("v") && temp.get("v").isJsonObject) {
+                        temp.getAsJsonObject("v").also { obj.add("v", it.get("v")) }
+                        // 直接使用 temp 的 v
+                        for (entry in temp.getAsJsonObject("v").entrySet()) {
+                            val name = entry.key
+                            val valWrapper = entry.value
+                            var t = 10
+                            if (valWrapper.isJsonObject && valWrapper.asJsonObject.has("t")) {
+                                t = valWrapper.asJsonObject.get("t").asInt
+                            } else if (valWrapper.isJsonArray) {
+                                t = 9
+                            }
+
+                            dos.writeByte(t)
+                            writeString(dos, name)
+                            writeTagPayload(dos, valWrapper, t)
+                        }
+                        dos.writeByte(0)
+                        return
+                    } else {
+                        for (entry in temp.entrySet()) {
+                            val name = entry.key
+                            val valWrapper = entry.value
+                            if (name == "t" || name == "v" || name == "itemType") continue
+
+                            var t = 10
+                            if (valWrapper.isJsonObject && valWrapper.asJsonObject.has("t")) {
+                                t = valWrapper.asJsonObject.get("t").asInt
+                            } else if (valWrapper.isJsonArray) {
+                                t = 9
+                            }
+
+                            dos.writeByte(t)
+                            writeString(dos, name)
+                            writeTagPayload(dos, valWrapper, t)
+                        }
+                        dos.writeByte(0)
+                        return
+                    }
                 }
 
                 for (entry in obj.entrySet()) {
@@ -271,9 +307,11 @@ object BedrockParser {
                     if (name == "t" || name == "v" || name == "itemType") continue
 
                     var t = 10
-                    if (valWrapper.isJsonObject() && valWrapper.getAsJsonObject().has("t")) t =
-                        valWrapper.getAsJsonObject().get("t").getAsInt()
-                    else if (valWrapper.isJsonArray()) t = 9
+                    if (valWrapper.isJsonObject && valWrapper.asJsonObject.has("t")) {
+                        t = valWrapper.asJsonObject.get("t").asInt
+                    } else if (valWrapper.isJsonArray) {
+                        t = 9
+                    }
 
                     dos.writeByte(t)
                     writeString(dos, name)
@@ -283,13 +321,13 @@ object BedrockParser {
             }
 
             9 -> {
-                val arr = JsonArray()
-                val it = 1
-                if (element.isJsonObject()) {
-                    val wrap = element.getAsJsonObject()
-                    if (wrap.has("itemType")) it = wrap.get("itemType").getAsInt()
-                    if (wrap.has("v") && wrap.get("v").isJsonArray()) arr = wrap.getAsJsonArray("v")
-                } else if (element.isJsonArray()) arr = element.getAsJsonArray()
+                var arr = JsonArray()
+                var it = 1
+                if (element.isJsonObject) {
+                    val wrap = element.asJsonObject
+                    if (wrap.has("itemType")) it = wrap.get("itemType").asInt
+                    if (wrap.has("v") && wrap.get("v").isJsonArray) arr = wrap.getAsJsonArray("v")
+                } else if (element.isJsonArray) arr = element.asJsonArray
 
                 dos.writeByte(it)
                 writeIntLE(dos, arr.size())
@@ -311,55 +349,55 @@ object BedrockParser {
     }
 
     private fun getSafeByte(el: JsonElement): Byte {
-        try {
-            return el.getAsByte()
+        return try {
+            el.asByte
         } catch (e: Exception) {
-            return 0
+            0.toByte()
         }
     }
 
-    private fun getSafeShort(el: JsonElement): Short {
-        try {
-            return el.getAsShort()
+    private fun getSafeShort(el: JsonElement): kotlin.Short {
+        return try {
+            el.asShort
         } catch (e: Exception) {
-            return 0
+            0.toShort()
         }
     }
 
     private fun getSafeInt(el: JsonElement): Int {
-        try {
-            return el.getAsInt()
+        return try {
+            el.asInt
         } catch (e: Exception) {
-            return 0
+            0
         }
     }
 
-    private fun getSafeLong(el: JsonElement): Long {
-        try {
-            return el.getAsLong()
+    private fun getSafeLong(el: JsonElement): kotlin.Long {
+        return try {
+            el.asLong
         } catch (e: Exception) {
-            return 0
+            0L
         }
     }
 
-    private fun getSafeFloat(el: JsonElement): Float {
-        try {
-            return el.getAsFloat()
+    private fun getSafeFloat(el: JsonElement): kotlin.Float {
+        return try {
+            el.asFloat
         } catch (e: Exception) {
-            return 0f
+            0.0f
         }
     }
 
-    private fun getSafeDouble(el: JsonElement): Double {
-        try {
-            return el.getAsDouble()
+    private fun getSafeDouble(el: JsonElement): kotlin.Double {
+        return try {
+            el.asDouble
         } catch (e: Exception) {
-            return 0.0
+            0.0
         }
     }
 
     @Throws(IOException::class)
-    private fun readShortLE(s: DataInputStream): Short {
+    private fun readShortLE(s: DataInputStream): kotlin.Short {
         return Short.reverseBytes(s.readShort())
     }
 
@@ -369,18 +407,18 @@ object BedrockParser {
     }
 
     @Throws(IOException::class)
-    private fun readLongLE(s: DataInputStream): Long {
-        return Long.reverseBytes(s.readLong())
+    private fun readLongLE(s: DataInputStream): kotlin.Long {
+        return java.lang.Long.reverseBytes(s.readLong())
     }
 
     @Throws(IOException::class)
-    private fun readFloatLE(s: DataInputStream): Float {
+    private fun readFloatLE(s: DataInputStream): kotlin.Float {
         return Float.intBitsToFloat(readIntLE(s))
     }
 
     @Throws(IOException::class)
-    private fun readDoubleLE(s: DataInputStream): Double {
-        return Double.longBitsToDouble(readLongLE(s))
+    private fun readDoubleLE(s: DataInputStream): kotlin.Double {
+        return java.lang.Double.longBitsToDouble(readLongLE(s))
     }
 
     @Throws(IOException::class)

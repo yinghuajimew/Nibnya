@@ -6,7 +6,7 @@ plugins {
 android {
     namespace 'yhjmew.minecraft.nbteditor'
     compileSdk 35
-    
+
     defaultConfig {
         applicationId "yhjmew.minecraft.nbteditor"
         minSdk 23
@@ -24,7 +24,7 @@ android {
             keyAlias 'mt'
             keyPassword 'android'
         }
-        
+
         // Release 签名
         release {
             storeFile file('yhjmew.minecraft.nbteditor.keystore')
@@ -44,7 +44,7 @@ android {
             versionNameSuffix "-debug"
             signingConfig signingConfigs.debug  // 使用 debug 签名
         }
-        
+
         release {
             minifyEnabled false
             shrinkResources false
@@ -67,4 +67,11 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.annotation:annotation-jvm:1.9.1'
     implementation 'androidx.core:core-ktx:1.10.1'
+}
+
+// 自定义任务：同时构建 Debug 和 Release
+tasks.register('buildALL') {
+    group = 'build'
+    description = '同时构建 Debug 和 Release'
+    dependsOn 'assembleDebug', 'assembleRelease'
 }

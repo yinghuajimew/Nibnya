@@ -1,58 +1,58 @@
 [
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable_bg_dialog_rounded.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable/bg_dialog_rounded.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable_bg_dialog_rounded.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable/bg_dialog_rounded.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable_bg_gradient_header.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable/bg_gradient_header.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable-mdpi_ic_launcher.png.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable-mdpi/ic_launcher.png"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable_bg_circle_blue.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable/bg_circle_blue.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_item_checkbox.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/item_checkbox.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_main.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/main.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable-xxhdpi_ic_launcher.png.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable-xxhdpi/ic_launcher.png"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_item_checkbox.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/item_checkbox.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_item_nbt_tree.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/item_nbt_tree.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable-xhdpi_ic_launcher.png.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable-xhdpi/ic_launcher.png"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_dialog_title_with_search.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/dialog_title_with_search.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_dialog_app_info.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/dialog_app_info.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable_bg_circle_blue.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable/bg_circle_blue.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable_bg_circle_green.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable/bg_circle_green.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable_bg_gradient_header.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable/bg_gradient_header.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable-mdpi_ic_launcher.png.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable-mdpi/ic_launcher.png"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_dialog_app_info.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/dialog_app_info.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_item_nbt_tree.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/item_nbt_tree.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_main.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/main.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable-hdpi_ic_launcher.png.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable-hdpi/ic_launcher.png"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable-xhdpi_ic_launcher.png.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable-xhdpi/ic_launcher.png"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_dialog_title_with_search.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/dialog_title_with_search.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable-hdpi_ic_launcher.png.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable-hdpi/ic_launcher.png"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/layout_item_nbt.xml.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/layout/item_nbt.xml"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/layout_item_nbt.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/layout/item_nbt.xml"
     },
     {
-        "merged": "yhjmew.minecraft.nbteditor.app-debug-4:/drawable-xxhdpi_ic_launcher.png.flat",
-        "source": "yhjmew.minecraft.nbteditor.app-main-6:/drawable-xxhdpi/ic_launcher.png"
+        "merged": "yhjmew.minecraft.nbteditor.app-debug-8:/drawable_bg_circle_green.xml.flat",
+        "source": "yhjmew.minecraft.nbteditor.app-main-10:/drawable/bg_circle_green.xml"
     }
 ]

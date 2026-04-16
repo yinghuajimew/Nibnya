@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeDebugResources-2:/values-v21/values-v21.xml",
+            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeDebugResources-6:/values-v21/values-v21.xml",
             "map": [
                 {
                     "source": "D:\\NBTeditor\\app\\src\\main\\res\\values-v21\\styles.xml",
@@ -12,6 +12,33 @@
                         "endLines": "3",
                         "endColumns": "9",
                         "endOffsets": "133"
+                    },
+                    "to": {
+                        "startLines": "6",
+                        "startColumns": "4",
+                        "startOffsets": "368",
+                        "endLines": "7",
+                        "endColumns": "9",
+                        "endOffsets": "446"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\yinghuaji\\.gradle\\caches\\9.0.0\\transforms\\cff30f28e54c521916fa88b517e209fc\\transformed\\core-1.10.1\\res\\values-v21\\values-v21.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,13",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,173,237,304,368,484,610,736,864,1036",
+                        "endLines": "2,3,4,5,6,7,8,9,12,17",
+                        "endColumns": "117,63,66,63,115,125,125,127,12,12",
+                        "endOffsets": "168,232,299,363,479,605,731,859,1031,1383"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,8,9,10,11,12,15",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,173,237,304,451,567,693,819,947,1119",
+                        "endLines": "2,3,4,5,8,9,10,11,14,19",
+                        "endColumns": "117,63,66,63,115,125,125,127,12,12",
+                        "endOffsets": "168,232,299,363,562,688,814,942,1114,1466"
                     }
                 }
             ]

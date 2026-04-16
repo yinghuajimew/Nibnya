@@ -16,8 +16,14 @@
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
     </queries>
-    <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
+
+    <permission
+        android:name="yhjmew.minecraft.nbteditor.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="yhjmew.minecraft.nbteditor.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
     <application
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
         android:extractNativeLibs="false"
         android:icon="@drawable/ic_launcher"

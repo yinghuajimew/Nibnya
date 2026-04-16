@@ -53,10 +53,10 @@ class NbtTreeAdapter(private val context: Context, rootData: JsonObject?) : Base
     }
 
     private fun buildChildren(parent: Node, container: JsonObject) {
-        val keys: MutableList<String> = ArrayList<String>(container.keySet())
+        val keys: MutableList<String> = ArrayList(container.keySet())
         Collections.sort<String?>(keys)
 
-        val children: MutableList<Node?> = ArrayList<Node?>()
+        val children: MutableList<Node> = ArrayList()
         for (k in keys) {
             val v = container.get(k)
             val child = Node(k, v, parent.level + 1, parent)
@@ -82,7 +82,7 @@ class NbtTreeAdapter(private val context: Context, rootData: JsonObject?) : Base
         } else {
             // 展开
             node.isExpanded = true
-            val subNodes: MutableList<Node?> = ArrayList<Node?>()
+            val subNodes: MutableList<Node> = ArrayList<Node>()
             val innerV = node.value!!.getAsJsonObject().get("v")
 
             if (node.type == 10) { // Compound
@@ -390,14 +390,14 @@ class NbtTreeAdapter(private val context: Context, rootData: JsonObject?) : Base
 
     // === 【新增】获取指定位置节点的完整路径链 ===
     fun getNodePath(position: Int): MutableList<String?> {
-        if (position < 0 || position >= visibleNodes.size) return ArrayList<String?>()
+        if (position < 0 || position >= visibleNodes.size) return ArrayList()
 
-        var node = visibleNodes.get(position)
-        val path: MutableList<String?> = ArrayList<String?>()
+        var node: Node? = visibleNodes[position]
+        val path: MutableList<String?> = ArrayList()
 
-        // 如果当前点击的是“值”（不是容器），我们应该定位到它的【父容器】
+        // 如果当前点击的是"值"（不是容器），我们应该定位到它的【父容器】
         // 这样切回列表时，能看到这个值
-        if (node.type != 9 && node.type != 10) {
+        if (node != null && node.type != 9 && node.type != 10) {
             node = node.parent
         }
 

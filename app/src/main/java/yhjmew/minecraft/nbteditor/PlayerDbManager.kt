@@ -91,9 +91,9 @@ class PlayerDbManager(dbFolderPath: String) {
     }
 
     @Throws(Exception::class)
-    fun listMapKeys(): MutableList<String?> {
+    fun listMapKeys(): MutableList<String> {
         if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
-        val list: MutableList<String?> = ArrayList<String?>()
+        val list: MutableList<String> = ArrayList()
 
         db!!.iterator().use { iterator ->
             val prefix: ByteArray? = "map_".toByteArray(StandardCharsets.UTF_8)
@@ -106,14 +106,14 @@ class PlayerDbManager(dbFolderPath: String) {
                 iterator.next()
             }
         }
-        Collections.sort<String?>(list)
+        Collections.sort<String>(list)
         return list
     }
 
     @Throws(Exception::class)
-    fun listVillageKeys(): MutableList<String?> {
+    fun listVillageKeys(): MutableList<String> {
         if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
-        val list: MutableList<String?> = ArrayList<String?>()
+        val list: MutableList<String> = ArrayList()
 
         db!!.iterator().use { iterator ->
             val prefix: ByteArray? = "VILLAGE_".toByteArray(StandardCharsets.UTF_8)
@@ -125,14 +125,14 @@ class PlayerDbManager(dbFolderPath: String) {
                 iterator.next()
             }
         }
-        Collections.sort<String?>(list)
+        Collections.sort<String>(list)
         return list
     }
 
     @Throws(Exception::class)
-    fun listPlayerKeys(): MutableList<String?> {
+    fun listPlayerKeys(): MutableList<String> {
         if (db == null) throw Exception(getString(R.string.msg_database_shutdown))
-        val players: MutableList<String?> = ArrayList<String?>()
+        val players: MutableList<String> = ArrayList()
         players.add("~local_player")
 
         db!!.iterator().use { iterator ->
@@ -148,7 +148,7 @@ class PlayerDbManager(dbFolderPath: String) {
                 iterator.next()
             }
         }
-        Collections.sort<String?>(players)
+        Collections.sort<String>(players)
         return players
     }
 
