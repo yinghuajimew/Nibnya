@@ -1,0 +1,142 @@
+-- Merging decision tree log ---
+provider#rikka.shizuku.ShizukuProvider
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:36:9-42:82
+	android:enabled
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:40:13-35
+	android:authorities
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:38:13-59
+	android:multiprocess
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:39:13-41
+	android:exported
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:41:13-36
+	android:permission
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:42:13-79
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:37:13-57
+manifest
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:1-45:12
+MERGED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.core:core-ktx:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\848e0ec49238c561586552bcc09a19c7\transformed\jetified-core-ktx-1.10.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\f95035cccd584f92f583db7857c97fe6\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\bbf7534e7dd3551e4045afa3c02d89e9\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.3.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c8984eedc56c5c5d1e5be94572826723\transformed\lifecycle-runtime-2.3.1\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.arch.core:core-runtime:2.1.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c73f6bc891b8563c0fa39979e863c6dd\transformed\core-runtime-2.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6789b259ecc3e2a8892f6f33dff5162e\transformed\jetified-annotation-experimental-1.3.0\AndroidManifest.xml:17:1-22:12
+	package
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:3:5-41
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:versionName
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:5:5-32
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:2:11-69
+	android:versionCode
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:4:5-28
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+uses-sdk
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+MERGED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-ktx:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\848e0ec49238c561586552bcc09a19c7\transformed\jetified-core-ktx-1.10.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\848e0ec49238c561586552bcc09a19c7\transformed\jetified-core-ktx-1.10.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\f95035cccd584f92f583db7857c97fe6\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\f95035cccd584f92f583db7857c97fe6\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\bbf7534e7dd3551e4045afa3c02d89e9\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\bbf7534e7dd3551e4045afa3c02d89e9\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.3.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c8984eedc56c5c5d1e5be94572826723\transformed\lifecycle-runtime-2.3.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.3.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c8984eedc56c5c5d1e5be94572826723\transformed\lifecycle-runtime-2.3.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.1.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c73f6bc891b8563c0fa39979e863c6dd\transformed\core-runtime-2.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.1.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\c73f6bc891b8563c0fa39979e863c6dd\transformed\core-runtime-2.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6789b259ecc3e2a8892f6f33dff5162e\transformed\jetified-annotation-experimental-1.3.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6789b259ecc3e2a8892f6f33dff5162e\transformed\jetified-annotation-experimental-1.3.0\AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:9:9-38
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:8:9-35
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+uses-permission#moe.shizuku.manager.permission.API_V23
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:11:5-78
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:11:22-75
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:12:5-80
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:12:22-77
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:13:5-81
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:13:22-78
+uses-permission#android.permission.MANAGE_EXTERNAL_STORAGE
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:14:5-82
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:14:22-79
+queries
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:15:5-17:15
+package#moe.shizuku.privileged.api
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:16:9-62
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:16:18-59
+application
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
+INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
+MERGED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\f95035cccd584f92f583db7857c97fe6\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\f95035cccd584f92f583db7857c97fe6\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from D:\NBTeditor\app\src\main\AndroidManifest.xml
+	android:requestLegacyExternalStorage
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:24:9-52
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:21:9-41
+	android:icon
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:22:9-45
+	android:theme
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:23:9-60
+activity#yhjmew.minecraft.nbteditor.MainActivity
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:26:9-34:20
+	android:label
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:28:13-45
+	android:exported
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:29:13-36
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:27:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:30:13-33:29
+action#android.intent.action.MAIN
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:31:17-69
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:31:25-66
+category#android.intent.category.LAUNCHER
+ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:32:17-77
+	android:name
+		ADDED from D:\NBTeditor\app\src\main\AndroidManifest.xml:32:27-74
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+permission#yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
+uses-permission#yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:22-94

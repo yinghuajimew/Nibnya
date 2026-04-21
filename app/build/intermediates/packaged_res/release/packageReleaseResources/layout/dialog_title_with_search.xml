@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- 第一行：标题 + 按钮组 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tv_dialog_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/text_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <!-- [新增] 批量删除按钮 -->
+        <Button
+            android:id="@+id/btn_batch_delete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="🗑️"
+            android:textSize="16sp"
+            android:background="#00000000"
+            android:textColor="#F44336"
+            android:padding="0dp"
+            android:layout_marginEnd="8dp" />
+
+        <!-- 搜索按钮 -->
+        <Button
+            android:id="@+id/btn_search_toggle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="🔍"
+            android:textSize="18sp"
+            android:background="#00000000"
+            android:textColor="#555555"
+            android:padding="0dp" />
+
+    </LinearLayout>
+
+    <!-- 第二行：搜索输入区域 (包裹在一个 FrameLayout 里以便叠加按钮) -->
+    <!-- 【核心修复】这里的 ID 必须是 search_container -->
+    <FrameLayout
+        android:id="@+id/search_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/et_search_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/text_enter_keyword_search"
+            android:textSize="14sp"
+            android:singleLine="true"
+            android:background="#F0F0F0"
+            android:padding="10dp"
+            android:paddingEnd="40dp" />
+
+        <!-- 【核心修复】这里的 ID 必须是 btn_clear_search -->
+        <ImageButton
+            android:id="@+id/btn_clear_search"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:background="#00000000"
+            android:scaleType="centerInside"
+            android:layout_gravity="end|center_vertical"
+            android:visibility="gone"
+            android:padding="8dp" />
+
+    </FrameLayout>
+
+</LinearLayout>

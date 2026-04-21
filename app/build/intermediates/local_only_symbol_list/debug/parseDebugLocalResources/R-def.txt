@@ -50,6 +50,7 @@ id layout_settings_header
 id layout_sidebar_items
 id lv_nbt_list
 id main_content
+id progress_bar
 id root_layout_container
 id search_container
 id sidebar_content
@@ -65,6 +66,7 @@ id tv_info_seed
 id tv_item_name
 id tv_key
 id tv_key_desc
+id tv_progress_message
 id tv_settings_expand
 id tv_sidebar_app_name
 id tv_sidebar_author
@@ -73,6 +75,7 @@ id tv_value
 id view_indentation
 id view_mask
 layout dialog_app_info
+layout dialog_progress
 layout dialog_title_with_search
 layout item_checkbox
 layout item_nbt

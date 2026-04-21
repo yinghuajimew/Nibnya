@@ -2,13 +2,12 @@ package yhjmew.minecraft.nbteditor
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.app.ProgressDialog
+import androidx.core.net.toUri
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.DialogInterface
-import android.content.DialogInterface.OnShowListener
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -25,25 +24,22 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.text.Editable
 import android.text.Html
 import android.text.InputType
 import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.AdapterView
-import android.widget.AdapterView.OnItemClickListener
-import android.widget.AdapterView.OnItemLongClickListener
 import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
 import android.widget.Button
@@ -192,12 +188,16 @@ class MainActivity : Activity() {
     private val sessionCacheMap: MutableMap<String?, EditorSession?> =
         HashMap<String?, EditorSession?>()
     private var useShizuku = true // 默认启用 Shizuku
+
+    // 【新增】自定义进度对话框（替代已弃用的 ProgressDialog）
+    private var progressDialog: AlertDialog? = null
+    private var tvProgressMessage: TextView? = null
     var sidebarContainer: View? = null
     var sidebar: View? = null
 
     private var currentWorldsPath: String = PATH_STANDARD
     private val REQUEST_PERMISSION_RESULT_LISTENER =
-        OnRequestPermissionResultListener { requestCode: Int, grantResult: Int ->
+        OnRequestPermissionResultListener { _, grantResult: Int ->
             if (grantResult == PackageManager.PERMISSION_GRANTED) toast(getString(R.string.toast_shizuku_granted))
             else toast(getString(R.string.toast_shizuku_denied))
         }
@@ -242,8 +242,8 @@ class MainActivity : Activity() {
         )
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.main)
-        viewMainContent = findViewById<View?>(R.id.main_content)
-        viewSidebar = findViewById<View?>(R.id.sidebar_content)
+        viewMainContent = findViewById(R.id.main_content)
+        viewSidebar = findViewById(R.id.sidebar_content)
         // 在 onCreate 初始化 prefs 之后
         useMultiThreading = prefs!!.getBoolean("use_multithread", true)
         // 在 useMultiThreading 初始化之后添加
@@ -258,7 +258,7 @@ class MainActivity : Activity() {
         // 在 onCreate 初始化部分添加
         val savedSafUri = prefs!!.getString("saf_tree_uri", null)
         if (savedSafUri != null) {
-            safTreeUri = Uri.parse(savedSafUri)
+            safTreeUri = savedSafUri.toUri()
             try {
                 // 检查权限是否仍然有效
                 contentResolver.takePersistableUriPermission(
@@ -266,7 +266,7 @@ class MainActivity : Activity() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                             or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // 权限已失效，清除
                 safTreeUri = null
                 prefs!!.edit().remove("saf_tree_uri").apply()
@@ -274,19 +274,19 @@ class MainActivity : Activity() {
         }
 
         // 初始化控件
-        etWorldName = findViewById<EditText?>(R.id.et_world_name)
-        btnCopy = findViewById<Button>(R.id.btn_copy)
-        btnParse = findViewById<Button>(R.id.btn_parse)
-        btnCheck = findViewById<Button>(R.id.btn_check_permission)
-        btnSave = findViewById<Button>(R.id.btn_save)
-        nbtListView = findViewById<ListView?>(R.id.lv_nbt_list)
-        btnHistory = findViewById<Button>(R.id.btn_backup_history)
-        btnEditPlayer = findViewById<Button>(R.id.btn_edit_player)
-        btnSwitchPath = findViewById<Button?>(R.id.btn_switch_path)
-        btnCleanCache = findViewById<Button?>(R.id.btn_clear_cache) // 确保XML有此ID
+        etWorldName = findViewById(R.id.et_world_name)
+        btnCopy = findViewById(R.id.btn_copy)
+        btnParse = findViewById(R.id.btn_parse)
+        btnCheck = findViewById(R.id.btn_check_permission)
+        btnSave = findViewById(R.id.btn_save)
+        nbtListView = findViewById(R.id.lv_nbt_list)
+        btnHistory = findViewById(R.id.btn_backup_history)
+        btnEditPlayer = findViewById(R.id.btn_edit_player)
+        btnSwitchPath = findViewById(R.id.btn_switch_path)
+        btnCleanCache = findViewById(R.id.btn_clear_cache) // 确保XML有此ID
         applyTheme()
 
-        tvCurrentPath = findViewById<TextView?>(R.id.tv_current_path)
+        tvCurrentPath = findViewById(R.id.tv_current_path)
         if (tvCurrentPath != null) {
             tvCurrentPath!!.setOnClickListener { toast(getString(R.string.long_press_here_to_open_the_root_menu)) }
             tvCurrentPath!!.setOnLongClickListener {
@@ -369,7 +369,7 @@ class MainActivity : Activity() {
             if (checkFolder(f)) showBackupList(f)
         }
 
-        nbtListView!!.setOnItemClickListener { parent, view, position, id ->
+        nbtListView!!.setOnItemClickListener { _, _, position, _ ->
             if (isTreeMode) {
                 lastTreeClickPosition = position
                 if (nbtTreeAdapter!!.isContainer(position)) {
@@ -401,7 +401,7 @@ class MainActivity : Activity() {
             }
         }
 
-        nbtListView!!.setOnItemLongClickListener { parent, view, position, id ->
+        nbtListView!!.setOnItemLongClickListener { _, _, position, _ ->
             lastTreeClickPosition = position
             if (isTreeMode) {
                 val node = nbtTreeAdapter!!.getNode(position)
@@ -432,7 +432,7 @@ class MainActivity : Activity() {
             try {
                 val c = Class.forName("rikka.shizuku.Shizuku")
                 c.getMethod("requestPermission", Int::class.javaPrimitiveType).invoke(null, 0)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 toast(getString(R.string.toast_install_shizuku))
             }
         }
@@ -504,38 +504,31 @@ class MainActivity : Activity() {
             }
         }
 
-        val sidebarArr = arrayOf<View?>(findViewById<View?>(R.id.sidebar_content))
+        val sidebarArr = arrayOf<View?>(findViewById(R.id.sidebar_content))
         if (sidebarArr[0] != null) {
-            val metrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(metrics)
-            val screenWidth = metrics.widthPixels
+            val screenWidth = resources.displayMetrics.widthPixels
             val params = sidebarArr[0]!!.layoutParams
             params.width = screenWidth * 2 / 3
             sidebarArr[0]!!.layoutParams = params
         }
 
         val btnMultiPlayer = findViewById<View?>(R.id.btn_online_players)
-        if (btnMultiPlayer != null) {
-            btnMultiPlayer.setOnClickListener {
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-                ensureDbLoaded { showMultiPlayerDialog() }
-            }
+        btnMultiPlayer?.setOnClickListener {
+            sidebarContainer?.visibility = View.GONE
+            ensureDbLoaded { showMultiPlayerDialog() }
         }
 
+
         val btnMap = findViewById<View?>(R.id.btn_map_nbt)
-        if (btnMap != null) {
-            btnMap.setOnClickListener {
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-                ensureDbLoaded { showMapListDialog() }
-            }
+        btnMap?.setOnClickListener {
+            sidebarContainer?.visibility = View.GONE
+            ensureDbLoaded { showMapListDialog() }
         }
 
         val btnVillage = findViewById<View?>(R.id.btn_village_nbt)
-        if (btnVillage != null) {
-            btnVillage.setOnClickListener {
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-                ensureDbLoaded { showVillageListDialog() }
-            }
+        btnVillage?.setOnClickListener {
+            sidebarContainer?.visibility = View.GONE
+            ensureDbLoaded { showVillageListDialog() }
         }
 
         val btnSearchNbt = findViewById<View?>(R.id.btn_search_nbt)
@@ -564,43 +557,32 @@ class MainActivity : Activity() {
         }
 
         val btnOpenKey = findViewById<View?>(R.id.btn_open_any_key)
-        if (btnOpenKey != null) {
-            btnOpenKey.setOnClickListener {
-                if (currentWorkingDbPath == null) {
-                    toast(getString(R.string.toast_please_initialize_the_database_first))
-                    return@setOnClickListener
-                }
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-                showOpenByKeyDialog()
+        btnOpenKey?.setOnClickListener {
+            if (currentWorkingDbPath == null) {
+                toast(getString(R.string.toast_please_initialize_the_database_first))
+                return@setOnClickListener
             }
+            sidebarContainer?.visibility = View.GONE
+            showOpenByKeyDialog()
         }
 
-        if (btnOpen != null) {
-            btnOpen.setOnClickListener {
-                if (sidebarContainer != null) {
-                    sidebarContainer!!.visibility = View.VISIBLE
-                    sidebarContainer!!.bringToFront()
-                } else {
-                    toast(getString(R.string.toast_error_sidebar_layout_not_found))
-                }
-            }
-        } else {
-            toast(getString(R.string.toast_error_menu_button_not_found))
-        }
+
+        btnOpen?.setOnClickListener {
+            sidebarContainer?.let {
+                it.visibility = View.VISIBLE
+                it.bringToFront()
+            } ?: toast(getString(R.string.toast_error_sidebar_layout_not_found))
+        } ?: toast(getString(R.string.toast_error_menu_button_not_found))
 
         val viewMask = findViewById<View?>(R.id.view_mask)
-        if (viewMask != null) {
-            viewMask.setOnClickListener {
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-            }
+        viewMask?.setOnClickListener {
+            sidebarContainer?.visibility = View.GONE
         }
 
         val btnGlobal = findViewById<View?>(R.id.btn_global_nbt)
-        if (btnGlobal != null) {
-            btnGlobal.setOnClickListener {
-                if (sidebarContainer != null) sidebarContainer!!.visibility = View.GONE
-                ensureDbLoaded { showGlobalDataDialog() }
-            }
+        btnGlobal?.setOnClickListener {
+            sidebarContainer?.visibility = View.GONE
+            ensureDbLoaded { showGlobalDataDialog() }
         }
 
         if (savedInstanceState != null) {
@@ -615,7 +597,7 @@ class MainActivity : Activity() {
                 lastLoadedWorldFolder = savedWorldName
             }
             if (currentWorkingDbPath != null || currentWorkingFileOrDir != null) {
-                Handler().postDelayed({
+                Handler(Looper.getMainLooper()).postDelayed({
                     if (tempNbtData != null) {
                         rootNbtData = tempNbtData
                         currentTargetKey = tempTargetKey
@@ -659,7 +641,7 @@ class MainActivity : Activity() {
 
         if (viewMask != null) {
             viewMask.setOnClickListener {
-                sidebarArr[0] = findViewById<View?>(R.id.custom_sidebar_container)
+                sidebarArr[0] = findViewById(R.id.custom_sidebar_container)
                 if (sidebarArr[0] != null) sidebarArr[0]!!.visibility = View.GONE
             }
         }
@@ -690,14 +672,9 @@ class MainActivity : Activity() {
 
 
             // 下面是你原有的单张图片处理逻辑
-            val processing = ProgressDialog.show(
-                this,
-                getString(R.string.msg_processing),
-                getString(R.string.toast_generate_bedrock_edition_map),
-                true
-            )
+            showProgressDialog(getString(R.string.msg_processing), getString(R.string.toast_generate_bedrock_edition_map))
 
-            Thread(Runnable {
+            Thread {
                 try {
                     // 1. 读取原图
                     val `is` = getContentResolver().openInputStream(imageUri)
@@ -765,22 +742,22 @@ class MainActivity : Activity() {
                         }
                     }
 
-                    runOnUiThread(Runnable {
-                        processing.dismiss()
+                    runOnUiThread {
+                        dismissProgressDialog()
                         toast(getString(R.string.toast_the_map_is_generated))
                         if (nbtAdapter != null) nbtAdapter!!.notifyDataSetChanged()
                         if (nbtTreeAdapter != null) nbtTreeAdapter!!.notifyDataSetChanged()
-                    })
+                    }
 
                     original.recycle()
                     finalBitmap.recycle()
                 } catch (e: Exception) {
-                    runOnUiThread(Runnable {
-                        processing.dismiss()
+                    runOnUiThread {
+                        dismissProgressDialog()
                         toast(getString(R.string.toast_build_failed) + e)
-                    })
+                    }
                 }
-            }).start()
+            }.start()
         }
 
         // 【新增】处理 SAF 路径选择
@@ -889,7 +866,7 @@ class MainActivity : Activity() {
 
 
         // 3. 清理 Bridge 中转站 (保留根目录和 .nomedia)
-        val bridgeDir: File = File(BRIDGE_ROOT)
+        val bridgeDir = File(BRIDGE_ROOT)
         if (bridgeDir.exists()) {
             // 确保隐身衣存在
             createNoMedia()
@@ -968,53 +945,53 @@ class MainActivity : Activity() {
             .setView(lv)
             .setNeutralButton(getString(R.string.btn_close), null)
             .setPositiveButton(
-                getString(R.string.btn_clear_all),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(getString(R.string.title_clear_confirm))
-                        .setMessage(getString(R.string.msg_clear_all_cache))
-                        .setPositiveButton(
-                            getString(R.string.btn_delete),
-                            DialogInterface.OnClickListener { dd: DialogInterface?, ww: Int ->
-                                for (f in fileList) deleteRecursive(f)
-                                fileList.clear()
-                                nameList.clear()
-                                adapter.notifyDataSetChanged()
-                                // 【加固】重置路径变量
-                                currentWorkingDbPath = null
-                                currentWorkingFileOrDir = null
-                                lastLoadedWorldFolder = null // 【新增】强制下次加载时重置
-                                toast(getString(R.string.toast_cleared_short))
-                            })
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show()
-                })
+                getString(R.string.btn_clear_all)
+            ) { _: DialogInterface?, _: Int ->
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(getString(R.string.title_clear_confirm))
+                    .setMessage(getString(R.string.msg_clear_all_cache))
+                    .setPositiveButton(
+                        getString(R.string.btn_delete)
+                    ) { _: DialogInterface?, _: Int ->
+                        for (f in fileList) deleteRecursive(f)
+                        fileList.clear()
+                        nameList.clear()
+                        adapter.notifyDataSetChanged()
+                        // 【加固】重置路径变量
+                        currentWorkingDbPath = null
+                        currentWorkingFileOrDir = null
+                        lastLoadedWorldFolder = null // 【新增】强制下次加载时重置
+                        toast(getString(R.string.toast_cleared_short))
+                    }
+                    .setNegativeButton(getString(R.string.btn_cancel), null)
+                    .show()
+            }
             .create()
 
-        lv.setOnItemClickListener(OnItemClickListener { p: AdapterView<*>?, v: View?, pos: Int, id: kotlin.Long ->
+        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, _: Int, _: kotlin.Long ->
             toast(
                 getString(R.string.toast_hold_delete)
             )
-        })
+        }
 
-        lv.setOnItemLongClickListener(OnItemLongClickListener { p: AdapterView<*>?, v: View?, pos: Int, id: kotlin.Long ->
+        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
             val target = fileList.get(pos)
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.btn_delete))
                 .setMessage(String.format(getString(R.string.msg_delete_confirm), target.getName()))
                 .setPositiveButton(
-                    getString(R.string.btn_delete),
-                    DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                        deleteRecursive(target)
-                        fileList.removeAt(pos)
-                        nameList.removeAt(pos)
-                        adapter.notifyDataSetChanged()
-                        toast(getString(R.string.toast_deleted))
-                    })
+                    getString(R.string.btn_delete)
+                ) { _: DialogInterface?, _: Int ->
+                    deleteRecursive(target)
+                    fileList.removeAt(pos)
+                    nameList.removeAt(pos)
+                    adapter.notifyDataSetChanged()
+                    toast(getString(R.string.toast_deleted))
+                }
                 .setNegativeButton(getString(R.string.btn_cancel), null)
                 .show()
             true
-        })
+        }
         dialog.show()
     }
 
@@ -1065,13 +1042,13 @@ class MainActivity : Activity() {
             .create()
 
         // 点击恢复
-        lv.setOnItemClickListener(OnItemClickListener { p: AdapterView<*>?, v: View?, pos: Int, id: kotlin.Long ->
+        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
             restoreBackup(fileList.get(pos))
             dialog.dismiss()
-        })
+        }
 
         // 【修复部分】长按菜单：包含删除和重命名
-        lv.setOnItemLongClickListener(OnItemLongClickListener { p: AdapterView<*>?, v: View?, pos: Int, id: kotlin.Long ->
+        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
             val target = fileList.get(pos)
             val ops = arrayOf<String?>(
                 getString(R.string.menu_del_backup),
@@ -1080,7 +1057,7 @@ class MainActivity : Activity() {
 
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.title_manage_prefix) + target.getName())
-                .setItems(ops, DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
+                .setItems(ops) { _: DialogInterface?, w: Int ->
                     if (w == 0) { // 删除
                         deleteRecursive(target)
                         fileList.removeAt(pos)
@@ -1094,34 +1071,34 @@ class MainActivity : Activity() {
                             .setTitle(getString(R.string.title_rename))
                             .setView(input)
                             .setPositiveButton(
-                                getString(R.string.btn_confirm),
-                                DialogInterface.OnClickListener { dd: DialogInterface?, ww: Int ->
-                                    val newName = input.getText().toString().trim { it <= ' ' }
-                                    if (!newName.isEmpty()) {
-                                        val newFile = File(target.getParent(), newName)
-                                        if (target.renameTo(newFile)) {
-                                            fileList.set(pos, newFile)
-                                            // 重新格式化显示名
-                                            val time = SimpleDateFormat(
-                                                "yyyy-MM-dd HH:mm:ss",
-                                                Locale.getDefault()
-                                            ).format(
-                                                Date(newFile.lastModified())
-                                            )
-                                            val prefix = if (newFile.isDirectory()) "📁 " else "📄 "
-                                            nameList.set(pos, prefix + newName + "\n" + time)
+                                getString(R.string.btn_confirm)
+                            ) { _: DialogInterface?, _: Int ->
+                                val newName = input.getText().toString().trim { it <= ' ' }
+                                if (!newName.isEmpty()) {
+                                    val newFile = File(target.getParent(), newName)
+                                    if (target.renameTo(newFile)) {
+                                        fileList.set(pos, newFile)
+                                        // 重新格式化显示名
+                                        val time = SimpleDateFormat(
+                                            "yyyy-MM-dd HH:mm:ss",
+                                            Locale.getDefault()
+                                        ).format(
+                                            Date(newFile.lastModified())
+                                        )
+                                        val prefix = if (newFile.isDirectory()) "📁 " else "📄 "
+                                        nameList.set(pos, prefix + newName + "\n" + time)
 
-                                            adapter.notifyDataSetChanged()
-                                            toast(getString(R.string.toast_renamed))
-                                        } else {
-                                            toast(getString(R.string.toast_rename_failed))
-                                        }
+                                        adapter.notifyDataSetChanged()
+                                        toast(getString(R.string.toast_renamed))
+                                    } else {
+                                        toast(getString(R.string.toast_rename_failed))
                                     }
-                                }).show()
+                                }
+                            }.show()
                     }
-                }).show()
+                }.show()
             true
-        })
+        }
 
         dialog.show()
     }
@@ -1203,14 +1180,9 @@ class MainActivity : Activity() {
             }
         }
 
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_loading),
-            getString(R.string.msg_moving),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_loading), getString(R.string.msg_moving))
 
-        Thread(Runnable {
+        Thread {
             try {
                 val src = currentWorldsPath + folder + "/level.dat"
                 val destFile = File(this.worksDir, LEVEL_DAT_NAME)
@@ -1220,7 +1192,7 @@ class MainActivity : Activity() {
                 var success = copyFileNative(File(src), destFile)
 
                 if (!success && checkShizukuAvailable()) {
-                    val bridgeDir: File = File(BRIDGE_ROOT)
+                    val bridgeDir = File(BRIDGE_ROOT)
                     if (!bridgeDir.exists()) bridgeDir.mkdirs()
                     val bridgeFile: String = BRIDGE_ROOT + "level.dat"
 
@@ -1244,8 +1216,8 @@ class MainActivity : Activity() {
                 if (success) {
                     currentWorkingFileOrDir = destFile.getAbsolutePath()
 
-                    runOnUiThread(Runnable {
-                        loading.dismiss()
+                    runOnUiThread {
+                        dismissProgressDialog()
                         // 【核心修复】强制切换到世界模式
                         isEditingPlayer = false
                         currentTargetKey = null // level.dat 没有 Key
@@ -1253,30 +1225,25 @@ class MainActivity : Activity() {
                         // 此时 isEditingPlayer 已经是 false 了，parseLevelDat 会正确读取文件
                         parseLevelDat()
                         toast(getString(R.string.toast_loaded) + "level.dat")
-                    })
+                    }
                 } else {
                     throw Exception(getString(R.string.err_read_file_not_generated))
                 }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     toast(e.toString())
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     private fun parseLevelDat() {
         // 1. 保存现场
         saveCurrentSessionToMemory()
 
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_reading),
-            getString(R.string.msg_reading_details),
-            true
-        )
-        Thread(Runnable {
+        showProgressDialog(getString(R.string.msg_reading), getString(R.string.msg_reading_details))
+        Thread {
             try {
                 val newJson: JsonObject?
 
@@ -1305,8 +1272,8 @@ class MainActivity : Activity() {
                     newJson = BedrockParser.parse(path!!)
                 }
 
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     try {
                         rootNbtData = newJson
 
@@ -1335,14 +1302,14 @@ class MainActivity : Activity() {
                     } catch (uiEx: Exception) {
                         toast(getString(R.string.err_display_data) + uiEx)
                     }
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     toast("Refresh Failed: " + e.message)
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
 
@@ -1367,14 +1334,9 @@ class MainActivity : Activity() {
 
         // === 3. 初始化加载状态 ===
         val canUseShizuku = checkShizukuAvailable()
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.title_read_player),
-            getString(R.string.msg_init_player),
-            true
-        )
+        showProgressDialog(getString(R.string.title_read_player), getString(R.string.msg_init_player))
 
-        Thread(Runnable {
+        Thread {
             try {
                 // === 4. 路径构建 ===
                 val base = File(currentWorldsPath)
@@ -1408,10 +1370,10 @@ class MainActivity : Activity() {
                             runShizukuCmd(
                                 arrayOf("sh", "-c", "rm -f \"$srcPath/LOCK\"")
                             ).waitFor()
-                            runOnUiThread(Runnable { toast(getString(R.string.toast_lock_delete)) })
+                            runOnUiThread { toast(getString(R.string.toast_lock_delete)) }
                         }
                     }
-                } catch (ignored: Exception) {
+                } catch (_: Exception) {
                 }
 
                 // === 7. 准备工作目录 ===
@@ -1492,8 +1454,8 @@ class MainActivity : Activity() {
                 val playerDataObj = parseBytes(data)
 
                 // === 10. UI 更新 (成功) ===
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     // 状态重置
                     isEditingPlayer = true
                     currentTargetKey = "~local_player" // 核心修复：重置 Key
@@ -1522,12 +1484,12 @@ class MainActivity : Activity() {
                     if (tvCurrentPath != null) tvCurrentPath!!.text = getString(
                         R.string.path_editing_player,
                         folderName
-                        )
-                })
+                    )
+                }
             } catch (e: Exception) {
 // === 11. 异常处理 ===
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     // 特殊处理：数据库损坏
                     if (e.message != null && e.message!!.contains("DB_CORRUPT")) {
                         showDbRepairConfirmDialog(currentWorkingDbPath!!, folderName, onSuccess)
@@ -1540,25 +1502,26 @@ class MainActivity : Activity() {
                                 )
                             )
                             .setPositiveButton(
-                                getString(R.string.btn_open_settings),
-                                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                                    // 检查版本
-                                    if (Build.VERSION.SDK_INT >= 30) {
-                                        val intent =
-                                            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                        intent.setData(Uri.parse("package:" + getPackageName()))
-                                        startActivity(intent)
-                                    } else {
-                                        // Android 10 及以下使用传统存储设置
-                                        val intent =
-                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                        intent.setData(Uri.parse("package:" + getPackageName()))
-                                        startActivity(intent)
-                                    }
-                                })
+                                getString(R.string.btn_open_settings)
+                            ) { _: DialogInterface?, _: Int ->
+                                // 检查版本
+                                if (Build.VERSION.SDK_INT >= 30) {
+                                    val intent =
+                                        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    startActivity(intent)
+                                } else {
+                                    // Android 10 及以下使用传统存储设置
+                                    val intent =
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    startActivity(intent)
+                                }
+                            }
                             .setNegativeButton(getString(R.string.btn_understood), null)
                             .show()
                     } else {
+                        dismissProgressDialog()
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle(getString(R.string.title_load_failed))
                             .setMessage(
@@ -1567,30 +1530,25 @@ class MainActivity : Activity() {
                                 )
                             )
                             .setPositiveButton(
-                                getString(R.string.btn_copy_error),
-                                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                                    val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clip = ClipData.newPlainText("Error", getFullStackTrace(e))
-                                    cm.setPrimaryClip(clip)
-                                    toast(getString(R.string.toast_copied))
-                                })
+                                getString(R.string.btn_copy_error)
+                            ) { _: DialogInterface?, _: Int ->
+                                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Error", getFullStackTrace(e))
+                                cm.setPrimaryClip(clip)
+                                toast(getString(R.string.toast_copied))
+                            }
                             .setNegativeButton(getString(R.string.btn_understood), null)
                             .show()
                     }
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 2. 保存回写 (修复版：带更详细的错误反馈)
     private fun saveAndPushBack(dataToSave: JsonObject?, folder: String) {
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_saving),
-            getString(R.string.msg_processing),
-            true
-        )
-        Thread(Runnable {
+        showProgressDialog(getString(R.string.msg_saving), getString(R.string.msg_processing))
+        Thread {
             try {
                 // 1. 创建备份
                 createBackup(folder)
@@ -1650,10 +1608,10 @@ class MainActivity : Activity() {
                     deleteRecursive(oldWorkDir)
                     currentWorkingDbPath = newWorkDir.getAbsolutePath()
 
-                    runOnUiThread(Runnable {
-                        loading.dismiss()
+                    runOnUiThread {
+                        dismissProgressDialog()
                         toast(getString(R.string.toast_player_saved))
-                    })
+                    }
                 } else {
                     // === 保存 Level.dat ===
 
@@ -1687,17 +1645,17 @@ class MainActivity : Activity() {
                     }
 
                     if (success) {
-                        runOnUiThread(Runnable {
-                            loading.dismiss()
+                        runOnUiThread {
+                            dismissProgressDialog()
                             toast(getString(R.string.toast_level_dat_saved))
-                        })
+                        }
                     } else {
                         throw Exception(getString(R.string.msg_write_to_game_dir_failed))
                     }
                 }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     val msg = e.message
 
                     // 【新增】区分 Shizuku 禁用状态和实际错误
@@ -1707,22 +1665,22 @@ class MainActivity : Activity() {
                             .setTitle(getString(R.string.err_save_failed))
                             .setMessage(getString(R.string.err_direct_access_failed) + "\n\n" + msg)
                             .setPositiveButton(
-                                getString(R.string.btn_open_settings),
-                                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                                    if (Build.VERSION.SDK_INT >= 30) {
-                                        // Android 11+ 使用 MANAGE_ALL_FILES_ACCESS_PERMISSION
-                                        val intent =
-                                            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                        intent.setData(Uri.parse("package:" + getPackageName()))
-                                        startActivity(intent)
-                                    } else {
-                                        // Android 10 及以下使用应用详情设置页
-                                        val intent =
-                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                        intent.setData(Uri.parse("package:" + getPackageName()))
-                                        startActivity(intent)
-                                    }
-                                })
+                                getString(R.string.btn_open_settings)
+                            ) { _: DialogInterface?, _: Int ->
+                                if (Build.VERSION.SDK_INT >= 30) {
+                                    // Android 11+ 使用 MANAGE_ALL_FILES_ACCESS_PERMISSION
+                                    val intent =
+                                        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    startActivity(intent)
+                                } else {
+                                    // Android 10 及以下使用应用详情设置页
+                                    val intent =
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    startActivity(intent)
+                                }
+                            }
                             .setNegativeButton(getString(R.string.btn_cancel), null)
                             .show()
                     } else {
@@ -1732,18 +1690,18 @@ class MainActivity : Activity() {
                                 .setTitle(getString(R.string.title_shizuku_error))
                                 .setMessage(msg)
                                 .setPositiveButton(
-                                    getString(R.string.btn_open_shizuku),
-                                    DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                                        try {
-                                            val intent =
-                                                getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api")
-                                            if (intent != null) {
-                                                startActivity(intent)
-                                            }
-                                        } catch (ex: Exception) {
-                                            toast(getString(R.string.toast_shizuku_not_installed))
+                                    getString(R.string.btn_open_shizuku)
+                                ) { _: DialogInterface?, _: Int ->
+                                    try {
+                                        val intent =
+                                            getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api")
+                                        if (intent != null) {
+                                            startActivity(intent)
                                         }
-                                    })
+                                    } catch (_: Exception) {
+                                        toast(getString(R.string.toast_shizuku_not_installed))
+                                    }
+                                }
                                 .setNegativeButton(getString(R.string.btn_cancel), null)
                                 .show()
                         } else {
@@ -1755,9 +1713,9 @@ class MainActivity : Activity() {
                                 .show()
                         }
                     }
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     private fun createBackup(folderName: String) {
@@ -1807,7 +1765,7 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.dialog_custom_path_title))
             .setMessage(getString(R.string.msg_custom_path))
             .setView(input)
-            .setPositiveButton(getString(R.string.btn_confirm)) { d, w ->
+            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                 var p = input.text.toString().trim()
                 if (p.isEmpty()) return@setPositiveButton
                 // 去除末尾可能多余的斜杠，为了下面获取 getName() 准确
@@ -1882,12 +1840,7 @@ class MainActivity : Activity() {
     }
 
     private fun showWorldSelector() {
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_scanning),
-            getString(R.string.msg_parsing_archive_information),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_scanning), getString(R.string.msg_parsing_archive_information))
 
         Thread {
             try {
@@ -1949,17 +1902,23 @@ class MainActivity : Activity() {
                 val displayArr = displayList.toTypedArray()
 
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     if (displayArr.isEmpty()) {
                         toast(getString(R.string.err_no_saves_detail))
                         return@runOnUiThread
                     }
-
                     AlertDialog.Builder(this@MainActivity)
-                        .setTitle(String.format(getString(R.string.dialog_select_archive_title), displayArr.size))
-                        .setItems(displayArr) { d, i ->
+                        .setTitle(
+                            String.format(
+                                getString(R.string.dialog_select_archive_title),
+                                displayArr.size
+                            )
+                        )
+                        .setItems(
+                            displayArr
+                        ) { _: DialogInterface?, i: Int ->
                             // 点击时，从 folderList 里取纯净的文件夹名
-                            val realFolder = folderList[i]
+                            val realFolder = folderList.get(i)
 
                             // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
                             // 这里建议输入框里还是显示名字+ID，或者只显示ID
@@ -1972,7 +1931,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     toast(e.toString())
                 }
             }
@@ -1989,7 +1948,7 @@ class MainActivity : Activity() {
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_path_title))
-            .setItems(options, DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
+            .setItems(options) { _: DialogInterface?, w: Int ->
                 if (w == 0) {
                     currentWorldsPath = PATH_STANDARD
                     toast(getString(R.string.toast_switched_std))
@@ -2004,7 +1963,7 @@ class MainActivity : Activity() {
                     // 【新增】SAF 路径选择
                     openSafPathSelector()
                 }
-            })
+            }
             .show()
     }
 
@@ -2081,7 +2040,7 @@ class MainActivity : Activity() {
             val ch = c.getMethod("checkSelfPermission")
             val permission = ch.invoke(null) as Int?
             return permission != null && permission == PackageManager.PERMISSION_GRANTED
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }
@@ -2117,7 +2076,7 @@ class MainActivity : Activity() {
         try {
             copyFile(src, dst)
             return true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }
@@ -2191,9 +2150,9 @@ class MainActivity : Activity() {
             if (!scrollPositionStack.isEmpty()) {
                 val lastPos = scrollPositionStack.pop()!!
                 // 必须要 post 执行，因为 updateAdapter 刚刚才 reset 了列表
-                nbtListView!!.post(Runnable {
+                nbtListView!!.post {
                     nbtListView!!.setSelection(lastPos) // 瞬间跳回原来的位置
-                })
+                }
             }
 
             return  // 结束方法，不退出应用
@@ -2236,7 +2195,7 @@ class MainActivity : Activity() {
 
     // 更新顶部路径标题 (修复树状图标题显示错误的 Bug)
     private fun updatePathTitle() {
-        var titleText = ""
+        var titleText: String
 
         if (isTreeMode) {
             // === 树状图模式 ===
@@ -2337,13 +2296,13 @@ class MainActivity : Activity() {
             btnAutocomplete.setText(getString(R.string.btn_choose) + getTypeLabel(finalDataType))
             btnAutocomplete.setTextColor(Color.parseColor("#2196F3"))
             btnAutocomplete.setBackgroundColor(Color.TRANSPARENT)
-            btnAutocomplete.setOnClickListener(View.OnClickListener { v: View? ->
+            btnAutocomplete.setOnClickListener { _: View? ->
                 showAutocompleteDialog(
                     input,
                     finalDataType,
                     input.getText().toString()
                 )
-            })
+            }
             layout.addView(btnAutocomplete)
 
             builder.setView(layout)
@@ -2354,33 +2313,33 @@ class MainActivity : Activity() {
 
         // ========== 保存按钮 ==========
         builder.setPositiveButton(
-            getString(R.string.btn_save_short),
-            DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                try {
-                    val `val` = input.getText().toString().trim { it <= ' ' }
+            getString(R.string.btn_save_short)
+        ) { _: DialogInterface?, _: Int ->
+            try {
+                val `val` = input.getText().toString().trim { it <= ' ' }
 
-                    if (type >= 1 && type <= 3) {
-                        item.addProperty("v", `val`.toInt())
-                    } else if (type == 4) {
-                        item.addProperty("v", `val`.toLong())
-                    } else if (type >= 5 && type <= 6) {
-                        item.addProperty("v", `val`.toDouble())
-                    } else if (type == 8) {
-                        item.addProperty("v", `val`)
-                    } else if (type == 7 || type == 11 || type == 12) {
-                        val parsed = JsonParser().parse(`val`)
-                        item.add("v", parsed.getAsJsonArray())
-                    }
-
-                    if (!isTreeMode) {
-                        nbtAdapter!!.refreshKeys()
-                    } else {
-                        nbtTreeAdapter!!.notifyDataSetChanged()
-                    }
-                } catch (e: Exception) {
-                    toast(getString(R.string.err_save_failed) + e.message)
+                if (type >= 1 && type <= 3) {
+                    item.addProperty("v", `val`.toInt())
+                } else if (type == 4) {
+                    item.addProperty("v", `val`.toLong())
+                } else if (type >= 5 && type <= 6) {
+                    item.addProperty("v", `val`.toDouble())
+                } else if (type == 8) {
+                    item.addProperty("v", `val`)
+                } else if (type == 7 || type == 11 || type == 12) {
+                    val parsed = JsonParser().parse(`val`)
+                    item.add("v", parsed.getAsJsonArray())
                 }
-            })
+
+                if (!isTreeMode) {
+                    nbtAdapter!!.refreshKeys()
+                } else {
+                    nbtTreeAdapter!!.notifyDataSetChanged()
+                }
+            } catch (e: Exception) {
+                toast(getString(R.string.err_save_failed) + e.message)
+            }
+        }
 
         builder.show()
     }
@@ -2414,7 +2373,7 @@ class MainActivity : Activity() {
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_manage_prefix) + key)
-            .setItems(ops) { d, w ->
+            .setItems(ops) { _, w ->
                 // 根据模式获取正确的容器和 key
                 var parentContainer: JsonObject?
                 var nodeKey = key
@@ -2494,7 +2453,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_rename))
             .setView(input)
-            .setPositiveButton(getString(R.string.btn_confirm)) { d, w ->
+            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                 val newKey = input.text.toString().trim()
                 if (newKey.isEmpty() || newKey == oldKey) return@setPositiveButton
                 if (parentContainer.has(newKey)) {
@@ -2543,11 +2502,11 @@ class MainActivity : Activity() {
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_add_child))
-            .setItems(types, DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
+            .setItems(types) { _: DialogInterface?, w: Int ->
                 val selectedType = ids[w]
                 // 弹出命名对话框
                 showNameInputDialog(parent, selectedType)
-            })
+            }
             .show()
     }
 
@@ -2558,7 +2517,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this@MainActivity)
             .setTitle(getString(R.string.menu_rename))
             .setView(input)
-            .setPositiveButton(getString(R.string.btn_create)) { dd, ww ->
+            .setPositiveButton(getString(R.string.btn_create)) { _, _ ->
                 val name = input.text.toString()
                 if (name.isNotEmpty()) {
                     if (parentCompound.has(name)) {
@@ -2602,15 +2561,15 @@ class MainActivity : Activity() {
         input.setText(oldKey)
         AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input)
             .setPositiveButton(
-                getString(R.string.btn_confirm),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    val newKey = input.getText().toString()
-                    if (!newKey.isEmpty() && !nbtAdapter!!.data!!.has(newKey)) {
-                        nbtAdapter!!.data!!.remove(oldKey)
-                        nbtAdapter!!.data!!.add(newKey, itemData)
-                        nbtAdapter!!.refreshKeys()
-                    }
-                }).show()
+                getString(R.string.btn_confirm)
+            ) { _: DialogInterface?, _: Int ->
+                val newKey = input.getText().toString()
+                if (!newKey.isEmpty() && !nbtAdapter!!.data!!.has(newKey)) {
+                    nbtAdapter!!.data!!.remove(oldKey)
+                    nbtAdapter!!.data!!.add(newKey, itemData)
+                    nbtAdapter!!.refreshKeys()
+                }
+            }.show()
     }
 
     // 根菜单 (长按顶部标题或点击全屏右上角触发)
@@ -2642,7 +2601,7 @@ class MainActivity : Activity() {
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.menu_root_title))
-            .setItems(ops) { d, w ->
+            .setItems(ops) { _, w ->
                 if (w == 0) {
                     // === 1. 添加子项 ===
                     showAddChildDialog(current!!)
@@ -2657,7 +2616,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(getString(R.string.title_paste_as))
                         .setView(input)
-                        .setPositiveButton(getString(R.string.btn_confirm)) { dd, ww ->
+                        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                             val n = input.text.toString()
                             if (n.isNotEmpty() && !current!!.has(n)) {
                                 current!!.add(n, clipboard!!.deepCopy())
@@ -2689,7 +2648,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(getString(R.string.msg_confirm_replace))
                         .setMessage(getString(R.string.msg_replace_warning))
-                        .setPositiveButton(getString(R.string.btn_replace)) { dialog, which ->
+                        .setPositiveButton(getString(R.string.btn_replace)) { _, _ ->
                             try {
                                 val text = cm.primaryClip!!.getItemAt(0).text
                                 if (text == null) return@setPositiveButton
@@ -2706,7 +2665,7 @@ class MainActivity : Activity() {
 
                                 refreshAfterTreeEdit()
                                 toast(getString(R.string.toast_pasted))
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 toast(getString(R.string.err_json_parse))
                             }
                         }
@@ -2717,7 +2676,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(getString(R.string.dialog_danger_title))
                         .setMessage(getString(R.string.dialog_clear_msg))
-                        .setPositiveButton(getString(R.string.btn_confirm_clear)) { dd, ww ->
+                        .setPositiveButton(getString(R.string.btn_confirm_clear)) { _, _ ->
                             val keys = ArrayList(current!!.keySet())
                             for (key in keys) {
                                 current!!.remove(key)
@@ -2859,23 +2818,23 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_view_mode))
             .setSingleChoiceItems(
                 items,
-                currentViewMode,
-                DialogInterface.OnClickListener { d: DialogInterface?, which: Int ->
+                currentViewMode
+            ) { d: DialogInterface?, which: Int ->
 // 更新模式
-                    currentViewMode = which
-                    prefs!!.edit().putInt("view_mode", currentViewMode).apply() // commit改apply更高效喵
+                currentViewMode = which
+                prefs!!.edit().putInt("view_mode", currentViewMode).apply() // commit改apply更高效喵
 
-                    // 【核心修改】安全刷新Adapter
-                    if (nbtAdapter != null) {
-                        nbtAdapter!!.setViewMode(currentViewMode)
-                    }
-                    if (nbtTreeAdapter != null) {
-                        nbtTreeAdapter!!.setViewMode(currentViewMode)
-                    }
+                // 【核心修改】安全刷新Adapter
+                if (nbtAdapter != null) {
+                    nbtAdapter!!.setViewMode(currentViewMode)
+                }
+                if (nbtTreeAdapter != null) {
+                    nbtTreeAdapter!!.setViewMode(currentViewMode)
+                }
 
-                    d!!.dismiss()
-                    toast(getString(R.string.toast_mode_changed))
-                })
+                d!!.dismiss()
+                toast(getString(R.string.toast_mode_changed))
+            }
             .show()
     }
 
@@ -2939,7 +2898,7 @@ class MainActivity : Activity() {
         // 4. 等待完成
         try {
             latch.await()
-        } catch (e: InterruptedException) {
+        } catch (_: InterruptedException) {
             throw Exception(getString(R.string.msg_copy_process_interrupted))
         } finally {
             // 确保线程池关闭
@@ -2958,30 +2917,25 @@ class MainActivity : Activity() {
             showListDialogInternal(cachePlayerList!!, TYPE_PLAYER)
             return
         }
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_scanning),
-            getString(R.string.msg_search_for_players),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_scanning), getString(R.string.msg_search_for_players))
 
         Thread {
             try {
                 val db = PlayerDbManager(currentWorkingDbPath!!)
                 // 1. 获取并转存
-                val rawList: MutableList<String> = db.listPlayerKeys().mapNotNull { it }.toMutableList()
+                val rawList: MutableList<String> = db.listPlayerKeys().map { it }.toMutableList()
                 db.close()
 
                 cachePlayerList = rawList
 
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     // 2. 这里的 rawList 已经是 final 的了
                     showListDialogInternal(rawList, TYPE_PLAYER)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     toast(e.toString())
                 }
             }
@@ -3021,14 +2975,9 @@ class MainActivity : Activity() {
         }
 
         // 4. 既没草稿也没缓存，只能读硬盘
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_read),
-            getString(R.string.msg_load) + finalKey,
-            true
-        )
+        showProgressDialog(getString(R.string.msg_read), getString(R.string.msg_load) + finalKey)
 
-        Thread(Runnable {
+        Thread {
             try {
                 // 强制解锁
                 if (currentWorkingDbPath != null) {
@@ -3042,9 +2991,10 @@ class MainActivity : Activity() {
 
                 val jsonData = parseBytes(data)
 
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     currentTargetKey = finalKey
+                    isEditingPlayer = true
                     isEditingPlayer = true
 
                     navigationStack.clear()
@@ -3059,10 +3009,10 @@ class MainActivity : Activity() {
 
                     if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.title_current) + finalKey)
                     toast(getString(R.string.toast_loaded) + finalKey)
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     // 捕获空数据，询问创建
                     if (e.message != null && e.message!!.contains(getString(R.string.msg_data_is_empty))) {
                         AlertDialog.Builder(this@MainActivity)
@@ -3074,39 +3024,40 @@ class MainActivity : Activity() {
                                 )
                             )
                             .setPositiveButton(
-                                getString(R.string.btn_create_and_open),
-                                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                                    createNewGlobalData(finalKey)
-                                })
+                                getString(R.string.btn_create_and_open)
+                            ) { _: DialogInterface?, _: Int ->
+                                createNewGlobalData(finalKey)
+                            }
                             .setNegativeButton(getString(R.string.btn_cancel), null)
                             .show()
                     } else {
+                        dismissProgressDialog()
                         toast(getString(R.string.err_load_failed) + e.message)
                     }
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 1. [复制玩家数据]
     private fun copyPlayerJson(key: String) {
-        Thread(Runnable {
+        Thread {
             try {
                 val db = PlayerDbManager(currentWorkingDbPath!!)
                 val data = db.readSpecificKey(key)
                 db.close()
 
                 val json = parseBytes(data).toString()
-                runOnUiThread(Runnable {
+                runOnUiThread {
                     val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("PLAYER_DATA", json)
                     cm.setPrimaryClip(clip)
                     toast(getString(R.string.toast_player_data_copied_to_clipboard))
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable { toast(getString(R.string.toast_copy_failed) + e) })
+                runOnUiThread { toast(getString(R.string.toast_copy_failed) + e) }
             }
-        }).start()
+        }.start()
     }
 
     // 2. [粘贴并覆盖]
@@ -3127,28 +3078,28 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_override_warning))
             .setMessage(getString(R.string.msg_full_coverage) + targetKey + getString(R.string.msg_this_action_is_irreversible))
             .setPositiveButton(
-                getString(R.string.btn_cover),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    val jsonStr = cm.getPrimaryClip()!!.getItemAt(0).getText().toString()
-                    Thread(Runnable {
-                        try {
-                            val jo = JsonParser.parseString(jsonStr).getAsJsonObject()
-                            val bytes = writeToBytes(jo)
+                getString(R.string.btn_cover)
+            ) { _: DialogInterface?, _: Int ->
+                val jsonStr = cm.getPrimaryClip()!!.getItemAt(0).getText().toString()
+                Thread {
+                    try {
+                        val jo = JsonParser.parseString(jsonStr).getAsJsonObject()
+                        val bytes = writeToBytes(jo)
 
-                            // 【注意这里】重新创建一个新的 db 对象来操作，避免使用 final 的冲突
-                            val localDb = PlayerDbManager(currentWorkingDbPath!!)
-                            localDb.writeSpecificKey(targetKey, bytes)
-                            localDb.close()
+                        // 【注意这里】重新创建一个新的 db 对象来操作，避免使用 final 的冲突
+                        val localDb = PlayerDbManager(currentWorkingDbPath!!)
+                        localDb.writeSpecificKey(targetKey, bytes)
+                        localDb.close()
 
-                            runOnUiThread(Runnable {
-                                toast(getString(R.string.toast_data_covered))
-                                if (onSuccess != null) onSuccess.run()
-                            })
-                        } catch (e: Exception) {
-                            runOnUiThread(Runnable { toast(getString(R.string.toast_paste_failed) + e) })
+                        runOnUiThread {
+                            toast(getString(R.string.toast_data_covered))
+                            if (onSuccess != null) onSuccess.run()
                         }
-                    }).start()
-                })
+                    } catch (e: Exception) {
+                        runOnUiThread { toast(getString(R.string.toast_paste_failed) + e) }
+                    }
+                }.start()
+            }
             .setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
@@ -3159,26 +3110,26 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_remove_warning))
             .setMessage(getString(R.string.msg_confirm_deletion) + key + "？")
             .setPositiveButton(
-                getString(R.string.btn_delete),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
+                getString(R.string.btn_delete)
+            ) { _: DialogInterface?, _: Int ->
 
-                    // 【技巧】把外部变量转为 final 本地变量，传给线程
-                    val dbPath = currentWorkingDbPath
-                    Thread(Runnable {
-                        try {
-                            val db = PlayerDbManager(dbPath!!) // 用 dbPath
-                            db.deleteKey(key)
-                            db.close()
+                // 【技巧】把外部变量转为 final 本地变量，传给线程
+                val dbPath = currentWorkingDbPath
+                Thread {
+                    try {
+                        val db = PlayerDbManager(dbPath!!) // 用 dbPath
+                        db.deleteKey(key)
+                        db.close()
 
-                            runOnUiThread(Runnable {
-                                toast(getString(R.string.toast_deleted) + key)
-                                if (onSuccess != null) onSuccess.run()
-                            })
-                        } catch (e: Exception) {
-                            runOnUiThread(Runnable { toast(getString(R.string.toast_delete_failed) + e) })
+                        runOnUiThread {
+                            toast(getString(R.string.toast_deleted) + key)
+                            if (onSuccess != null) onSuccess.run()
                         }
-                    }).start()
-                }).setNegativeButton(getString(R.string.btn_cancel), null).show()
+                    } catch (e: Exception) {
+                        runOnUiThread { toast(getString(R.string.toast_delete_failed) + e) }
+                    }
+                }.start()
+            }.setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
     // 修复后的新建逻辑 (支持新建、粘贴、批量删除、拼图、国际化、防闪退)
@@ -3219,7 +3170,7 @@ class MainActivity : Activity() {
         val ops = menuList.toTypedArray<String?>()
 
         AlertDialog.Builder(this)
-            .setItems(ops) { d, w ->
+            .setItems(ops) { _, w ->
 
                 // === 情况 A: 删除所有 (Index 2) ===
                 if (w == 2) {
@@ -3230,14 +3181,9 @@ class MainActivity : Activity() {
                                 R.string.msg_indivual
                             ) + typeName + getString(R.string.msg_the_operation_cannot_be_undone)
                         )
-                        .setPositiveButton(getString(R.string.btn_delete_all)) { dd, ww ->
+                        .setPositiveButton(getString(R.string.btn_delete_all)) { _, _ ->
                             // 批量删除逻辑
-                            val deleting = ProgressDialog.show(
-                                this@MainActivity,
-                                getString(R.string.msg_deleting),
-                                getString(R.string.msg_cleaning_up),
-                                true
-                            )
+                            showProgressDialog(getString(R.string.msg_deleting), getString(R.string.msg_cleaning_up))
                             val dbPath = currentWorkingDbPath
                             Thread {
                                 try {
@@ -3249,7 +3195,7 @@ class MainActivity : Activity() {
                                     db.close()
 
                                     runOnUiThread {
-                                        deleting.dismiss()
+                                        dismissProgressDialog()
                                         currentList.clear() // 清空列表
 
                                         // 【核心修复】判空 adapter，防止搜索模式下闪退
@@ -3263,7 +3209,7 @@ class MainActivity : Activity() {
                                     }
                                 } catch (e: Exception) {
                                     runOnUiThread {
-                                        deleting.dismiss()
+                                        dismissProgressDialog()
                                         toast(getString(R.string.toast_delete_failed) + e)
                                     }
                                 }
@@ -3290,7 +3236,7 @@ class MainActivity : Activity() {
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.title_new) + finalTypeName + " Key")
                     .setView(input)
-                    .setPositiveButton(getString(R.string.btn_create)) { dd, ww ->
+                    .setPositiveButton(getString(R.string.btn_create)) { _, _ ->
                         val newKey = input.text.toString()
                         if (newKey.isEmpty()) {
                             toast(getString(R.string.toast_key_cannot_be_empty))
@@ -3349,7 +3295,7 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_rename_key))
             .setMessage(getString(R.string.msg_move_data_to_new_key_and_delete_old_key))
             .setView(input)
-            .setPositiveButton(getString(R.string.title_rename)) { d, w ->
+            .setPositiveButton(getString(R.string.title_rename)) { _, _ ->
                 val newKey = input.text.toString().trim()
                 if (newKey.isEmpty() || newKey == oldKey) return@setPositiveButton
 
@@ -3383,29 +3329,24 @@ class MainActivity : Activity() {
             return
         }
 
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_scanning),
-            getString(R.string.msg_search_map_data),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_scanning), getString(R.string.msg_search_map_data))
 
         Thread {
             try {
                 val db = PlayerDbManager(currentWorkingDbPath!!)
-                val rawList: MutableList<String> = db.listMapKeys().mapNotNull { it }.toMutableList()
+                val rawList: MutableList<String> = db.listMapKeys().map { it }.toMutableList()
                 db.close()
 
                 // 存入缓存
                 cacheMapList = rawList
 
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     showListDialogInternal(cacheMapList!!, TYPE_MAP)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     toast(e.toString())
                 }
             }
@@ -3446,7 +3387,7 @@ class MainActivity : Activity() {
         if (key == "colors" && size >= 16384) {
             val btnImport = Button(this)
             btnImport.setText(getString(R.string.text_import_images_to_generate_map_images))
-            btnImport.setOnClickListener(View.OnClickListener { v: View? ->
+            btnImport.setOnClickListener { _: View? ->
                 // 暂存目标数组
                 currentTargetMapArray = jsonArray
                 // 启动 SAF 选择器
@@ -3454,7 +3395,7 @@ class MainActivity : Activity() {
                 intent.addCategory(Intent.CATEGORY_OPENABLE)
                 intent.setType("image/*")
                 startActivityForResult(intent, REQUEST_PICK_IMAGE_FOR_MAP)
-            })
+            }
             layout.addView(btnImport)
         }
 
@@ -3463,37 +3404,36 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_manage_array) + key)
             .setView(layout) // 把刚才加了一堆东西的 layout 塞进去
             .setPositiveButton(
-                getString(R.string.btn_view_and_edit_clips),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    try {
-                        var start = etStart.getText().toString().toInt()
-                        var count = etCount.getText().toString().toInt()
-                        if (start < 0) start = 0
-                        if (count > 2000) count = 2000
-                        if (start + count > size) count = size - start
+                getString(R.string.btn_view_and_edit_clips)
+            ) { _: DialogInterface?, _: Int ->
+                try {
+                    var start = etStart.getText().toString().toInt()
+                    var count = etCount.getText().toString().toInt()
+                    if (start < 0) start = 0
+                    if (count > 2000) count = 2000
+                    if (start + count > size) count = size - start
 
-                        showSubArrayEditDialog(key, jsonArray, start, count)
-                    } catch (e: NumberFormatException) {
-                        toast(getString(R.string.toast_please_enter_valid_numbers))
-                    }
-                })
+                    showSubArrayEditDialog(key, jsonArray, start, count)
+                } catch (_: NumberFormatException) {
+                    toast(getString(R.string.toast_please_enter_valid_numbers))
+                }
+            }
             .setNeutralButton(
-                getString(R.string.btn_full_export),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    Thread(
-                        Runnable {
-                            val content = jsonArray.toString()
-                            runOnUiThread(Runnable {
-                                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                                cm.setPrimaryClip(ClipData.newPlainText("Array", content))
-                                toast(
-                                    getString(R.string.toast_exported) + content.length + getString(
-                                        R.string.toast_characters_to_clipboard
-                                    )
-                                )
-                            })
-                        }).start()
-                })
+                getString(R.string.btn_full_export)
+            ) { _: DialogInterface?, _: Int ->
+                Thread {
+                    val content = jsonArray.toString()
+                    runOnUiThread {
+                        val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("Array", content))
+                        toast(
+                            getString(R.string.toast_exported) + content.length + getString(
+                                R.string.toast_characters_to_clipboard
+                            )
+                        )
+                    }
+                }.start()
+            }
             .setNegativeButton(getString(R.string.btn_close), null)
             .show()
     }
@@ -3521,7 +3461,7 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_edit_left_bracket) + start + " ~ " + (start + count - 1) + ")")
             .setView(input)
             .setMessage(getString(R.string.msg_comma_separated_format_click_save_after_modification))
-            .setPositiveButton(getString(R.string.btn_save_clip)) { d, w ->
+            .setPositiveButton(getString(R.string.btn_save_clip)) { _, _ ->
                 try {
                     val parsed = JsonParser.parseString(input.text.toString())
                     if (parsed.isJsonArray) {
@@ -3558,28 +3498,24 @@ class MainActivity : Activity() {
             showListDialogInternal(cacheVillageList!!, TYPE_VILLAGE)
             return
         }
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_scanning),
-            getString(R.string.msg_search_village_data),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_scanning), getString(R.string.msg_search_village_data))
 
         Thread {
             try {
                 val db = PlayerDbManager(currentWorkingDbPath!!)
-                val rawList: MutableList<String> = db.listVillageKeys().mapNotNull { it }.toMutableList()
+                val rawList: MutableList<String> = db.listVillageKeys().map { it }.toMutableList()
                 db.close()
 
                 cacheVillageList = rawList
 
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
+                    // 2. 这里的 rawList 已经是 final 的了
                     showListDialogInternal(rawList, TYPE_VILLAGE)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    loading.dismiss()
+                    dismissProgressDialog()
                     toast(e.toString())
                 }
             }
@@ -3592,8 +3528,8 @@ class MainActivity : Activity() {
             .setTitle(getString(R.string.title_warning_inventory))
             .setMessage(getString(R.string.msg_warning_puzzle))
             .setPositiveButton(
-                getString(R.string.btn_i_understand_continue),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int -> showPuzzleConfigDialog() })
+                getString(R.string.btn_i_understand_continue)
+            ) { _: DialogInterface?, _: Int -> showPuzzleConfigDialog() }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
@@ -3610,7 +3546,7 @@ class MainActivity : Activity() {
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_choose_puzzle_size))
-            .setItems(options) { d, w ->
+            .setItems(options) { _, w ->
                 if (w == 0) {
                     puzzleRows = 1
                     puzzleCols = 1
@@ -3645,7 +3581,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(getString(R.string.title_input_dimensions))
                         .setView(layout)
-                        .setPositiveButton(getString(R.string.btn_confirm)) { dd, ww ->
+                        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                             try {
                                 val strW = etW.text.toString()
                                 val strH = etH.text.toString()
@@ -3686,19 +3622,15 @@ class MainActivity : Activity() {
     // 核心引擎：生成拼图（禁人塔式单链嵌套 - Slot 0递归放盒子）
     private fun processPuzzleMap(imageUri: Uri) {
         val currentFolderName = etWorldName!!.getText().toString()
-        val pd = ProgressDialog.show(
-            this,
-            getString(R.string.msg_in_preparation),
-            getString(R.string.msg_analyzing_backpack),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_in_preparation), getString(R.string.msg_analyzing_backpack))
 
-        Thread(Runnable {
+        Thread {
             try {
                 // 1. 准备 DB 对象
                 val db = PlayerDbManager(currentWorkingDbPath!!)
                 val playerData = db.readLocalPlayer()
-                val mapKeys: MutableList<String> = db.listMapKeys().mapNotNull { it }.toMutableList()
+                val mapKeys: MutableList<String> =
+                    db.listMapKeys().map { it }.toMutableList()
 
                 // 2. 解析背包
                 var playerRoot = parseBytes(playerData)
@@ -3778,7 +3710,7 @@ class MainActivity : Activity() {
                             if (isRealItem) {
                                 occupiedSlots[slot.toInt()] = true
                             }
-                        } catch (ignored: Exception) {
+                        } catch (_: Exception) {
                         }
                     }
                 }
@@ -3786,7 +3718,7 @@ class MainActivity : Activity() {
                 // 寻找第一个空位
                 var freeSlot: Byte = -1
                 for (i in 0..35) {
-                    if (!occupiedSlots[i.toInt()]) {
+                    if (!occupiedSlots[i]) {
                         freeSlot = i.toByte()
                         break
                     }
@@ -3806,7 +3738,7 @@ class MainActivity : Activity() {
                     try {
                         val id = idStr.toLong()
                         if (id > maxMapId) maxMapId = id
-                    } catch (ignored: Exception) {
+                    } catch (_: Exception) {
                     }
                 }
                 val startMapId = if (maxMapId < 0) 0 else (maxMapId + 1)
@@ -3831,13 +3763,13 @@ class MainActivity : Activity() {
 
                 val itemsMap = ConcurrentHashMap<Int?, JsonObject?>()
 
-                runOnUiThread(Runnable {
-                    pd.setMessage(
+                runOnUiThread {
+                    updateProgressDialog(
                         getString(R.string.msg_high_performance_mode_starts) + totalMaps + getString(
                             R.string.msg_map_write_to_database
                         )
                     )
-                })
+                }
 
                 val cores = Runtime.getRuntime().availableProcessors()
                 val threadCount = if (useMultiThreading) min(cores + 1, 8) else 1
@@ -3947,7 +3879,7 @@ class MainActivity : Activity() {
 
                 try {
                     latch.await()
-                } catch (e: InterruptedException) {
+                } catch (_: InterruptedException) {
                     throw Exception(getString(R.string.msg_interrupted))
                 }
                 executor.shutdown()
@@ -4065,8 +3997,8 @@ class MainActivity : Activity() {
                 val finalStartId = startMapId
                 val finalTotalLayers = totalLayers
 
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     val msg =
                         getString(R.string.msg_success) + totalMaps + getString(R.string.msg_maps_have_been_packed) +
                                 getString(R.string.msg_nesting_depth) + finalTotalLayers + getString(
@@ -4088,20 +4020,20 @@ class MainActivity : Activity() {
                     scrollPositionStack.clear()
                     updateAdapter(rootNbtData)
                     if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.text_player_data_has_been_modified))
-                })
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 val fullStack: String = getFullStackTrace(e)
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(getString(R.string.title_operation_failed))
                         .setMessage(fullStack)
                         .setPositiveButton(getString(R.string.btn_close), null)
                         .show()
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 递归打包引擎 (修复版：去除内部 List 的双重包装)
@@ -4336,13 +4268,8 @@ class MainActivity : Activity() {
                         R.string.msg_item_this_action_is_irreversible
                     )
                 )
-                .setPositiveButton(getString(R.string.btn_delete)) { d, w ->
-                    val pd = ProgressDialog.show(
-                        this@MainActivity,
-                        getString(R.string.msg_processing_ing),
-                        getString(R.string.msg_are_deleting),
-                        true
-                    )
+                .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
+                    showProgressDialog(getString(R.string.msg_processing_ing), getString(R.string.msg_are_deleting))
                     val dbPath = currentWorkingDbPath
                     Thread {
                         try {
@@ -4353,7 +4280,7 @@ class MainActivity : Activity() {
                             db.close()
 
                             runOnUiThread {
-                                pd.dismiss()
+                                dismissProgressDialog()
                                 for (key in toDelete) {
                                     adapter.remove(key)
                                     dataList.remove(key)
@@ -4371,7 +4298,7 @@ class MainActivity : Activity() {
                         } catch (e: Exception) {
                             val errorMsg = e.toString()
                             runOnUiThread {
-                                pd.dismiss()
+                                dismissProgressDialog()
                                 toast(getString(R.string.toast_delete_failed) + errorMsg)
                             }
                         }
@@ -4415,7 +4342,7 @@ class MainActivity : Activity() {
 
         val dialog = AlertDialog.Builder(this@MainActivity)
             .setCustomTitle(customTitleView)
-            .setNeutralButton(getString(R.string.btn_more_actions)) { d, which ->
+            .setNeutralButton(getString(R.string.btn_more_actions)) { _, _ ->
                 showPlayerRootMenu(dataList, null, type)
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -4431,7 +4358,7 @@ class MainActivity : Activity() {
         }
 
         // 列表点击事件 (为了更好的体验，在选择模式下，点击文字也相当于勾选)
-        listView.setOnItemClickListener { parent, view, pos, id ->
+        listView.setOnItemClickListener { _, view, pos, _ ->
             val selectedKey = adapter.getItem(pos)
             // 【核心优化】如果是选择模式，点击行 = 勾选/取消勾选
             if (adapter.isSelectionMode()) {
@@ -4448,7 +4375,7 @@ class MainActivity : Activity() {
         }
 
         // 列表长按 (保留)
-        listView.setOnItemLongClickListener { parent, view, pos, id ->
+        listView.setOnItemLongClickListener { _, _, pos, _ ->
             // 如果在选择模式，长按不触发菜单，避免冲突
             if (adapter.isSelectionMode()) return@setOnItemLongClickListener false
 
@@ -4462,7 +4389,7 @@ class MainActivity : Activity() {
 
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.title_manage_prefix) + targetKey)
-                .setItems(ops) { d, w ->
+                .setItems(ops) { _, w ->
                     if (w == 0) copyPlayerJson(targetKey)
                     else if (w == 1) pastePlayerJson(targetKey) {
                         loadSpecificPlayer(targetKey)
@@ -4561,10 +4488,10 @@ class MainActivity : Activity() {
 
 
             // 复选框点击事件
-            cb.setOnClickListener(View.OnClickListener { v: View? ->
+            cb.setOnClickListener { _: View? ->
                 if (cb.isChecked()) selectedItems.add(currentKey!!)
                 else selectedItems.remove(currentKey)
-            })
+            }
 
             return convertView
         }
@@ -4635,10 +4562,10 @@ class MainActivity : Activity() {
             .setView(container)
             .setPositiveButton(getString(R.string.btn_close), null)
             .setNeutralButton(
-                getString(R.string.btn_clear_filter),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    if (nbtAdapter != null) nbtAdapter!!.filter(null)
-                })
+                getString(R.string.btn_clear_filter)
+            ) { _: DialogInterface?, _: Int ->
+                if (nbtAdapter != null) nbtAdapter!!.filter(null)
+            }
             .create()
 
         // 实时监听输入
@@ -4655,13 +4582,13 @@ class MainActivity : Activity() {
 
 
         // 自动弹键盘
-        dialog.setOnShowListener(OnShowListener { d: DialogInterface? ->
+        dialog.setOnShowListener { _: DialogInterface? ->
             etSearch.setFocusable(true)
             etSearch.setFocusableInTouchMode(true)
             etSearch.requestFocus()
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager?
             if (imm != null) imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
-        })
+        }
 
         dialog.show()
     }
@@ -4766,7 +4693,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_open_nbt_by_name))
             .setView(layout)
-            .setPositiveButton(getString(R.string.btn_confirm)) { d, w ->
+            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                 val input = etKey.text.toString()
                 if (input.isEmpty()) {
                     toast(getString(R.string.toast_input_cannot_be_empty))
@@ -4782,14 +4709,9 @@ class MainActivity : Activity() {
 
     // 加载自定义 Key 的核心逻辑
     private fun loadCustomKey(inputStr: String, isHex: Boolean) {
-        val pd = ProgressDialog.show(
-            this,
-            getString(R.string.msg_read),
-            getString(R.string.msg_querying),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_read), getString(R.string.msg_querying))
 
-        Thread(Runnable {
+        Thread {
             try {
                 val db = PlayerDbManager(currentWorkingDbPath!!)
 
@@ -4798,7 +4720,7 @@ class MainActivity : Activity() {
                     // Hex 模式：将字符串转为 byte[]
                     try {
                         keyBytes = hexStringToByteArray(inputStr)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         throw Exception(getString(R.string.msg_hex_format_error))
                     }
                 } else {
@@ -4813,8 +4735,8 @@ class MainActivity : Activity() {
                 // 解析 NBT
                 val json = parseBytes(data)
 
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     // 更新界面
                     isEditingPlayer = true
                     // 注意：如果是 Hex 模式，保存时可能需要特殊处理，
@@ -4834,14 +4756,14 @@ class MainActivity : Activity() {
                         tvCurrentPath!!.setText(getString(R.string.title_current) + type + inputStr)
                     }
                     toast(getString(R.string.toast_loading_successfully))
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     toast(getString(R.string.err_load_failed) + e.message)
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 【新增】数据库修复询问弹窗
@@ -4858,19 +4780,19 @@ class MainActivity : Activity() {
                         getString(R.string.msg_warning_repair_process_may_discard_unreadable_data_blocks)
             )
             .setPositiveButton(
-                getString(R.string.btn_try_to_fix),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    performDbRepair(
-                        dbPath,
-                        folderName,
-                        originalSuccessTask
-                    )
-                })
+                getString(R.string.btn_try_to_fix)
+            ) { _: DialogInterface?, _: Int ->
+                performDbRepair(
+                    dbPath,
+                    folderName,
+                    originalSuccessTask
+                )
+            }
             .setNegativeButton(
-                getString(R.string.btn_cancel),
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    toast(getString(R.string.toast_operation_canceled_please_check_archive_integrity))
-                })
+                getString(R.string.btn_cancel)
+            ) { _: DialogInterface?, _: Int ->
+                toast(getString(R.string.toast_operation_canceled_please_check_archive_integrity))
+            }
             .setCancelable(false) // 禁止点击外部关闭，必须选一个
             .show()
     }
@@ -4881,20 +4803,15 @@ class MainActivity : Activity() {
         folderName: String?,
         originalSuccessTask: Runnable?
     ) {
-        val pd = ProgressDialog.show(
-            this,
-            getString(R.string.msg_under_repair),
-            getString(R.string.msg_trying_to_rebuild_data_index),
-            true
-        )
+        showProgressDialog(getString(R.string.msg_under_repair), getString(R.string.msg_trying_to_rebuild_data_index))
 
-        Thread(Runnable {
+        Thread {
             try {
                 // 调用静态修复方法
                 PlayerDbManager.tryRepair(dbPath)
 
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     toast(getString(R.string.toast_repair_completed_trying_to_load_again))
 
                     // 修复成功后，递归调用 loadPlayerData 重新走一遍流程
@@ -4913,25 +4830,20 @@ class MainActivity : Activity() {
 
                     // === 修正方案：手动触发读取流程 ===
                     retryLoadAfterRepair(dbPath, folderName)
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    pd.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     toast(getString(R.string.toast_repair_failed) + e.message)
-                })
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 【新增】修复成功后的重试逻辑 (复用 loadPlayerData 的后半部分)
     private fun retryLoadAfterRepair(dbPath: String, folderName: String?) {
-        val loading = ProgressDialog.show(
-            this,
-            getString(R.string.msg_retrying),
-            getString(R.string.msg_reading_repaired_data),
-            true
-        )
-        Thread(Runnable {
+        showProgressDialog(getString(R.string.msg_retrying), getString(R.string.msg_reading_repaired_data))
+        Thread {
             try {
                 // 此时 dbPath 已经是修好的了，直接读
                 val dbManager = PlayerDbManager(dbPath)
@@ -4940,8 +4852,8 @@ class MainActivity : Activity() {
 
                 val playerDataObj = parseBytes(data)
 
-                runOnUiThread(Runnable {
-                    loading.dismiss()
+                runOnUiThread {
+                    dismissProgressDialog()
                     isEditingPlayer = true
                     navigationStack.clear()
                     pathStack.clear()
@@ -4954,27 +4866,27 @@ class MainActivity : Activity() {
                     updateAdapter(rootNbtData)
                     toast(getString(R.string.toast_player_loaded_success))
                     if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.path_editing_player) + folderName + ")")
-                })
+                }
             } catch (e: Exception) {
-                runOnUiThread(Runnable {
-                    loading.dismiss()
-                    toast(getString(R.string.toast_retry_failed) + e.toString())
-                })
+                runOnUiThread {
+                    dismissProgressDialog()
+                    toast(getString(R.string.toast_retry_failed) + e)
+                }
             }
-        }).start()
+        }.start()
     }
 
     // 【新增】创建 .nomedia 文件，防止系统媒体服务扫描导致崩溃
     private fun createNoMedia() {
         try {
-            val bridgeDir: File = File(BRIDGE_ROOT)
+            val bridgeDir = File(BRIDGE_ROOT)
             if (!bridgeDir.exists()) bridgeDir.mkdirs()
 
             val noMedia = File(bridgeDir, ".nomedia")
             if (!noMedia.exists()) {
                 noMedia.createNewFile()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // 忽略错误，这个文件不关键，只是为了防崩
         }
     }
@@ -4987,7 +4899,7 @@ class MainActivity : Activity() {
             if (!noMedia.exists()) {
                 noMedia.createNewFile()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // 忽略错误，不影响主流程
         }
     }
@@ -5003,8 +4915,8 @@ class MainActivity : Activity() {
         val data = ByteArray(len / 2)
         var i = 0
         while (i < len) {
-            data[i / 2] = ((s.get(i).digitToIntOrNull(16) ?: -1 shl 4)
-            + s.get(i + 1).digitToIntOrNull(16)!! ?: -1).toByte()
+            data[i / 2] = ((((s.get(i).digitToIntOrNull(16) ?: (-1 shl 4)) + s.get(i + 1)
+                .digitToIntOrNull(16)!!) ?: -1)).toByte()
             i += 2
         }
         return data
@@ -5096,23 +5008,23 @@ class MainActivity : Activity() {
             .setNegativeButton(getString(R.string.btn_close), null)
             .create()
 
-        listView.setOnItemClickListener(OnItemClickListener { parent: AdapterView<*>?, view: View?, position: Int, id: kotlin.Long ->
+        listView.setOnItemClickListener { _: AdapterView<*>?, _: View?, position: Int, _: kotlin.Long ->
             val key = realKeys.get(position)
             // 尝试加载
             // 这里的 loadSpecificPlayer 其实是通用的 loadByKey，直接复用
             loadSpecificPlayer(key)
             dialog.dismiss()
-        })
+        }
 
 
         // 可选：长按复制 Key
-        listView.setOnItemLongClickListener(OnItemLongClickListener { p: AdapterView<*>?, v: View?, pos: Int, id: kotlin.Long ->
+        listView.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
             val key: String? = realKeys.get(pos)
             val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("Key", key))
             toast(getString(R.string.toast_key_copied) + key)
             true
-        })
+        }
 
         dialog.show()
     }
@@ -5318,7 +5230,7 @@ class MainActivity : Activity() {
             // 恢复列表滚动位置
             if (!scrollPositionStack.isEmpty()) {
                 val pos = scrollPositionStack.peek()!!
-                nbtListView!!.post(Runnable { nbtListView!!.setSelection(pos) })
+                nbtListView!!.post { nbtListView!!.setSelection(pos) }
             }
 
             toast(getString(R.string.toast_unsaved_editing_session_restored))
@@ -5412,7 +5324,7 @@ class MainActivity : Activity() {
         }
 
         if (aboutHeader != null) {
-            aboutHeader.setOnClickListener(View.OnClickListener { v: View? ->
+            aboutHeader.setOnClickListener { _: View? ->
                 if (aboutContent != null && aboutContent.getVisibility() == View.GONE) {
                     aboutContent.setVisibility(View.VISIBLE)
                     aboutExpand.setText("▲")
@@ -5420,7 +5332,7 @@ class MainActivity : Activity() {
                     if (aboutContent != null && aboutContent.getVisibility() == View.GONE);
                     aboutExpand.setText("▼")
                 }
-            })
+            }
         }
 
 
@@ -5430,7 +5342,7 @@ class MainActivity : Activity() {
         val settingsExpand = dialogView.findViewById<TextView>(R.id.tv_settings_expand)
 
         if (settingsHeader != null) {
-            settingsHeader.setOnClickListener(View.OnClickListener { v: View? ->
+            settingsHeader.setOnClickListener { _: View? ->
                 if (settingsContent.getVisibility() == View.GONE) {
                     settingsContent.setVisibility(View.VISIBLE)
                     settingsExpand.setText("▲")
@@ -5438,7 +5350,7 @@ class MainActivity : Activity() {
                     settingsContent.setVisibility(View.GONE)
                     settingsExpand.setText("▼")
                 }
-            })
+            }
         }
 
 
@@ -5448,7 +5360,7 @@ class MainActivity : Activity() {
         val cbMulti = dialogView.findViewById<CheckBox?>(R.id.cb_dialog_multithread)
         if (cbMulti != null) {
             cbMulti.setChecked(useMultiThreading)
-            cbMulti.setOnCheckedChangeListener(CompoundButton.OnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
+            cbMulti.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
                 useMultiThreading = isChecked
                 prefs!!.edit().putBoolean("use_multithread", isChecked).apply()
                 toast(
@@ -5457,7 +5369,7 @@ class MainActivity : Activity() {
                     else
                         getString(R.string.toast_switched_to_single_threaded_stable_mode)
                 )
-            })
+            }
         }
 
 
@@ -5465,11 +5377,11 @@ class MainActivity : Activity() {
         val cbShizuku = dialogView.findViewById<CheckBox?>(R.id.cb_dialog_shizuku)
         if (cbShizuku != null) {
             cbShizuku.setChecked(useShizuku)
-            cbShizuku.setOnCheckedChangeListener(CompoundButton.OnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
+            cbShizuku.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
                 useShizuku = isChecked
                 prefs!!.edit().putBoolean("use_shizuku", isChecked).apply()
                 toast(if (isChecked) getString(R.string.toast_shizuku_enabled) else getString(R.string.toast_shizuku_disabled))
-            })
+            }
         }
 
 
@@ -5477,13 +5389,13 @@ class MainActivity : Activity() {
         val btnTheme = dialogView.findViewById<Button?>(R.id.btn_dialog_theme)
         if (btnTheme != null) {
             btnTheme.setText(if (isNightMode) getString(R.string.action_switch_day) else getString(R.string.action_switch_night))
-            btnTheme.setOnClickListener(View.OnClickListener { v: View? ->
+            btnTheme.setOnClickListener { _: View? ->
                 isNightMode = !isNightMode
                 prefs!!.edit().putBoolean("night_mode", isNightMode).apply()
                 applyTheme()
                 dialog.dismiss() // 关闭弹窗重建
                 recreate()
-            })
+            }
         }
 
 
@@ -5495,7 +5407,7 @@ class MainActivity : Activity() {
                     R.string.switch_to_chinese
                 )
             )
-            btnLang.setOnClickListener(View.OnClickListener { v: View? ->
+            btnLang.setOnClickListener { _: View? ->
                 if ("zh" == currentLang) currentLang = "en"
                 else currentLang = "zh"
                 prefs!!.edit().putString("app_language", currentLang).apply()
@@ -5507,7 +5419,7 @@ class MainActivity : Activity() {
                 reset()
                 dialog.dismiss()
                 recreate()
-            })
+            }
         }
 
         // 【新增】调试菜单触发器（点击图标10次）
@@ -5516,7 +5428,7 @@ class MainActivity : Activity() {
         val headerLayout = dialogView.findViewById<View?>(R.id.in_app_icon) // 确保XML中有这个ID
 
         if (headerLayout != null) {
-            headerLayout.setOnClickListener(View.OnClickListener { v: View? ->
+            headerLayout.setOnClickListener { _: View? ->
                 val currentTime = System.currentTimeMillis()
                 // 重置计数（如果超过2秒未点击）
                 if (currentTime - lastClickTime[0] > 5000) {
@@ -5536,7 +5448,7 @@ class MainActivity : Activity() {
                     clickCount[0] = 0 // 重置
                     showDebugMenu() // 显示调试菜单
                 }
-            })
+            }
         }
     }
 
@@ -5853,7 +5765,7 @@ class MainActivity : Activity() {
         })
 
         // 列表点击
-        lvSuggestions.setOnItemClickListener { parent, view, position, id ->
+        lvSuggestions.setOnItemClickListener { _, _, position, _ ->
             val selected = adapter.getItem(position)
             if (selected != null) {
                 targetInput.setText(selected.fillValue)
@@ -5875,15 +5787,15 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("🔧 开发者调试菜单")
             .setItems(
-                options,
-                DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                    when (which) {
-                        0 -> performCrashTest()
-                        1 -> showLogViewer()
-                        2 -> copyLogsToClipboard()
-                        3 -> exportLogsToFile()
-                    }
-                })
+                options
+            ) { dialog: DialogInterface?, which: Int ->
+                when (which) {
+                    0 -> performCrashTest()
+                    1 -> showLogViewer()
+                    2 -> copyLogsToClipboard()
+                    3 -> exportLogsToFile()
+                }
+            }
             .setNegativeButton("关闭", null)
             .show()
     }
@@ -5894,13 +5806,13 @@ class MainActivity : Activity() {
             .setTitle("⚠️ 确认")
             .setMessage("即将模拟一次应用崩溃，用于测试崩溃处理机制。\n\n是否继续？")
             .setPositiveButton(
-                "立即崩溃",
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int ->
-                    // 延迟1秒后抛出异常，让对话框先关闭
-                    Handler().postDelayed(Runnable {
-                        throw RuntimeException("【测试】手动触发的崩溃 - 用于验证 CrashHandler 是否正常工作")
-                    }, 1000)
-                })
+                "立即崩溃"
+            ) { _: DialogInterface?, _: Int ->
+                // 延迟1秒后抛出异常，让对话框先关闭
+                Handler().postDelayed({
+                    throw RuntimeException("【测试】手动触发的崩溃 - 用于验证 CrashHandler 是否正常工作")
+                }, 1000)
+            }
             .setNegativeButton("取消", null)
             .show()
     }
@@ -5987,8 +5899,8 @@ class MainActivity : Activity() {
             .setTitle("📋 日志查看器")
             .setView(scrollView)
             .setPositiveButton(
-                "复制",
-                DialogInterface.OnClickListener { d: DialogInterface?, w: Int -> copyLogsToClipboard() })
+                "复制"
+            ) { _: DialogInterface?, _: Int -> copyLogsToClipboard() }
             .setNegativeButton("关闭", null)
             .show()
     }
@@ -6049,7 +5961,7 @@ class MainActivity : Activity() {
                 val crashDir = File(getExternalFilesDir(null), "CrashLogs")
                 var files = crashDir.listFiles()
                 if (!crashDir.exists() || files == null || files.size == 0) {
-                    runOnUiThread(Runnable { toast("没有日志可导出") })
+                    runOnUiThread { toast("没有日志可导出") }
                     return@Runnable
                 }
 
@@ -6093,10 +6005,10 @@ class MainActivity : Activity() {
                 writer.close()
 
                 val path = exportFile.getAbsolutePath()
-                runOnUiThread(Runnable { toast("日志已导出到: " + path) })
+                runOnUiThread { toast("日志已导出到: " + path) }
             } catch (e: Exception) {
                 val error = e.message
-                runOnUiThread(Runnable { toast("导出失败: " + error) })
+                runOnUiThread { toast("导出失败: " + error) }
             }
         }).start()
     }
@@ -6136,4 +6048,53 @@ class MainActivity : Activity() {
             return sw.toString()
         }
     }
+
+    // ==========================================
+// 【新增】自定义进度对话框辅助方法（替代已弃用的 ProgressDialog）
+// ==========================================
+
+    /**
+     * 显示进度对话框
+     * @param title 标题
+     * @param message 消息
+     */
+    private fun showProgressDialog(title: String, message: String) {
+        if (progressDialog != null && progressDialog!!.isShowing) {
+            progressDialog!!.dismiss()
+        }
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_progress, null)
+        tvProgressMessage = view.findViewById(R.id.tv_progress_message)
+        tvProgressMessage!!.text = message
+
+        progressDialog = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+
+        progressDialog!!.show()
+    }
+
+    /**
+     * 更新进度对话框消息
+     * @param message 新消息
+     */
+    private fun updateProgressDialog(message: String) {
+        if (tvProgressMessage != null) {
+            runOnUiThread { tvProgressMessage!!.text = message }
+        }
+    }
+
+    /**
+     * 关闭进度对话框
+     */
+    private fun dismissProgressDialog() {
+        if (progressDialog != null && progressDialog!!.isShowing) {
+            progressDialog!!.dismiss()
+        }
+        progressDialog = null
+        tvProgressMessage = null
+    }
+
 }

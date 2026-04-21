@@ -1,0 +1,92 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="yhjmew.minecraft.nbteditor"
+4    android:versionCode="4"
+5    android:versionName="1.0.4" >
+6
+7    <uses-sdk
+7-->D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
+8        android:minSdkVersion="23"
+8-->D:\NBTeditor\app\src\main\AndroidManifest.xml:8:9-35
+9        android:targetSdkVersion="33" />
+9-->D:\NBTeditor\app\src\main\AndroidManifest.xml:9:9-38
+10    <!-- Shizuku 权限 -->
+11    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+11-->D:\NBTeditor\app\src\main\AndroidManifest.xml:11:5-78
+11-->D:\NBTeditor\app\src\main\AndroidManifest.xml:11:22-75
+12    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+12-->D:\NBTeditor\app\src\main\AndroidManifest.xml:12:5-80
+12-->D:\NBTeditor\app\src\main\AndroidManifest.xml:12:22-77
+13    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+13-->D:\NBTeditor\app\src\main\AndroidManifest.xml:13:5-81
+13-->D:\NBTeditor\app\src\main\AndroidManifest.xml:13:22-78
+14    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+14-->D:\NBTeditor\app\src\main\AndroidManifest.xml:14:5-82
+14-->D:\NBTeditor\app\src\main\AndroidManifest.xml:14:22-79
+15
+16    <queries>
+16-->D:\NBTeditor\app\src\main\AndroidManifest.xml:15:5-17:15
+17        <package android:name="moe.shizuku.privileged.api" />
+17-->D:\NBTeditor\app\src\main\AndroidManifest.xml:16:9-62
+17-->D:\NBTeditor\app\src\main\AndroidManifest.xml:16:18-59
+18    </queries>
+19
+20    <permission
+20-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+21        android:name="yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+21-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+22        android:protectionLevel="signature" />
+22-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+23
+24    <uses-permission android:name="yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
+24-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
+24-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
+25    <application
+25-->D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
+26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+26-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
+27        android:extractNativeLibs="false"
+28        android:icon="@drawable/ic_launcher"
+28-->D:\NBTeditor\app\src\main\AndroidManifest.xml:22:9-45
+29        android:label="@string/app_name"
+29-->D:\NBTeditor\app\src\main\AndroidManifest.xml:21:9-41
+30        android:requestLegacyExternalStorage="true"
+30-->D:\NBTeditor\app\src\main\AndroidManifest.xml:24:9-52
+31        android:theme="@android:style/Theme.Material.Light" >
+31-->D:\NBTeditor\app\src\main\AndroidManifest.xml:23:9-60
+32        <activity
+32-->D:\NBTeditor\app\src\main\AndroidManifest.xml:26:9-34:20
+33            android:name="yhjmew.minecraft.nbteditor.MainActivity"
+33-->D:\NBTeditor\app\src\main\AndroidManifest.xml:27:13-41
+34            android:exported="true"
+34-->D:\NBTeditor\app\src\main\AndroidManifest.xml:29:13-36
+35            android:label="@string/app_name" >
+35-->D:\NBTeditor\app\src\main\AndroidManifest.xml:28:13-45
+36            <intent-filter>
+36-->D:\NBTeditor\app\src\main\AndroidManifest.xml:30:13-33:29
+37                <action android:name="android.intent.action.MAIN" />
+37-->D:\NBTeditor\app\src\main\AndroidManifest.xml:31:17-69
+37-->D:\NBTeditor\app\src\main\AndroidManifest.xml:31:25-66
+38
+39                <category android:name="android.intent.category.LAUNCHER" />
+39-->D:\NBTeditor\app\src\main\AndroidManifest.xml:32:17-77
+39-->D:\NBTeditor\app\src\main\AndroidManifest.xml:32:27-74
+40            </intent-filter>
+41        </activity>
+42
+43        <provider
+44            android:name="rikka.shizuku.ShizukuProvider"
+44-->D:\NBTeditor\app\src\main\AndroidManifest.xml:37:13-57
+45            android:authorities="yhjmew.minecraft.nbteditor.shizuku"
+45-->D:\NBTeditor\app\src\main\AndroidManifest.xml:38:13-59
+46            android:enabled="true"
+46-->D:\NBTeditor\app\src\main\AndroidManifest.xml:40:13-35
+47            android:exported="true"
+47-->D:\NBTeditor\app\src\main\AndroidManifest.xml:41:13-36
+48            android:multiprocess="false"
+48-->D:\NBTeditor\app\src\main\AndroidManifest.xml:39:13-41
+49            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+49-->D:\NBTeditor\app\src\main\AndroidManifest.xml:42:13-79
+50    </application>
+51
+52</manifest>
