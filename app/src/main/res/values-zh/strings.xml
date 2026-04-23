@@ -250,12 +250,11 @@
     <string name="text_starting_position_eg_0">起始位置 (例如: 0)</string>
     <string name="text_number_of_views_recommended_200">查看数量 (建议: 200)</string>
     <string name="text_import_images_to_generate_map_images">🖼️ 导入图片生成地图画</string>
-    <string name="title_manage_array">管理数组: </string>
+    <string name="title_manage_array">管理数组: %1$s</string>
     <string name="btn_view_and_edit_clips">查看/编辑片段</string>
     <string name="toast_please_enter_valid_numbers">请输入有效数字</string>
     <string name="btn_full_export">全量导出</string>
-    <string name="toast_exported">已导出 </string>
-    <string name="toast_characters_to_clipboard"> 字符到剪贴板</string>
+    <string name="toast_exported">已导出 %1$d 字符到剪贴板</string>
     <string name="title_edit_left_bracket">编辑 (</string>
     <string name="msg_comma_separated_format_click_save_after_modification">请保持英文逗号分隔格式，修改后点击保存</string>
     <string name="btn_save_clip">保存片段</string>
@@ -436,4 +435,5 @@
 <string name="title_choose">选择</string>
 <string name="msg_slice_missing">缺失的地图</string>
     <string name="key_seed_display">🌱 %1$s</string>
+    <string name="title_with_count">%1$s (%2$d)</string>
 </resources>

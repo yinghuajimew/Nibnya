@@ -532,10 +532,10 @@ string title_treemap_player_data
 string title_treemap_world_data
 string title_view_mode
 string title_warning_inventory
+string title_with_count
 string title_you_can_click_more_pperations_to_create_a_new
 string toast_build_failed
 string toast_cache_empty
-string toast_characters_to_clipboard
 string toast_cleared
 string toast_cleared_all
 string toast_cleared_short

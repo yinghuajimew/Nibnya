@@ -1,8 +1,14 @@
 package yhjmew.minecraft.nbteditor
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import androidx.core.net.toUri
+import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
+import androidx.core.view.isVisible
+import androidx.core.graphics.toColorInt
+import androidx.core.graphics.scale
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -192,8 +198,6 @@ class MainActivity : Activity() {
     // 【新增】自定义进度对话框（替代已弃用的 ProgressDialog）
     private var progressDialog: AlertDialog? = null
     private var tvProgressMessage: TextView? = null
-    var sidebarContainer: View? = null
-    var sidebar: View? = null
 
     private var currentWorldsPath: String = PATH_STANDARD
     private val REQUEST_PERMISSION_RESULT_LISTENER =
@@ -260,16 +264,14 @@ class MainActivity : Activity() {
         if (savedSafUri != null) {
             safTreeUri = savedSafUri.toUri()
             try {
-                // 检查权限是否仍然有效
                 contentResolver.takePersistableUriPermission(
                     safTreeUri!!,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                             or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // 权限已失效，清除
                 safTreeUri = null
-                prefs!!.edit().remove("saf_tree_uri").apply()
+                prefs!!.edit { remove("saf_tree_uri") }
             }
         }
 
@@ -326,8 +328,6 @@ class MainActivity : Activity() {
                 }
             }
         }
-
-        val selectListener = View.OnClickListener { showWorldSelector() }
 
         btnCopy!!.setOnClickListener {
             val currentFolder = etWorldName!!.text.toString().trim()
@@ -648,6 +648,7 @@ class MainActivity : Activity() {
         // onCreate 应该在这里结束
     }
 
+    @SuppressLint("UseKtx")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -686,7 +687,7 @@ class MainActivity : Activity() {
                     // 2. 创建 128x128 居中画布
                     val targetW = 128
                     val targetH = 128
-                    val finalBitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+                    val finalBitmap = createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(finalBitmap)
                     canvas.drawColor(Color.WHITE)
 
@@ -761,7 +762,7 @@ class MainActivity : Activity() {
         }
 
         // 【新增】处理 SAF 路径选择
-        if (requestCode == REQUEST_SAF_PATH && resultCode == RESULT_OK && data != null) {
+        if (requestCode == REQUEST_SAF_PATH) {
             val treeUri = data.getData()
             if (treeUri != null) {
                 // 持久化授权
@@ -780,7 +781,7 @@ class MainActivity : Activity() {
 
 
                 // 保存到 SharedPreferences
-                prefs!!.edit().putString("saf_tree_uri", path).apply()
+                prefs!!.edit { putString("saf_tree_uri", path) }
 
                 toast(String.format(getString(R.string.msg_saf_selected), path))
                 showWorldSelector()
@@ -1508,13 +1509,13 @@ class MainActivity : Activity() {
                                 if (Build.VERSION.SDK_INT >= 30) {
                                     val intent =
                                         Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    intent.data = "package:$packageName".toUri()
                                     startActivity(intent)
                                 } else {
                                     // Android 10 及以下使用传统存储设置
                                     val intent =
                                         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    intent.data = "package:$packageName".toUri()
                                     startActivity(intent)
                                 }
                             }
@@ -1556,8 +1557,9 @@ class MainActivity : Activity() {
                 // 2. 判断当前模式
                 if (isEditingPlayer) {
                     // === 保存玩家数据 ===
-                    if (currentWorkingDbPath == null) throw Exception("Error: DbPath is NULL")
-                    val oldWorkDir = File(currentWorkingDbPath)
+                    val dbPath = currentWorkingDbPath ?: throw Exception("Error: DbPath is NULL")
+                    val oldWorkDir = File(dbPath)
+                    if (!oldWorkDir.exists()) throw Exception("Error: WorkDir lost ($dbPath)")
                     if (!oldWorkDir.exists()) throw Exception("Error: WorkDir lost (" + currentWorkingDbPath + ")")
                     if (currentTargetKey == null) {
                         // 如果万一为空，兜底设为本地玩家，防止写飞
@@ -1626,7 +1628,8 @@ class MainActivity : Activity() {
                     write(dataToSave, currentWorkingFileOrDir)
 
                     // 3. 准备回写到游戏
-                    val workingFile = File(currentWorkingFileOrDir)
+                    val filePath = currentWorkingFileOrDir ?: throw Exception("Error: File path is NULL")
+                    val workingFile = File(filePath)
                     val bridgeFile: String = BRIDGE_ROOT + "level.dat"
                     File(BRIDGE_ROOT).mkdirs()
                     copyFile(workingFile, File(bridgeFile))
@@ -1668,16 +1671,15 @@ class MainActivity : Activity() {
                                 getString(R.string.btn_open_settings)
                             ) { _: DialogInterface?, _: Int ->
                                 if (Build.VERSION.SDK_INT >= 30) {
-                                    // Android 11+ 使用 MANAGE_ALL_FILES_ACCESS_PERMISSION
                                     val intent =
                                         Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    intent.data = "package:$packageName".toUri()
                                     startActivity(intent)
                                 } else {
                                     // Android 10 及以下使用应用详情设置页
                                     val intent =
                                         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                    intent.setData(Uri.parse("package:" + getPackageName()))
+                                    intent.data = "package:$packageName".toUri()
                                     startActivity(intent)
                                 }
                             }
@@ -1729,11 +1731,11 @@ class MainActivity : Activity() {
 
             if (isEditingPlayer) {
                 // 玩家模式：检查源目录
-                if (currentWorkingDbPath != null) {
-                    val srcDb = File(currentWorkingDbPath)
+                currentWorkingDbPath?.let { dbPath ->
+                    val srcDb = File(dbPath)
                     // 【加固】如果源目录还存在，才备份
-                    if (srcDb.exists() && srcDb.isDirectory()) {
-                        val dstDb = File(backupRoot, "db_" + timeStamp)
+                    if (srcDb.exists() && srcDb.isDirectory) {
+                        val dstDb = File(backupRoot, "db_$timeStamp")
                         copyDirectory(srcDb, dstDb)
                     }
                 }
@@ -1975,10 +1977,10 @@ class MainActivity : Activity() {
 
                 try {
                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.setData(Uri.parse("package:" + getPackageName()))
+                    intent.data = "package:$packageName".toUri()
                     startActivity(intent)
                 } catch (e: Exception) {
-                    Log.e(ContentValues.TAG, "Failed to open settings: " + e.message)
+                    Log.e(ContentValues.TAG, "Failed to open settings: ${e.message}")
                     toast("无法打开系统设置")
                 }
             }
@@ -2131,10 +2133,11 @@ class MainActivity : Activity() {
         if (isListMode) toast(getString(R.string.toast_enter_list) + key)
     }
 
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         val sidebarContainer = findViewById<View?>(R.id.custom_sidebar_container)
-        if (sidebarContainer != null && sidebarContainer.getVisibility() == View.VISIBLE) {
-            sidebarContainer.setVisibility(View.GONE)
+        if (sidebarContainer != null && sidebarContainer.isVisible) {
+            sidebarContainer.visibility = View.GONE
             return
         }
         // 1. 先检查有没有子文件夹可以退
@@ -2293,8 +2296,8 @@ class MainActivity : Activity() {
             layout.addView(input)
 
             val btnAutocomplete = Button(this)
-            btnAutocomplete.setText(getString(R.string.btn_choose) + getTypeLabel(finalDataType))
-            btnAutocomplete.setTextColor(Color.parseColor("#2196F3"))
+            btnAutocomplete.text = getString(R.string.btn_choose, getTypeLabel(finalDataType))
+            btnAutocomplete.setTextColor("#2196F3".toColorInt())
             btnAutocomplete.setBackgroundColor(Color.TRANSPARENT)
             btnAutocomplete.setOnClickListener { _: View? ->
                 showAutocompleteDialog(
@@ -2316,19 +2319,19 @@ class MainActivity : Activity() {
             getString(R.string.btn_save_short)
         ) { _: DialogInterface?, _: Int ->
             try {
-                val `val` = input.getText().toString().trim { it <= ' ' }
+                val value = input.text.toString().trim()
 
                 if (type >= 1 && type <= 3) {
-                    item.addProperty("v", `val`.toInt())
+                    item.addProperty("v", value.toInt())
                 } else if (type == 4) {
-                    item.addProperty("v", `val`.toLong())
+                    item.addProperty("v", value.toLong())
                 } else if (type >= 5 && type <= 6) {
-                    item.addProperty("v", `val`.toDouble())
+                    item.addProperty("v", value.toDouble())
                 } else if (type == 8) {
-                    item.addProperty("v", `val`)
+                    item.addProperty("v", value)
                 } else if (type == 7 || type == 11 || type == 12) {
-                    val parsed = JsonParser().parse(`val`)
-                    item.add("v", parsed.getAsJsonArray())
+                    val parsed = JsonParser.parseString(value)
+                    item.add("v", parsed.asJsonArray)
                 }
 
                 if (!isTreeMode) {
@@ -2337,7 +2340,7 @@ class MainActivity : Activity() {
                     nbtTreeAdapter!!.notifyDataSetChanged()
                 }
             } catch (e: Exception) {
-                toast(getString(R.string.err_save_failed) + e.message)
+                toast(getString(R.string.err_save_failed) + e.message.orEmpty())
             }
         }
 
@@ -2408,12 +2411,14 @@ class MainActivity : Activity() {
                             toast(getString(R.string.toast_clipboard_empty))
                             return@setItems
                         }
+                        val container = parentContainer ?: return@setItems
                         val pasteKey = nodeKey + "_copy"
-                        if (parentContainer!!.has(pasteKey)) {
+                        if (container.has(pasteKey)) {
                             toast(getString(R.string.toast_name_exists))
                             return@setItems
                         }
-                        parentContainer!!.add(pasteKey, clipboard!!.deepCopy())
+                        val clip = clipboard ?: return@setItems
+                        container.add(pasteKey, clip.deepCopy())
                         refreshAfterTreeEdit()
                         toast(getString(R.string.toast_pasted))
                     }
@@ -2426,13 +2431,18 @@ class MainActivity : Activity() {
 
                     3 -> showTreeRenameDialog(nodeKey, nodeData, parentContainer!!)
                     4 -> {
-                        val type = nodeData!!.get("t").asInt
+                        val data = nodeData ?: return@setItems
+                        val type = data.get("t").asInt
                         if (type == 10) {
-                            val childContainer = nodeData!!.asJsonObject.get("v").asJsonObject
+                            val childContainer = data.asJsonObject.get("v").asJsonObject
                             showAddChildDialog(childContainer)
                             // 树状图模式需要特殊处理展开
-                            if (isTreeMode && !nbtTreeAdapter!!.getNode(lastTreeClickPosition)!!.isExpanded) {
-                                nbtTreeAdapter!!.toggleExpand(lastTreeClickPosition)
+                            if (isTreeMode) {
+                                nbtTreeAdapter?.getNode(lastTreeClickPosition)?.let { node ->
+                                    if (!node.isExpanded) {
+                                        nbtTreeAdapter?.toggleExpand(lastTreeClickPosition)
+                                    }
+                                }
                             }
                         } else {
                             toast(getString(R.string.toast_compound_only))
@@ -2556,22 +2566,6 @@ class MainActivity : Activity() {
             }.show()
     }
 
-    private fun showRenameDialog(oldKey: String?, itemData: JsonObject?) {
-        val input = EditText(this)
-        input.setText(oldKey)
-        AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input)
-            .setPositiveButton(
-                getString(R.string.btn_confirm)
-            ) { _: DialogInterface?, _: Int ->
-                val newKey = input.getText().toString()
-                if (!newKey.isEmpty() && !nbtAdapter!!.data!!.has(newKey)) {
-                    nbtAdapter!!.data!!.remove(oldKey)
-                    nbtAdapter!!.data!!.add(newKey, itemData)
-                    nbtAdapter!!.refreshKeys()
-                }
-            }.show()
-    }
-
     // 根菜单 (长按顶部标题或点击全屏右上角触发)
     private fun showRootMenu() {
         // 【修复】兼容树状图模式，使用 final 声明
@@ -2602,15 +2596,18 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.menu_root_title))
             .setItems(ops) { _, w ->
+                val container = current ?: return@setItems
+
                 if (w == 0) {
                     // === 1. 添加子项 ===
-                    showAddChildDialog(current!!)
+                    showAddChildDialog(container)
                 } else if (w == 1) {
                     // === 2. 粘贴 (作为子节点插入) ===
                     if (clipboard == null) {
                         toast(getString(R.string.toast_clipboard_empty))
                         return@setItems
                     }
+                    val clip = clipboard ?: return@setItems
                     val input = EditText(this@MainActivity)
                     input.hint = getString(R.string.hint_new_tag_name)
                     AlertDialog.Builder(this@MainActivity)
@@ -2618,8 +2615,8 @@ class MainActivity : Activity() {
                         .setView(input)
                         .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                             val n = input.text.toString()
-                            if (n.isNotEmpty() && !current!!.has(n)) {
-                                current!!.add(n, clipboard!!.deepCopy())
+                            if (n.isNotEmpty() && !container.has(n)) {
+                                container.add(n, clip.deepCopy())
                                 refreshAfterTreeEdit()
                                 toast(getString(R.string.toast_pasted))
                             } else {
@@ -2629,8 +2626,8 @@ class MainActivity : Activity() {
                 } else if (w == 2) {
                     // === 3. 复制当前完整数据 (JSON 导出) ===
                     val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText("NBT_JSON", current.toString())
-                    cm.setPrimaryClip(clip)
+                    val clipData = ClipData.newPlainText("NBT_JSON", container.toString())
+                    cm.setPrimaryClip(clipData)
                     toast(getString(R.string.toast_copy_success))
                 } else if (w == 3) {
                     // === 4. 粘贴并替换当前数据 (导入) ===
@@ -2650,17 +2647,17 @@ class MainActivity : Activity() {
                         .setMessage(getString(R.string.msg_replace_warning))
                         .setPositiveButton(getString(R.string.btn_replace)) { _, _ ->
                             try {
-                                val text = cm.primaryClip!!.getItemAt(0).text
+                                val text = cm.primaryClip?.getItemAt(0)?.text
                                 if (text == null) return@setPositiveButton
 
                                 val newObj = JsonParser.parseString(text.toString()).asJsonObject
 
                                 // 清空当前界面并填入新数据
-                                val oldKeys = ArrayList(current!!.keySet())
-                                for (k in oldKeys) current!!.remove(k)
+                                val oldKeys = ArrayList(container.keySet())
+                                for (k in oldKeys) container.remove(k)
 
                                 for (entry in newObj.entrySet()) {
-                                    current!!.add(entry.key, entry.value)
+                                    container.add(entry.key, entry.value)
                                 }
 
                                 refreshAfterTreeEdit()
@@ -2677,9 +2674,9 @@ class MainActivity : Activity() {
                         .setTitle(getString(R.string.dialog_danger_title))
                         .setMessage(getString(R.string.dialog_clear_msg))
                         .setPositiveButton(getString(R.string.btn_confirm_clear)) { _, _ ->
-                            val keys = ArrayList(current!!.keySet())
+                            val keys = ArrayList(container.keySet())
                             for (key in keys) {
-                                current!!.remove(key)
+                                container.remove(key)
                             }
                             refreshAfterTreeEdit()
                             toast(getString(R.string.toast_cleared))
@@ -2694,29 +2691,10 @@ class MainActivity : Activity() {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
     }
 
-    // 设置语言的核心方法
-    private fun setAppLanguage(langCode: String?) {
-        val locale: Locale?
-        // 如果是英语，就设为 ENGLISH，否则设为 CHINESE
-        if ("en" == langCode) {
-            locale = Locale.ENGLISH
-        } else {
-            locale = Locale.CHINESE
-        }
-
-        // 强制更新系统的配置
-        Locale.setDefault(locale)
-        val config = Configuration()
-        config.locale = locale
-        getResources().updateConfiguration(config, getResources().getDisplayMetrics())
-    }
-
-    // 放到 MainActivity 类的最下方
-    // 终极修复版 applyTheme (放在类末尾)
+    @Suppress("DEPRECATION")
     private fun applyTheme() {
         // 直接使用全局变量 viewMainContent，不再临时 findViewById
-        if (viewMainContent == null) return
-
+        val mainContent = viewMainContent ?: return
 
         // 重新获取文字控件 (这些还是动态获取比较好，防止视图树变化)
         val tvTitle = findViewById<TextView?>(R.id.tv_app_title)
@@ -2725,56 +2703,50 @@ class MainActivity : Activity() {
         if (isNightMode) {
             // === 夜间模式 ===
             // 给主容器变色
-            viewMainContent!!.setBackgroundColor(-0xededee) // 黑灰
-
+            mainContent.setBackgroundColor(-0xededee) // 黑灰
 
             // 如果全局变量 viewSidebar 不为空，也给它变色
-            if (viewSidebar != null) {
-                viewSidebar!!.setBackgroundColor(-0xe1e1e2) // 稍浅的黑
-            }
+            viewSidebar?.setBackgroundColor(-0xe1e1e2) // 稍浅的黑
 
             // 文字变白
-            if (tvTitle != null) tvTitle.setTextColor(-0x1)
-            if (tvLabelEdit != null) tvLabelEdit.setTextColor(-0x333334)
-            if (etWorldName != null) {
-                etWorldName!!.setBackgroundColor(-0xcccccd)
-                etWorldName!!.setTextColor(-0x1)
+            tvTitle?.setTextColor(-0x1)
+            tvLabelEdit?.setTextColor(-0x333334)
+            etWorldName?.let {
+                it.setBackgroundColor(-0xcccccd)
+                it.setTextColor(-0x1)
             }
-            if (nbtListView != null) nbtListView!!.setBackgroundColor(-0xe1e1e2)
+            nbtListView?.setBackgroundColor(-0xe1e1e2)
         } else {
             // === 日间模式 ===
             var isDynamic = false
 
-
             // 尝试 Android 12 动态色
             if (Build.VERSION.SDK_INT >= 31) {
                 try {
-                    val colorId =
-                        getResources().getIdentifier("system_neutral1_100", "color", "android")
+                    val colorId = resources.getIdentifier("system_neutral1_100", "color", "android")
                     if (colorId != 0) {
-                        val dynamicColor = getResources().getColor(colorId)
-                        viewMainContent!!.setBackgroundColor(dynamicColor)
-                        if (viewSidebar != null) viewSidebar!!.setBackgroundColor(-0x1) // 侧边栏保持白或动态色都行
-
+                        val dynamicColor = getColor(colorId)
+                        mainContent.setBackgroundColor(dynamicColor)
+                        viewSidebar?.setBackgroundColor(-0x1) // 侧边栏保持白或动态色都行
                         isDynamic = true
                     }
                 } catch (e: Exception) {
-                    Log.w(ContentValues.TAG, "Dynamic color load failed: " + e.message)
+                    Log.w(ContentValues.TAG, "Dynamic color load failed: ${e.message}")
                 }
             }
 
             if (!isDynamic) {
-                viewMainContent!!.setBackgroundColor(-0xa0a0b) // 默认灰白
-                if (viewSidebar != null) viewSidebar!!.setBackgroundColor(-0x1)
+                mainContent.setBackgroundColor(-0xa0a0b) // 默认灰白
+                viewSidebar?.setBackgroundColor(-0x1)
             }
 
-            if (tvTitle != null) tvTitle.setTextColor(-0xcccccd)
-            if (tvLabelEdit != null) tvLabelEdit.setTextColor(-0x8a8a8b)
-            if (etWorldName != null) {
-                etWorldName!!.setBackgroundColor(-0x1)
-                etWorldName!!.setTextColor(-0x1000000)
+            tvTitle?.setTextColor(-0xcccccd)
+            tvLabelEdit?.setTextColor(-0x8a8a8b)
+            etWorldName?.let {
+                it.setBackgroundColor(-0x1)
+                it.setTextColor(-0x1000000)
             }
-            if (nbtListView != null) nbtListView!!.setBackgroundColor(-0x1)
+            nbtListView?.setBackgroundColor(-0x1)
         }
     }
 
@@ -2820,19 +2792,15 @@ class MainActivity : Activity() {
                 items,
                 currentViewMode
             ) { d: DialogInterface?, which: Int ->
-// 更新模式
+                // 更新模式
                 currentViewMode = which
-                prefs!!.edit().putInt("view_mode", currentViewMode).apply() // commit改apply更高效喵
+                prefs?.edit { putInt("view_mode", currentViewMode) }
 
                 // 【核心修改】安全刷新Adapter
-                if (nbtAdapter != null) {
-                    nbtAdapter!!.setViewMode(currentViewMode)
-                }
-                if (nbtTreeAdapter != null) {
-                    nbtTreeAdapter!!.setViewMode(currentViewMode)
-                }
+                nbtAdapter?.setViewMode(currentViewMode)
+                nbtTreeAdapter?.setViewMode(currentViewMode)
 
-                d!!.dismiss()
+                d?.dismiss()
                 toast(getString(R.string.toast_mode_changed))
             }
             .show()
@@ -2946,10 +2914,10 @@ class MainActivity : Activity() {
     private fun loadSpecificPlayer(keyName: String) {
         val finalKey = keyName
 
-        // 1. 【核心新增】切走前，先把当前正在编辑的界面保存为“草稿”
+        // 1. 【核心新增】切走前，先把当前正在编辑的界面保存为"草稿"
         saveCurrentSessionToMemory()
 
-        // 2. 【核心新增】尝试恢复目标 Key 的“草稿”
+        // 2. 【核心新增】尝试恢复目标 Key 的"草稿"
         // 如果之前编辑过这个 Key 且没保存，这里会直接恢复现场，包括滚动位置
         if (tryRestoreSession(finalKey)) {
             return
@@ -2960,8 +2928,7 @@ class MainActivity : Activity() {
             currentTargetKey = finalKey
             isEditingPlayer = true
 
-            rootNbtData = nbtDataCache.get(finalKey)
-
+            rootNbtData = nbtDataCache[finalKey]
 
             // 如果是读缓存（说明是第一次打开或重置过），重置视图到顶部
             navigationStack.clear()
@@ -2970,7 +2937,7 @@ class MainActivity : Activity() {
 
             updateAdapter(rootNbtData)
 
-            if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.title_current) + finalKey)
+            tvCurrentPath?.text = getString(R.string.title_current, finalKey)
             return
         }
 
@@ -2980,12 +2947,13 @@ class MainActivity : Activity() {
         Thread {
             try {
                 // 强制解锁
-                if (currentWorkingDbPath != null) {
-                    val lockFile = File(currentWorkingDbPath, "LOCK")
+                currentWorkingDbPath?.let { dbPath ->
+                    val lockFile = File(dbPath, "LOCK")
                     if (lockFile.exists()) lockFile.delete()
                 }
 
-                val db = PlayerDbManager(currentWorkingDbPath!!)
+                val dbPath = currentWorkingDbPath ?: throw Exception("DB path is null")
+                val db = PlayerDbManager(dbPath)
                 val data = db.readSpecificKey(finalKey)
                 db.close()
 
@@ -2995,7 +2963,6 @@ class MainActivity : Activity() {
                     dismissProgressDialog()
                     currentTargetKey = finalKey
                     isEditingPlayer = true
-                    isEditingPlayer = true
 
                     navigationStack.clear()
                     pathStack.clear()
@@ -3003,23 +2970,23 @@ class MainActivity : Activity() {
 
                     rootNbtData = jsonData
                     // 存入静态缓存
-                    nbtDataCache.put(finalKey, rootNbtData)
+                    nbtDataCache[finalKey] = rootNbtData
 
                     updateAdapter(rootNbtData)
 
-                    if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.title_current) + finalKey)
+                    tvCurrentPath?.text = getString(R.string.title_current, finalKey)
                     toast(getString(R.string.toast_loaded) + finalKey)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
                     dismissProgressDialog()
                     // 捕获空数据，询问创建
-                    if (e.message != null && e.message!!.contains(getString(R.string.msg_data_is_empty))) {
+                    if (e.message?.contains(getString(R.string.msg_data_is_empty)) == true) {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle(getString(R.string.title_data_does_not_exist))
                             .setMessage(
-                                String.format(
-                                    getString(R.string.msg_this_archive_has_not_generated_data_yet),
+                                getString(
+                                    R.string.msg_this_archive_has_not_generated_data_yet,
                                     finalKey
                                 )
                             )
@@ -3032,7 +2999,7 @@ class MainActivity : Activity() {
                             .show()
                     } else {
                         dismissProgressDialog()
-                        toast(getString(R.string.err_load_failed) + e.message)
+                        toast(getString(R.string.err_load_failed) + e.message.orEmpty())
                     }
                 }
             }
@@ -3135,7 +3102,6 @@ class MainActivity : Activity() {
     // 修复后的新建逻辑 (支持新建、粘贴、批量删除、拼图、国际化、防闪退)
     private fun showPlayerRootMenu(
         currentList: MutableList<String>,
-        adapter: ArrayAdapter<*>?,
         dataType: Int
     ) {
         val typeName: String
@@ -3198,13 +3164,7 @@ class MainActivity : Activity() {
                                         dismissProgressDialog()
                                         currentList.clear() // 清空列表
 
-                                        // 【核心修复】判空 adapter，防止搜索模式下闪退
-                                        if (adapter != null) {
-                                            adapter.notifyDataSetChanged()
-                                        } else {
-                                            // 如果是从搜索进入(adapter为null)，清空缓存以强制刷新
                                             invalidateListCache(dataType)
-                                        }
                                         toast(getString(R.string.toast_cleared_all) + typeName)
                                     }
                                 } catch (e: Exception) {
@@ -3269,12 +3229,7 @@ class MainActivity : Activity() {
                                     if (!currentList.contains(newKey)) {
                                         currentList.add(newKey)
 
-                                        // 【核心修复】判空 adapter
-                                        if (adapter != null) {
-                                            adapter.notifyDataSetChanged()
-                                        } else {
                                             invalidateListCache(dataType)
-                                        }
                                     }
                                     toast(finalTypeName + getString(R.string.toast_yes_created))
                                 }
@@ -3355,45 +3310,44 @@ class MainActivity : Activity() {
 
     // 新增：巨型数组专用管理对话框
     // 新增：巨型数组分页查看/编辑对话框
+    @SuppressLint("SetTextI18n")
     private fun showArrayPaginationDialog(key: String, jsonArray: JsonArray) {
         val size = jsonArray.size()
 
-
         // 1. 创建布局容器
         val layout = LinearLayout(this)
-        layout.setOrientation(LinearLayout.VERTICAL)
+        layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(50, 30, 50, 0)
 
         val tvInfo = TextView(this)
-        tvInfo.text = String.format(getString(R.string.text_huge_array_detected), size)
+        tvInfo.text = getString(R.string.text_huge_array_detected, size)
         tvInfo.textSize = 16f
         layout.addView(tvInfo)
 
-
         // 范围选择框
         val etStart = EditText(this)
-        etStart.setHint(getString(R.string.text_starting_position_eg_0))
-        etStart.setInputType(InputType.TYPE_CLASS_NUMBER)
+        etStart.hint = getString(R.string.text_starting_position_eg_0)
+        etStart.inputType = InputType.TYPE_CLASS_NUMBER
         etStart.setText("0")
         layout.addView(etStart)
 
         val etCount = EditText(this)
-        etCount.setHint(getString(R.string.text_number_of_views_recommended_200))
-        etCount.setInputType(InputType.TYPE_CLASS_NUMBER)
+        etCount.hint = getString(R.string.text_number_of_views_recommended_200)
+        etCount.inputType = InputType.TYPE_CLASS_NUMBER
         etCount.setText("200")
         layout.addView(etCount)
 
         // 【核心修改】在此处添加图片导入按钮
         if (key == "colors" && size >= 16384) {
             val btnImport = Button(this)
-            btnImport.setText(getString(R.string.text_import_images_to_generate_map_images))
-            btnImport.setOnClickListener { _: View? ->
+            btnImport.text = getString(R.string.text_import_images_to_generate_map_images)
+            btnImport.setOnClickListener {
                 // 暂存目标数组
                 currentTargetMapArray = jsonArray
                 // 启动 SAF 选择器
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
                 intent.addCategory(Intent.CATEGORY_OPENABLE)
-                intent.setType("image/*")
+                intent.type = "image/*"
                 startActivityForResult(intent, REQUEST_PICK_IMAGE_FOR_MAP)
             }
             layout.addView(btnImport)
@@ -3401,19 +3355,19 @@ class MainActivity : Activity() {
 
         // 2. 构建并显示弹窗
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.title_manage_array) + key)
-            .setView(layout) // 把刚才加了一堆东西的 layout 塞进去
+            .setTitle(getString(R.string.title_manage_array, key))
+            .setView(layout)
             .setPositiveButton(
                 getString(R.string.btn_view_and_edit_clips)
             ) { _: DialogInterface?, _: Int ->
                 try {
-                    var start = etStart.getText().toString().toInt()
-                    var count = etCount.getText().toString().toInt()
+                    var start = etStart.text.toString().toInt()
+                    var count = etCount.text.toString().toInt()
                     if (start < 0) start = 0
                     if (count > 2000) count = 2000
                     if (start + count > size) count = size - start
 
-                    showSubArrayEditDialog(key, jsonArray, start, count)
+                    showSubArrayEditDialog(jsonArray, start, count)
                 } catch (_: NumberFormatException) {
                     toast(getString(R.string.toast_please_enter_valid_numbers))
                 }
@@ -3427,9 +3381,7 @@ class MainActivity : Activity() {
                         val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                         cm.setPrimaryClip(ClipData.newPlainText("Array", content))
                         toast(
-                            getString(R.string.toast_exported) + content.length + getString(
-                                R.string.toast_characters_to_clipboard
-                            )
+                            getString(R.string.toast_exported, content.length)
                         )
                     }
                 }.start()
@@ -3440,7 +3392,6 @@ class MainActivity : Activity() {
 
     // 分页后的实际编辑窗口
     private fun showSubArrayEditDialog(
-        key: String?,
         originalArray: JsonArray,
         start: Int,
         count: Int
@@ -3621,7 +3572,6 @@ class MainActivity : Activity() {
 
     // 核心引擎：生成拼图（禁人塔式单链嵌套 - Slot 0递归放盒子）
     private fun processPuzzleMap(imageUri: Uri) {
-        val currentFolderName = etWorldName!!.getText().toString()
         showProgressDialog(getString(R.string.msg_in_preparation), getString(R.string.msg_analyzing_backpack))
 
         Thread {
@@ -3751,7 +3701,7 @@ class MainActivity : Activity() {
                 if (rawSrc.getWidth() < puzzleCols || rawSrc.getHeight() < puzzleRows) {
                     val newW = max(rawSrc.getWidth(), puzzleCols)
                     val newH = max(rawSrc.getHeight(), puzzleRows)
-                    val scaledSrc = Bitmap.createScaledBitmap(rawSrc, newW, newH, true)
+                    val scaledSrc = rawSrc.scale(newW, newH)
                     rawSrc.recycle()
                     rawSrc = scaledSrc
                 }
@@ -3761,7 +3711,7 @@ class MainActivity : Activity() {
                 val cellH = src.getHeight() / puzzleRows
                 val totalMaps = puzzleRows * puzzleCols
 
-                val itemsMap = ConcurrentHashMap<Int?, JsonObject?>()
+                val itemsMap = ConcurrentHashMap<Int, JsonObject>()
 
                 runOnUiThread {
                     updateProgressDialog(
@@ -3792,9 +3742,7 @@ class MainActivity : Activity() {
                                 val chunk = Bitmap.createBitmap(
                                     src, fc * cellW, fr * cellH, cellW, cellH
                                 )
-                                val scaled = Bitmap.createScaledBitmap(
-                                    chunk, 128, 128, true
-                                )
+                                val scaled = chunk.scale(128, 128)
 
                                 val pixels = IntArray(128 * 128)
                                 scaled.getPixels(pixels, 0, 128, 0, 0, 128, 128)
@@ -3863,7 +3811,7 @@ class MainActivity : Activity() {
                                 tagTag.add("v", tagContent)
                                 itemContent.add("tag", tagTag)
 
-                                itemsMap.put(fIndex, itemContent)
+                                itemsMap[fIndex] = itemContent
 
                                 chunk.recycle()
                                 scaled.recycle()
@@ -3942,7 +3890,7 @@ class MainActivity : Activity() {
                     // Slot 1-26: 放入地图
                     for (i in 0..<mapsInThisLayer) {
                         val mapIdx = startIdx + i
-                        var mapItem = itemsMap.get(mapIdx)
+                        var mapItem = itemsMap[mapIdx]
                         if (mapItem == null) {
                             throw Exception(getString(R.string.msg_slice_missing) + mapIdx)
                         }
@@ -3984,7 +3932,7 @@ class MainActivity : Activity() {
                 }
                 val finalBox = currentContainer.deepCopy()
                 finalBox.add("Slot", wrapTag(1, finalFreeSlot)) // 使用找到的空位
-                inventory!!.add(finalBox) //暂时忽略
+                inventory?.add(finalBox)
 
                 // 保存玩家数据
                 val newPlayerData = writeToBytes(playerRoot)
@@ -3992,7 +3940,7 @@ class MainActivity : Activity() {
                 db.close()
 
                 // 【添加这行】声明为 final，供内部类使用
-                val finalPlayerRoot: JsonObject? = playerRoot
+                val finalPlayerRoot: JsonObject = playerRoot
 
                 val finalStartId = startMapId
                 val finalTotalLayers = totalLayers
@@ -4012,9 +3960,8 @@ class MainActivity : Activity() {
                     cacheMapList = null
                     isEditingPlayer = true
                     currentTargetKey = "~local_player"
-                    // 【修改这里】使用 final 变量
                     rootNbtData = finalPlayerRoot
-                    nbtDataCache.put("~local_player", finalPlayerRoot)
+                    nbtDataCache["~local_player"] = finalPlayerRoot
                     navigationStack.clear()
                     pathStack.clear()
                     scrollPositionStack.clear()
@@ -4022,7 +3969,7 @@ class MainActivity : Activity() {
                     if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.text_player_data_has_been_modified))
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("MainActivity", "Puzzle map generation failed", e)
                 val fullStack: String = getFullStackTrace(e)
                 runOnUiThread {
                     dismissProgressDialog()
@@ -4136,13 +4083,14 @@ class MainActivity : Activity() {
     // 【新增】智能检查数据库状态，如果未加载则自动加载，然后执行任务
     private fun ensureDbLoaded(nextTask: Runnable) {
         // 1. 如果已经加载好了，直接执行
-        if (currentWorkingDbPath != null && File(currentWorkingDbPath).exists()) {
+        val dbPath = currentWorkingDbPath
+        if (dbPath != null && File(dbPath).exists()) {
             nextTask.run()
             return
         }
 
         // 2. 如果还没加载，检查有没有选存档
-        val folder = etWorldName!!.getText().toString()
+        val folder = etWorldName?.getText().toString()
         val hint = getString(R.string.hint_select_world)
         if (folder.isEmpty() || folder == hint || folder.contains("...")) {
             toast(getString(R.string.toast_please_click_the_blue_button_to_select_an_archive_first))
@@ -4230,7 +4178,7 @@ class MainActivity : Activity() {
         listView.emptyView = emptyView
 
         val inflater = LayoutInflater.from(this)
-        val customTitleView = inflater.inflate(R.layout.dialog_title_with_search, null)
+        val customTitleView = inflater.inflate(R.layout.dialog_title_with_search, null, false)
 
         val tvTitle = customTitleView.findViewById<TextView>(R.id.tv_dialog_title)
         val btnSearch = customTitleView.findViewById<Button>(R.id.btn_search_toggle)
@@ -4239,7 +4187,7 @@ class MainActivity : Activity() {
         val btnClear = customTitleView.findViewById<View>(R.id.btn_clear_search)
         val btnBatchDelete = customTitleView.findViewById<Button>(R.id.btn_batch_delete)
 
-        tvTitle.text = "$baseTitle (${dataList.size})"
+        tvTitle.text = getString(R.string.title_with_count, baseTitle, dataList.size)
 
         // === [修改] 批量删除按钮点击事件 ===
         btnBatchDelete.setOnClickListener {
@@ -4288,7 +4236,7 @@ class MainActivity : Activity() {
                                 // 删除完成后，自动退出选择模式
                                 adapter.setSelectionMode(false)
 
-                                tvTitle.text = "$baseTitle (${adapter.count})"
+                                tvTitle.text = getString(R.string.title_with_count, baseTitle, adapter.count)
                                 toast(
                                     getString(R.string.toast_successfully_deleted) + toDelete.size + getString(
                                         R.string.toast_deleted_item
@@ -4310,31 +4258,32 @@ class MainActivity : Activity() {
 
         // 搜索按钮
         btnSearch.setOnClickListener {
-            if (searchContainer.visibility == View.VISIBLE) {
-                searchContainer.visibility = View.GONE
-                etSearch.setText("")
+            if (searchContainer.isVisible) {
+                searchContainer.isVisible = false
+                etSearch.text.clear()
                 adapter.filter.filter(null)
                 val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.hideSoftInputFromWindow(etSearch.windowToken, 0)
             } else {
-                searchContainer.visibility = View.VISIBLE
+                searchContainer.isVisible = true
                 etSearch.isFocusable = true
                 etSearch.isFocusableInTouchMode = true
                 etSearch.requestFocus()
                 etSearch.postDelayed({
                     val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager?
-                    imm?.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+                    etSearch.requestFocus()
+                    imm?.showSoftInput(etSearch, InputMethodManager.SHOW_IMPLICIT)
                 }, 200)
             }
         }
 
-        btnClear.setOnClickListener { etSearch.setText("") }
+        btnClear.setOnClickListener { etSearch.text.clear() }
 
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
                 adapter.filter.filter(s)
-                btnClear.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
+                btnClear.isVisible = s.isNotEmpty()
             }
 
             override fun afterTextChanged(s: Editable?) {}
@@ -4343,7 +4292,7 @@ class MainActivity : Activity() {
         val dialog = AlertDialog.Builder(this@MainActivity)
             .setCustomTitle(customTitleView)
             .setNeutralButton(getString(R.string.btn_more_actions)) { _, _ ->
-                showPlayerRootMenu(dataList, null, type)
+                showPlayerRootMenu(dataList, type)
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .setView(container)
@@ -4357,24 +4306,22 @@ class MainActivity : Activity() {
             }
         }
 
-        // 列表点击事件 (为了更好的体验，在选择模式下，点击文字也相当于勾选)
+// 列表点击事件 (为了更好的体验，在选择模式下，点击文字也相当于勾选)
         listView.setOnItemClickListener { _, view, pos, _ ->
             val selectedKey = adapter.getItem(pos)
             // 【核心优化】如果是选择模式，点击行 = 勾选/取消勾选
             if (adapter.isSelectionMode()) {
-                val cb = view!!.findViewById<CheckBox>(R.id.cb_item_select)
-                cb.performClick() // 模拟点击 CheckBox
+                view?.findViewById<CheckBox>(R.id.cb_item_select)?.performClick()
                 return@setOnItemClickListener
             }
 
             // 正常模式：加载编辑
             loadSpecificPlayer(selectedKey)
             dialog.dismiss()
-            val sidebar = findViewById<View?>(R.id.custom_sidebar_container)
-            if (sidebar != null) sidebar.visibility = View.GONE
+            findViewById<View?>(R.id.custom_sidebar_container)?.isVisible = false
         }
 
-        // 列表长按 (保留)
+// 列表长按 (保留)
         listView.setOnItemLongClickListener { _, _, pos, _ ->
             // 如果在选择模式，长按不触发菜单，避免冲突
             if (adapter.isSelectionMode()) return@setOnItemLongClickListener false
@@ -4406,7 +4353,7 @@ class MainActivity : Activity() {
                     else if (w == 3) deletePlayerKey(targetKey) {
                         adapter.remove(targetKey)
                         dataList.remove(targetKey)
-                        tvTitle.text = "$baseTitle (${adapter.count})"
+                        tvTitle.text = getString(R.string.title_with_count, baseTitle, adapter.count)
                     }
                 }.show()
             true

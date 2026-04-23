@@ -281,7 +281,7 @@
     <string name="title_item">物品</string>
     <string name="title_item_label">[物品] </string>
     <string name="title_load_failed">加载失败</string>
-    <string name="title_manage_array">管理数组: </string>
+    <string name="title_manage_array">管理数组: %1$s</string>
     <string name="title_manage_cache">管理缓存 (Works)</string>
     <string name="title_manage_prefix">管理: </string>
     <string name="title_new">新建 </string>
@@ -300,10 +300,10 @@
     <string name="title_treemap_world_data">树状图: 世界数据 (level.dat)</string>
     <string name="title_view_mode">切换显示模式</string>
     <string name="title_warning_inventory">⚠️ 背包覆盖风险警告</string>
+    <string name="title_with_count">%1$s (%2$d)</string>
     <string name="title_you_can_click_more_pperations_to_create_a_new">，您可以点击[更多操作]新建</string>
     <string name="toast_build_failed">生成失败: </string>
     <string name="toast_cache_empty">缓存目录为空</string>
-    <string name="toast_characters_to_clipboard"> 字符到剪贴板</string>
     <string name="toast_cleared">已清空所有数据</string>
     <string name="toast_cleared_all">已清空所有</string>
     <string name="toast_cleared_short">已清空</string>
@@ -331,7 +331,7 @@
     <string name="toast_error_menu_button_not_found">错误：找不到菜单按钮</string>
     <string name="toast_error_sidebar_layout_not_found">错误：找不到侧边栏布局</string>
     <string name="toast_exited_from_batch_management">已退出批量管理</string>
-    <string name="toast_exported">已导出 </string>
+    <string name="toast_exported">已导出 %1$d 字符到剪贴板</string>
     <string name="toast_generate_bedrock_edition_map">生成基岩版地图 (RGBA)...</string>
     <string name="toast_hold_delete">请长按以删除</string>
     <string name="toast_huge_size_warning">尺寸巨大 (%d 张)，处理可能耗时较长，请稍候...</string>

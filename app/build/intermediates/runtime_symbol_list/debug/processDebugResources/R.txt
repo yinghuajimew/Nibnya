@@ -531,10 +531,10 @@ int string title_treemap_player_data 0x7f080130
 int string title_treemap_world_data 0x7f080131
 int string title_view_mode 0x7f080132
 int string title_warning_inventory 0x7f080133
-int string title_you_can_click_more_pperations_to_create_a_new 0x7f080134
-int string toast_build_failed 0x7f080135
-int string toast_cache_empty 0x7f080136
-int string toast_characters_to_clipboard 0x7f080137
+int string title_with_count 0x7f080134
+int string title_you_can_click_more_pperations_to_create_a_new 0x7f080135
+int string toast_build_failed 0x7f080136
+int string toast_cache_empty 0x7f080137
 int string toast_cleared 0x7f080138
 int string toast_cleared_all 0x7f080139
 int string toast_cleared_short 0x7f08013a

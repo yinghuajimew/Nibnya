@@ -245,7 +245,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_high_energy_early_warning">⚠️ High energy warning</string>
     <string name="title_input_dimensions">Enter dimensions (row x column)</string>
     <string name="title_load_failed">Loading failed</string>
-    <string name="title_manage_array">Manage arrays:</string>
+    <string name="title_manage_array">Manage array: %1$s</string>
     <string name="title_manage_cache">Manage Cache (Works)</string>
     <string name="title_manage_prefix">manage:</string>
     <string name="title_new">New</string>
@@ -264,7 +264,6 @@ Would you like to create a new empty data set?</string>
     <string name="title_you_can_click_more_pperations_to_create_a_new">, you can click [More Actions] to create a new</string>
     <string name="toast_build_failed">Build failed:</string>
     <string name="toast_cache_empty">The cache directory is empty</string>
-    <string name="toast_characters_to_clipboard">characters to clipboard</string>
     <string name="toast_cleared">All data cleared</string>
     <string name="toast_cleared_all">Cleared all</string>
     <string name="toast_cleared_short">Cleared</string>
@@ -292,7 +291,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_error_menu_button_not_found">Error: Menu button not found</string>
     <string name="toast_error_sidebar_layout_not_found">Error: Sidebar layout not found</string>
     <string name="toast_exited_from_batch_management">Exited from batch management</string>
-    <string name="toast_exported">Exported</string>
+    <string name="toast_exported">Exported %1$d characters to clipboard</string>
     <string name="toast_generate_bedrock_edition_map">Generate Bedrock Edition map (RGBA)...</string>
     <string name="toast_hold_delete">Please press and hold to delete</string>
     <string name="toast_huge_size_warning">The size is huge (%d sheets), processing may take a long time, please wait...</string>
@@ -400,4 +399,5 @@ Would you like to create a new empty data set?</string>
 <string name="title_choose">Choose</string>
 <string name="msg_slice_missing">Missing map</string>
     <string name="key_seed_display">🌱 %1$s</string>
+    <string name="title_with_count">%1$s (%2$d)</string>
 </resources>
