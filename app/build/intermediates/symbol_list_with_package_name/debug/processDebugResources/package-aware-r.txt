@@ -282,6 +282,11 @@ string call_notification_hang_up_action
 string call_notification_incoming_text
 string call_notification_ongoing_text
 string call_notification_screening_text
+string debug_close
+string debug_copy_logs
+string debug_crash_test
+string debug_export_logs
+string debug_show_logs
 string dialog_backup_title
 string dialog_clear_msg
 string dialog_custom_path_title
@@ -294,6 +299,7 @@ string err_format
 string err_internal_player_path
 string err_json_parse
 string err_load_failed
+string err_load_failed_with_msg
 string err_no_saves_detail
 string err_read_file_not_generated
 string err_restore_failed_prefix
@@ -359,6 +365,7 @@ string msg_clear_all_cache
 string msg_comma_separated_format_click_save_after_modification
 string msg_confirm_deletion
 string msg_confirm_replace
+string msg_copy_failed
 string msg_copy_process_interrupted
 string msg_corrupt_or_missing_leveldb_data_file_detected
 string msg_create_a_giant_jigsaw_puzzle
@@ -374,6 +381,7 @@ string msg_delete_existing_ones_in_the_list
 string msg_deleting
 string msg_dn_is_not_open
 string msg_enchant
+string msg_export_failed
 string msg_failed_to_create_staging_directory
 string msg_for_example_map
 string msg_for_example_player
@@ -411,6 +419,8 @@ string msg_list_long_press_rename
 string msg_load
 string msg_load_failed_advice
 string msg_loading
+string msg_logs_copied
+string msg_logs_exported_to
 string msg_map
 string msg_map_data
 string msg_map_write_to_database
@@ -418,6 +428,8 @@ string msg_maps_have_been_packed
 string msg_move_data_to_new_key_and_delete_old_key
 string msg_moving
 string msg_nesting_depth
+string msg_no_logs_to_copy
+string msg_no_logs_to_export
 string msg_parsing_archive_information
 string msg_paste_as_new
 string msg_player_data
@@ -434,6 +446,7 @@ string msg_reading_repaired_data
 string msg_replace_warning
 string msg_retrying
 string msg_saf_selected
+string msg_saf_unavailable
 string msg_saving
 string msg_scanning
 string msg_search_for_players
@@ -473,9 +486,13 @@ string settings_header
 string status_bar_notification_info_overflow
 string switch_to_chinese
 string switch_to_english
+string text_autocomplete_label_name
 string text_data_name
 string text_enter_keyword_search
+string text_expand_down
+string text_expand_up
 string text_here_is_the_translation
+string text_hex_pre
 string text_huge_array_detected
 string text_import_images_to_generate_map_images
 string text_loading_new_save
@@ -495,14 +512,18 @@ string title_block
 string title_block_label
 string title_choose
 string title_choose_puzzle_size
+string title_choose_type
 string title_clear_confirm
 string title_current
+string title_current_new
 string title_data
 string title_data_does_not_exist
 string title_database_corruption
+string title_debug_menu
 string title_dendrogram
 string title_edit
 string title_edit_left_bracket
+string title_edit_type_key
 string title_effect
 string title_effect_label
 string title_enchant
@@ -527,6 +548,7 @@ string title_rename
 string title_rename_key
 string title_search
 string title_search_nbt_data
+string title_search_type
 string title_shizuku_error
 string title_treemap_player_data
 string title_treemap_world_data
@@ -554,6 +576,7 @@ string toast_data_covered
 string toast_delete_failed
 string toast_deleted
 string toast_deleted_item
+string toast_dev_mode_hint
 string toast_direct_load
 string toast_element_which_is_currently
 string toast_empty_data_has_been_created_please_edit_and_save

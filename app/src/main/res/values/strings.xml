@@ -299,7 +299,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_input_error">Input error:</string>
     <string name="toast_install_shizuku">Please install and start the Shizuku service first</string>
     <string name="toast_key_cannot_be_empty">Key cannot be empty</string>
-    <string name="toast_key_copied">Copied Key:</string>
+    <string name="toast_key_copied">Copied Key: %1$s</string>
     <string name="toast_level_dat_saved">✅ level.dat saved</string>
     <string name="toast_level_restored">The world backup has been restored, please save!</string>
     <string name="toast_loaded">Loaded:</string>
@@ -400,4 +400,27 @@ Would you like to create a new empty data set?</string>
 <string name="msg_slice_missing">Missing map</string>
     <string name="key_seed_display">🌱 %1$s</string>
     <string name="title_with_count">%1$s (%2$d)</string>
+    <string name="text_hex_pre">[Hex] %1$s</string>
+    <string name="err_load_failed_with_msg">Load failed: %1$s</string>
+    <string name="title_current_new">Current: %1$s (newly created)</string>
+    <string name="text_expand_up">▲</string>
+    <string name="text_expand_down">▼</string>
+    <string name="toast_dev_mode_hint">Tap 5 more times to enable developer options...</string>
+    <string name="msg_saf_unavailable">SAF unavailable: %1$s</string>
+    <string name="title_search_type">Search %1$s...</string>
+    <string name="title_choose_type">Choose %1$s</string>
+    <string name="title_edit_type_key">Edit (%1$s): %2$s</string>
+    <string name="title_debug_menu">🔧 Developer Debug Menu</string>
+    <string name="debug_crash_test">💥 Crash test (simulate crash)</string>
+    <string name="debug_show_logs">📋 Show logs</string>
+    <string name="debug_copy_logs">📄 Copy logs to clipboard</string>
+    <string name="debug_export_logs">💾 Export logs to file</string>
+    <string name="debug_close">Close</string>
+    <string name="text_autocomplete_label_name">%1$s%2$s</string>
+    <string name="msg_no_logs_to_copy">No logs to copy</string>
+    <string name="msg_logs_copied">Logs copied to clipboard</string>
+    <string name="msg_no_logs_to_export">No logs to export</string>
+    <string name="msg_logs_exported_to">Logs exported to: %1$s</string>
+    <string name="msg_copy_failed">Copy failed: %1$s</string>
+    <string name="msg_export_failed">Export failed: %1$s</string>
 </resources>

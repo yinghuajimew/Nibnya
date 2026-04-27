@@ -24,7 +24,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -50,7 +49,6 @@ import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.CheckBox
-import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.Filter
 import android.widget.Filterable
@@ -81,7 +79,6 @@ import java.io.FileWriter
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.lang.Long
 import java.lang.reflect.Method
 import java.text.SimpleDateFormat
 import java.util.Arrays
@@ -99,7 +96,6 @@ import kotlin.BooleanArray
 import kotlin.Byte
 import kotlin.ByteArray
 import kotlin.CharSequence
-import kotlin.Comparator
 import kotlin.Exception
 import kotlin.Int
 import kotlin.IntArray
@@ -120,6 +116,7 @@ import kotlin.plus
 import kotlin.require
 import kotlin.synchronized
 import kotlin.toString
+import androidx.core.graphics.drawable.toDrawable
 
 // 必需
 class MainActivity : Activity() {
@@ -920,14 +917,7 @@ class MainActivity : Activity() {
             return
         }
 
-        Arrays.sort<File?>(
-            filesArr,
-            Comparator { f1: File?, f2: File? ->
-                Long.compare(
-                    f2!!.lastModified(),
-                    f1!!.lastModified()
-                )
-            })
+        filesArr.sortByDescending { it.lastModified() }
 
         val fileList: MutableList<File> = ArrayList<File>(Arrays.asList<File?>(*filesArr))
         val nameList: MutableList<String?> = ArrayList<String?>()
@@ -969,13 +959,13 @@ class MainActivity : Activity() {
             }
             .create()
 
-        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, _: Int, _: kotlin.Long ->
+        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, _: Int, _: Long ->
             toast(
                 getString(R.string.toast_hold_delete)
             )
         }
 
-        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
+        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
             val target = fileList.get(pos)
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.btn_delete))
@@ -1014,14 +1004,7 @@ class MainActivity : Activity() {
             return
         }
 
-        Arrays.sort<File?>(
-            backups,
-            Comparator { f1: File?, f2: File? ->
-                Long.compare(
-                    f2!!.lastModified(),
-                    f1!!.lastModified()
-                )
-            })
+        backups.sortByDescending { it.lastModified() }
 
         val fileList: MutableList<File> = ArrayList<File>(Arrays.asList<File?>(*backups))
         val nameList: MutableList<String?> = ArrayList<String?>()
@@ -1043,13 +1026,13 @@ class MainActivity : Activity() {
             .create()
 
         // 点击恢复
-        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
+        lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
             restoreBackup(fileList.get(pos))
             dialog.dismiss()
         }
 
         // 【修复部分】长按菜单：包含删除和重命名
-        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
+        lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
             val target = fileList.get(pos)
             val ops = arrayOf<String?>(
                 getString(R.string.menu_del_backup),
@@ -1493,7 +1476,7 @@ class MainActivity : Activity() {
                     dismissProgressDialog()
                     // 特殊处理：数据库损坏
                     if (e.message != null && e.message!!.contains("DB_CORRUPT")) {
-                        showDbRepairConfirmDialog(currentWorkingDbPath!!, folderName, onSuccess)
+                        showDbRepairConfirmDialog(currentWorkingDbPath!!, folderName)
                     } else if (!useShizuku) {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle(getString(R.string.title_load_failed))
@@ -1861,7 +1844,11 @@ class MainActivity : Activity() {
                     val p = runShizukuCmd(arrayOf("sh", "-c", "ls \"$currentWorldsPath\""))
                     val r = BufferedReader(InputStreamReader(p.inputStream))
                     var line: String?
-                    while ((r.readLine().also { line = it }) != null) if (!line!!.trim().isEmpty()) rawFolders.add(line!!.trim())
+                    while (r.readLine().also { line = it } != null) {
+                        line?.trim()?.let { trimmed ->
+                            if (trimmed.isNotEmpty()) rawFolders.add(trimmed)
+                        }
+                    }
                     p.waitFor()
                 }
 
@@ -2133,7 +2120,7 @@ class MainActivity : Activity() {
         if (isListMode) toast(getString(R.string.toast_enter_list) + key)
     }
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         val sidebarContainer = findViewById<View?>(R.id.custom_sidebar_container)
         if (sidebarContainer != null && sidebarContainer.isVisible) {
@@ -2242,7 +2229,7 @@ class MainActivity : Activity() {
     }
 
     private fun showEditValueDialog(key: String, item: JsonObject) {
-        val type = item.get("t").getAsInt()
+        val type = item.get("t").asInt
 
         if (type == 9 || type == 10) {
             toast(getString(R.string.toast_click_detail))
@@ -2253,10 +2240,10 @@ class MainActivity : Activity() {
 
         if (item.has("v")) {
             val v = item.get("v")
-            if (v.isJsonArray()) {
+            if (v.isJsonArray) {
                 input.setText(v.toString())
             } else {
-                input.setText(v.getAsString())
+                input.setText(v.asString)
             }
         }
 
@@ -2264,19 +2251,19 @@ class MainActivity : Activity() {
         var showAutocomplete = false
         var detectedType = "all"
 
-        val parent = if (!pathStack.isEmpty()) pathStack.peek() else ""
-        val grandParent = if (pathStack.size >= 2) pathStack.get(pathStack.size - 2) else ""
+        val parent = if (pathStack.isNotEmpty()) pathStack.peek() else ""
+        val grandParent = if (pathStack.size >= 2) pathStack[pathStack.size - 2] else ""
 
         if (key == "Name" || key == "id" || key == "name" ||
             key == "Id" || key == "AttributeName"
         ) {
-            detectedType = detectAutocompleteType(key, parent, grandParent)
+            detectedType = detectAutocompleteType(parent, grandParent)
             showAutocomplete = true
         }
 
-        if ((type == 1 || type == 2) && "Id" == key) {
-            val dt = detectAutocompleteType(key, parent, grandParent)
-            if ("all" != dt) {
+        if ((type == 1 || type == 2) && key == "Id") {
+            val dt = detectAutocompleteType(parent, grandParent)
+            if (dt != "all") {
                 detectedType = dt
                 showAutocomplete = true
             }
@@ -2284,27 +2271,22 @@ class MainActivity : Activity() {
 
         // ========== 构建对话框 ==========
         val builder = AlertDialog.Builder(this)
-        builder.setTitle(getString(R.string.title_edit) + " (" + getTypeName(type) + "): " + key)
+        builder.setTitle(getString(R.string.title_edit_type_key, getTypeName(type), key))
 
-        // 【关键】声明为 final，供内部类使用
         val finalDataType = detectedType
 
         if (showAutocomplete) {
             // ===== 带自动填充按钮的布局 =====
             val layout = LinearLayout(this)
-            layout.setOrientation(LinearLayout.VERTICAL)
+            layout.orientation = LinearLayout.VERTICAL
             layout.addView(input)
 
             val btnAutocomplete = Button(this)
             btnAutocomplete.text = getString(R.string.btn_choose, getTypeLabel(finalDataType))
             btnAutocomplete.setTextColor("#2196F3".toColorInt())
             btnAutocomplete.setBackgroundColor(Color.TRANSPARENT)
-            btnAutocomplete.setOnClickListener { _: View? ->
-                showAutocompleteDialog(
-                    input,
-                    finalDataType,
-                    input.getText().toString()
-                )
+            btnAutocomplete.setOnClickListener {
+                showAutocompleteDialog(input, finalDataType)
             }
             layout.addView(btnAutocomplete)
 
@@ -2321,11 +2303,11 @@ class MainActivity : Activity() {
             try {
                 val value = input.text.toString().trim()
 
-                if (type >= 1 && type <= 3) {
+                if (type in 1..3) {
                     item.addProperty("v", value.toInt())
                 } else if (type == 4) {
                     item.addProperty("v", value.toLong())
-                } else if (type >= 5 && type <= 6) {
+                } else if (type in 5..6) {
                     item.addProperty("v", value.toDouble())
                 } else if (type == 8) {
                     item.addProperty("v", value)
@@ -2335,9 +2317,9 @@ class MainActivity : Activity() {
                 }
 
                 if (!isTreeMode) {
-                    nbtAdapter!!.refreshKeys()
+                    nbtAdapter?.refreshKeys()
                 } else {
-                    nbtTreeAdapter!!.notifyDataSetChanged()
+                    nbtTreeAdapter?.notifyDataSetChanged()
                 }
             } catch (e: Exception) {
                 toast(getString(R.string.err_save_failed) + e.message.orEmpty())
@@ -2692,6 +2674,7 @@ class MainActivity : Activity() {
     }
 
     @Suppress("DEPRECATION")
+    @SuppressLint("DiscouragedApi")
     private fun applyTheme() {
         // 直接使用全局变量 viewMainContent，不再临时 findViewById
         val mainContent = viewMainContent ?: return
@@ -3682,7 +3665,7 @@ class MainActivity : Activity() {
                 val finalFreeSlot = freeSlot
 
                 // 4. 计算 ID
-                var maxMapId: kotlin.Long = -1
+                var maxMapId: Long = -1
                 for (key in mapKeys) {
                     val idStr = key.replace("map_", "")
                     try {
@@ -4178,6 +4161,7 @@ class MainActivity : Activity() {
         listView.emptyView = emptyView
 
         val inflater = LayoutInflater.from(this)
+        @SuppressLint("InflateParams")
         val customTitleView = inflater.inflate(R.layout.dialog_title_with_search, null, false)
 
         val tvTitle = customTitleView.findViewById<TextView>(R.id.tv_dialog_title)
@@ -4369,14 +4353,14 @@ class MainActivity : Activity() {
         private var displayedList: MutableList<String>
         private val inflater: LayoutInflater
 
-        var selectedItems: HashSet<String> = HashSet<String>()
+        var selectedItems: HashSet<String> = HashSet()
 
         // 【新增】是否处于选择模式
         private var isSelectionMode = false
 
         init {
-            this.originalList = ArrayList<String>(data)
-            this.displayedList = ArrayList<String>(data)
+            this.originalList = ArrayList(data)
+            this.displayedList = ArrayList(data)
             this.inflater = LayoutInflater.from(context)
         }
 
@@ -4397,50 +4381,40 @@ class MainActivity : Activity() {
         }
 
         override fun getItem(position: Int): String {
-            return displayedList.get(position)
+            return displayedList[position]
         }
 
-        override fun getItemId(position: Int): kotlin.Long {
+        override fun getItemId(position: Int): Long {
             return position.toLong()
         }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            var convertView = convertView
-            if (convertView == null) {
-                convertView = inflater.inflate(R.layout.item_checkbox, parent, false)
-            }
+            val view = convertView ?: inflater.inflate(R.layout.item_checkbox, parent, false)
 
-            val currentKey = displayedList.get(position)
+            val currentKey = displayedList[position]
 
-            val tv = convertView.findViewById<TextView>(R.id.tv_item_name)
-            val cb = convertView.findViewById<CheckBox>(R.id.cb_item_select)
+            val tv = view.findViewById<TextView>(R.id.tv_item_name)
+            val cb = view.findViewById<CheckBox>(R.id.cb_item_select)
 
-            tv.setText(currentKey)
-
+            tv.text = currentKey
 
             // 【核心修改】根据模式决定复选框是否显示
             if (isSelectionMode) {
-                cb.setVisibility(View.VISIBLE)
+                cb.isVisible = true
                 // 绑定状态
                 cb.setOnCheckedChangeListener(null)
-                cb.setChecked(selectedItems.contains(currentKey))
-
-
-                // 整个 item 点击时也能切换勾选（提升体验）
-                // 但这里需要注意和 ListView 的 onItemClick 冲突问题
-                // 通常我们在 ListView onItemClick 里处理逻辑，这里只负责显示
+                cb.isChecked = selectedItems.contains(currentKey)
             } else {
-                cb.setVisibility(View.GONE)
+                cb.isVisible = false
             }
 
-
             // 复选框点击事件
-            cb.setOnClickListener { _: View? ->
-                if (cb.isChecked()) selectedItems.add(currentKey!!)
+            cb.setOnClickListener {
+                if (cb.isChecked) selectedItems.add(currentKey)
                 else selectedItems.remove(currentKey)
             }
 
-            return convertView
+            return view
         }
 
         fun remove(item: String?) {
@@ -4451,27 +4425,20 @@ class MainActivity : Activity() {
         }
 
         val selectedList: MutableList<String>
-            get() = ArrayList<String>(selectedItems)
+            get() = ArrayList(selectedItems)
 
-        fun clearSelection() {
-            selectedItems.clear()
-            notifyDataSetChanged()
-        }
-
+        @Suppress("UNCHECKED_CAST")
         override fun getFilter(): Filter {
             return object : Filter() {
                 override fun performFiltering(constraint: CharSequence?): FilterResults {
                     val results = FilterResults()
-                    val filtered: MutableList<String?> = ArrayList<String?>()
-                    if (constraint == null || constraint.length == 0) {
+                    val filtered: MutableList<String> = ArrayList()
+                    if (constraint.isNullOrEmpty()) {
                         filtered.addAll(originalList)
                     } else {
-                        val pattern =
-                            constraint.toString().lowercase(Locale.getDefault()).trim { it <= ' ' }
+                        val pattern = constraint.toString().lowercase(Locale.getDefault()).trim()
                         for (item in originalList) {
-                            if (item.lowercase(Locale.getDefault()).contains(pattern)) filtered.add(
-                                item
-                            )
+                            if (item.lowercase(Locale.getDefault()).contains(pattern)) filtered.add(item)
                         }
                     }
                     results.values = filtered
@@ -4480,6 +4447,7 @@ class MainActivity : Activity() {
                 }
 
                 override fun publishResults(constraint: CharSequence?, results: FilterResults) {
+                    @Suppress("UNCHECKED_CAST")
                     displayedList = results.values as MutableList<String>
                     notifyDataSetChanged()
                 }
@@ -4530,11 +4498,11 @@ class MainActivity : Activity() {
 
         // 自动弹键盘
         dialog.setOnShowListener { _: DialogInterface? ->
-            etSearch.setFocusable(true)
-            etSearch.setFocusableInTouchMode(true)
+            etSearch.isFocusable = true
+            etSearch.isFocusableInTouchMode = true
             etSearch.requestFocus()
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager?
-            if (imm != null) imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+            imm?.showSoftInput(etSearch, InputMethodManager.SHOW_IMPLICIT)
         }
 
         dialog.show()
@@ -4624,7 +4592,7 @@ class MainActivity : Activity() {
         // 标题 "数据名"
         val tvLabel = TextView(this)
         tvLabel.text = getString(R.string.text_data_name)
-        tvLabel.setTextColor(resources.getColor(android.R.color.holo_blue_light))
+        tvLabel.setTextColor(getColor(android.R.color.holo_blue_light))
         tvLabel.setPadding(0, 30, 0, 10)
         layout.addView(tvLabel)
 
@@ -4660,19 +4628,19 @@ class MainActivity : Activity() {
 
         Thread {
             try {
-                val db = PlayerDbManager(currentWorkingDbPath!!)
+                val dbPath = currentWorkingDbPath ?: throw Exception("DB path is null")
+                val db = PlayerDbManager(dbPath)
 
-                val keyBytes: ByteArray?
-                if (isHex) {
+                val keyBytes: ByteArray = if (isHex) {
                     // Hex 模式：将字符串转为 byte[]
                     try {
-                        keyBytes = hexStringToByteArray(inputStr)
+                        hexStringToByteArray(inputStr)
                     } catch (_: Exception) {
                         throw Exception(getString(R.string.msg_hex_format_error))
                     }
                 } else {
                     // 普通文本模式：UTF-8
-                    keyBytes = inputStr.toByteArray(charset("UTF-8"))
+                    inputStr.toByteArray(Charsets.UTF_8)
                 }
 
                 // 读取数据
@@ -4686,10 +4654,6 @@ class MainActivity : Activity() {
                     dismissProgressDialog()
                     // 更新界面
                     isEditingPlayer = true
-                    // 注意：如果是 Hex 模式，保存时可能需要特殊处理，
-                    // 但为了简单，这里暂时把 Key 设为输入值。
-                    // 如果是 Hex，保存逻辑可能会因为 writeSpecificKey 把 Hex 字符串当成普通字符串写回去而导致 Key 变动。
-                    // 这是一个已知限制，普通文本 Key 不受影响。
                     currentTargetKey = inputStr
 
                     rootNbtData = json
@@ -4698,16 +4662,18 @@ class MainActivity : Activity() {
                     scrollPositionStack.clear()
                     updateAdapter(rootNbtData)
 
-                    if (tvCurrentPath != null) {
-                        val type = if (isHex) "[Hex] " else ""
-                        tvCurrentPath!!.setText(getString(R.string.title_current) + type + inputStr)
+                    val displayText = if (isHex) {
+                        getString(R.string.text_hex_pre, inputStr)
+                    } else {
+                        inputStr
                     }
+                    tvCurrentPath?.text = getString(R.string.title_current, displayText)
                     toast(getString(R.string.toast_loading_successfully))
                 }
             } catch (e: Exception) {
                 runOnUiThread {
                     dismissProgressDialog()
-                    toast(getString(R.string.err_load_failed) + e.message)
+                    toast(getString(R.string.err_load_failed_with_msg, e.message.orEmpty()))
                 }
             }
         }.start()
@@ -4716,8 +4682,7 @@ class MainActivity : Activity() {
     // 【新增】数据库修复询问弹窗
     private fun showDbRepairConfirmDialog(
         dbPath: String,
-        folderName: String?,
-        originalSuccessTask: Runnable?
+        folderName: String?
     ) {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_database_corruption))
@@ -4731,8 +4696,7 @@ class MainActivity : Activity() {
             ) { _: DialogInterface?, _: Int ->
                 performDbRepair(
                     dbPath,
-                    folderName,
-                    originalSuccessTask
+                    folderName
                 )
             }
             .setNegativeButton(
@@ -4747,8 +4711,7 @@ class MainActivity : Activity() {
     // 【新增】执行修复并自动重试
     private fun performDbRepair(
         dbPath: String,
-        folderName: String?,
-        originalSuccessTask: Runnable?
+        folderName: String?
     ) {
         showProgressDialog(getString(R.string.msg_under_repair), getString(R.string.msg_trying_to_rebuild_data_index))
 
@@ -4812,7 +4775,7 @@ class MainActivity : Activity() {
 
                     updateAdapter(rootNbtData)
                     toast(getString(R.string.toast_player_loaded_success))
-                    if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.path_editing_player) + folderName + ")")
+                    tvCurrentPath?.text = getString(R.string.path_editing_player, folderName)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -4854,17 +4817,17 @@ class MainActivity : Activity() {
     // 工具：Hex 字符串转 Byte 数组
     private fun hexStringToByteArray(s: String): ByteArray {
         // 去除空格
-        var s = s
-        s = s.replace(" ", "")
-        val len = s.length
+        val hex = s.replace(" ", "")
+        val len = hex.length
         require(len % 2 == 0) { getString(R.string.msg_the_length_must_be_an_even_number) }
 
         val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((((s.get(i).digitToIntOrNull(16) ?: (-1 shl 4)) + s.get(i + 1)
-                .digitToIntOrNull(16)!!) ?: -1)).toByte()
-            i += 2
+        for (i in 0 until len step 2) {
+            val high = hex[i].digitToIntOrNull(16)
+                ?: throw IllegalArgumentException("Invalid hex character: ${hex[i]}")
+            val low = hex[i + 1].digitToIntOrNull(16)
+                ?: throw IllegalArgumentException("Invalid hex character: ${hex[i + 1]}")
+            data[i / 2] = ((high shl 4) + low).toByte()
         }
         return data
     }
@@ -4955,7 +4918,7 @@ class MainActivity : Activity() {
             .setNegativeButton(getString(R.string.btn_close), null)
             .create()
 
-        listView.setOnItemClickListener { _: AdapterView<*>?, _: View?, position: Int, _: kotlin.Long ->
+        listView.setOnItemClickListener { _: AdapterView<*>?, _: View?, position: Int, _: Long ->
             val key = realKeys.get(position)
             // 尝试加载
             // 这里的 loadSpecificPlayer 其实是通用的 loadByKey，直接复用
@@ -4965,11 +4928,11 @@ class MainActivity : Activity() {
 
 
         // 可选：长按复制 Key
-        listView.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: kotlin.Long ->
-            val key: String? = realKeys.get(pos)
+        listView.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
+            val key: String = realKeys[pos]
             val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("Key", key))
-            toast(getString(R.string.toast_key_copied) + key)
+            toast(getString(R.string.toast_key_copied, key))
             true
         }
 
@@ -4981,10 +4944,6 @@ class MainActivity : Activity() {
         // 创建一个空的 Compound NBT
         val emptyNbt = JsonObject()
 
-        // 如果你需要针对特定 Key 初始化特定结构（比如 Scoreboard 需要特定的头），可以在这里 switch-case
-        // 目前暂时初始化为空对象 {}
-
-        // 伪造加载过程
         currentTargetKey = key
         isEditingPlayer = true
         rootNbtData = emptyNbt
@@ -4995,12 +4954,7 @@ class MainActivity : Activity() {
 
         updateAdapter(rootNbtData)
 
-        if (tvCurrentPath != null) tvCurrentPath!!.setText(
-            getString(R.string.title_current) + key + getString(
-                R.string.text_newly_created
-            )
-        )
-
+        tvCurrentPath?.text = getString(R.string.title_current_new, key.orEmpty())
 
         // 只有当你点击保存时，才会真正写入数据库
         toast(getString(R.string.toast_empty_data_has_been_created_please_edit_and_save))
@@ -5044,7 +4998,7 @@ class MainActivity : Activity() {
 
             // 如果读到了种子，显示小字
             if (seedStr != null && !seedStr.isEmpty()) {
-                tvSeed.setText("🌱 " + seedStr)
+                tvSeed.setText(getString(R.string.key_seed_display))
                 tvSeed.setVisibility(View.VISIBLE)
             } else {
                 tvSeed.setVisibility(View.GONE)
@@ -5220,11 +5174,6 @@ class MainActivity : Activity() {
 
     // 【简化】打开 SAF 目录选择器（AIDE+ 兼容）
     private fun openSafPathSelector() {
-        if (Build.VERSION.SDK_INT < 21) {
-            toast("SAF 需要 Android 5.0+")
-            return
-        }
-
         try {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
             intent.addFlags(
@@ -5234,130 +5183,106 @@ class MainActivity : Activity() {
 
             startActivityForResult(intent, REQUEST_SAF_PATH)
         } catch (e: Exception) {
-            toast("SAF 不可用: " + e.message)
+            toast(getString(R.string.msg_saf_unavailable, e.message.orEmpty()))
         }
     }
 
     private fun showAppInfoDialog() {
         val builder = AlertDialog.Builder(this)
-        val dialogView = getLayoutInflater().inflate(R.layout.dialog_app_info, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_app_info, null, false)
         builder.setView(dialogView)
 
         val dialog = builder.create()
 
-        if (dialog.getWindow() != null) {
-            dialog.getWindow()!!.setBackgroundDrawableResource(android.R.color.transparent)
-        }
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         dialog.show()
 
-        if (dialog.getWindow() != null) {
-            val params = dialog.getWindow()!!.getAttributes()
-            params.width = (getResources().getDisplayMetrics().widthPixels * 0.85).toInt()
-            dialog.getWindow()!!.setAttributes(params)
+        dialog.window?.let {
+            val params = it.attributes
+            params.width = (resources.displayMetrics.widthPixels * 0.85).toInt()
+            it.attributes = params
         }
-
 
         // ===== 关于展开逻辑 =====
         val aboutHeader = dialogView.findViewById<LinearLayout?>(R.id.layout_about_header)
         val aboutContent = dialogView.findViewById<TextView?>(R.id.tv_about_content)
-        val aboutExpand = dialogView.findViewById<TextView>(R.id.tv_about_expand)
+        val aboutExpand = dialogView.findViewById<TextView?>(R.id.tv_about_expand)
 
         if (aboutContent != null) {
             val html = getString(R.string.msg_about_content_full)
-            val message: CharSequence? = Html.fromHtml(html.replace("\n", "<br>"))
-            aboutContent.setText(message)
-            aboutContent.setMovementMethod(LinkMovementMethod.getInstance())
+            @Suppress("DEPRECATION")
+            val message: CharSequence = Html.fromHtml(html.replace("\n", "<br>"))
+            aboutContent.text = message
+            aboutContent.movementMethod = LinkMovementMethod.getInstance()
         }
 
-        if (aboutHeader != null) {
-            aboutHeader.setOnClickListener { _: View? ->
-                if (aboutContent != null && aboutContent.getVisibility() == View.GONE) {
-                    aboutContent.setVisibility(View.VISIBLE)
-                    aboutExpand.setText("▲")
-                } else {
-                    if (aboutContent != null && aboutContent.getVisibility() == View.GONE);
-                    aboutExpand.setText("▼")
-                }
+        aboutHeader?.setOnClickListener {
+            if (aboutContent != null) {
+                val isExpanded = aboutContent.isVisible
+                aboutContent.isVisible = !isExpanded
+                aboutExpand?.text = if (!isExpanded) getString(R.string.text_expand_up) else getString(R.string.text_expand_down)
             }
         }
-
 
         // ===== 设置展开逻辑 =====
         val settingsHeader = dialogView.findViewById<LinearLayout?>(R.id.layout_settings_header)
-        val settingsContent = dialogView.findViewById<LinearLayout>(R.id.layout_settings_content)
-        val settingsExpand = dialogView.findViewById<TextView>(R.id.tv_settings_expand)
+        val settingsContent = dialogView.findViewById<LinearLayout?>(R.id.layout_settings_content)
+        val settingsExpand = dialogView.findViewById<TextView?>(R.id.tv_settings_expand)
 
-        if (settingsHeader != null) {
-            settingsHeader.setOnClickListener { _: View? ->
-                if (settingsContent.getVisibility() == View.GONE) {
-                    settingsContent.setVisibility(View.VISIBLE)
-                    settingsExpand.setText("▲")
-                } else {
-                    settingsContent.setVisibility(View.GONE)
-                    settingsExpand.setText("▼")
-                }
+        settingsHeader?.setOnClickListener {
+            if (settingsContent != null) {
+                val isExpanded = settingsContent.isVisible
+                settingsContent.isVisible = !isExpanded
+                settingsExpand?.text = if (!isExpanded) getString(R.string.text_expand_up) else getString(R.string.text_expand_down)
             }
         }
-
 
         // ===== 四个设置项绑定 =====
 
         // 1. 多线程
         val cbMulti = dialogView.findViewById<CheckBox?>(R.id.cb_dialog_multithread)
-        if (cbMulti != null) {
-            cbMulti.setChecked(useMultiThreading)
-            cbMulti.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
-                useMultiThreading = isChecked
-                prefs!!.edit().putBoolean("use_multithread", isChecked).apply()
-                toast(
-                    if (isChecked)
-                        getString(R.string.toast_multi_thread_acceleration_enabled)
-                    else
-                        getString(R.string.toast_switched_to_single_threaded_stable_mode)
-                )
-            }
+        cbMulti?.isChecked = useMultiThreading
+        cbMulti?.setOnCheckedChangeListener { _, isChecked: Boolean ->
+            useMultiThreading = isChecked
+            prefs?.edit { putBoolean("use_multithread", isChecked) }
+            toast(
+                if (isChecked)
+                    getString(R.string.toast_multi_thread_acceleration_enabled)
+                else
+                    getString(R.string.toast_switched_to_single_threaded_stable_mode)
+            )
         }
-
 
         // 2. Shizuku
         val cbShizuku = dialogView.findViewById<CheckBox?>(R.id.cb_dialog_shizuku)
-        if (cbShizuku != null) {
-            cbShizuku.setChecked(useShizuku)
-            cbShizuku.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
-                useShizuku = isChecked
-                prefs!!.edit().putBoolean("use_shizuku", isChecked).apply()
-                toast(if (isChecked) getString(R.string.toast_shizuku_enabled) else getString(R.string.toast_shizuku_disabled))
-            }
+        cbShizuku?.isChecked = useShizuku
+        cbShizuku?.setOnCheckedChangeListener { _, isChecked: Boolean ->
+            useShizuku = isChecked
+            prefs?.edit { putBoolean("use_shizuku", isChecked) }
+            toast(if (isChecked) getString(R.string.toast_shizuku_enabled) else getString(R.string.toast_shizuku_disabled))
         }
-
 
         // 3. 日夜模式
         val btnTheme = dialogView.findViewById<Button?>(R.id.btn_dialog_theme)
         if (btnTheme != null) {
-            btnTheme.setText(if (isNightMode) getString(R.string.action_switch_day) else getString(R.string.action_switch_night))
-            btnTheme.setOnClickListener { _: View? ->
+            btnTheme.text = if (isNightMode) getString(R.string.action_switch_day) else getString(R.string.action_switch_night)
+            btnTheme.setOnClickListener {
                 isNightMode = !isNightMode
-                prefs!!.edit().putBoolean("night_mode", isNightMode).apply()
+                prefs?.edit { putBoolean("night_mode", isNightMode) }
                 applyTheme()
-                dialog.dismiss() // 关闭弹窗重建
+                dialog.dismiss()
                 recreate()
             }
         }
 
-
         // 4. 语言切换
         val btnLang = dialogView.findViewById<Button?>(R.id.btn_dialog_lang)
         if (btnLang != null) {
-            btnLang.setText(
-                if ("zh" == currentLang) getString(R.string.switch_to_english) else getString(
-                    R.string.switch_to_chinese
-                )
-            )
-            btnLang.setOnClickListener { _: View? ->
-                if ("zh" == currentLang) currentLang = "en"
-                else currentLang = "zh"
-                prefs!!.edit().putString("app_language", currentLang).apply()
+            btnLang.text = if ("zh" == currentLang) getString(R.string.switch_to_english) else getString(R.string.switch_to_chinese)
+            btnLang.setOnClickListener {
+                currentLang = if ("zh" == currentLang) "en" else "zh"
+                prefs?.edit { putString("app_language", currentLang) }
 
                 // 暂存数据
                 tempNbtData = rootNbtData
@@ -5372,29 +5297,27 @@ class MainActivity : Activity() {
         // 【新增】调试菜单触发器（点击图标10次）
         val clickCount = intArrayOf(0)
         val lastClickTime = longArrayOf(0)
-        val headerLayout = dialogView.findViewById<View?>(R.id.in_app_icon) // 确保XML中有这个ID
+        val headerLayout = dialogView.findViewById<View?>(R.id.in_app_icon)
 
-        if (headerLayout != null) {
-            headerLayout.setOnClickListener { _: View? ->
-                val currentTime = System.currentTimeMillis()
-                // 重置计数（如果超过2秒未点击）
-                if (currentTime - lastClickTime[0] > 5000) {
-                    clickCount[0] = 0
-                }
-                lastClickTime[0] = currentTime
+        headerLayout?.setOnClickListener {
+            val currentTime = System.currentTimeMillis()
+            // 重置计数（如果超过5秒未点击）
+            if (currentTime - lastClickTime[0] > 5000) {
+                clickCount[0] = 0
+            }
+            lastClickTime[0] = currentTime
 
-                clickCount[0]++
+            clickCount[0]++
 
-                // 显示点击进度（可选，第5次后显示提示）
-                if (clickCount[0] == 5) {
-                    toast("再点击5次开启开发者选项...")
-                }
+            // 显示点击进度（第5次后显示提示）
+            if (clickCount[0] == 5) {
+                toast(getString(R.string.toast_dev_mode_hint))
+            }
 
-                // 达到10次，显示调试菜单
-                if (clickCount[0] >= 10) {
-                    clickCount[0] = 0 // 重置
-                    showDebugMenu() // 显示调试菜单
-                }
+            // 达到10次，显示调试菜单
+            if (clickCount[0] >= 10) {
+                clickCount[0] = 0
+                showDebugMenu()
             }
         }
     }
@@ -5458,30 +5381,27 @@ class MainActivity : Activity() {
         assetPath: String,
         category: String
     ) {
-        val `is` = getAssets().open(assetPath)
-        val reader = BufferedReader(InputStreamReader(`is`))
-        val sb = StringBuilder()
-        var line: String?
-        while ((reader.readLine().also { line = it }) != null) sb.append(line)
-        reader.close()
+        val inputStream = assets.open(assetPath)
+        val json = BufferedReader(InputStreamReader(inputStream)).use { reader ->
+            reader.readText()
+        }
 
-        val array = JsonParser().parse(sb.toString()).getAsJsonArray()
-        for (i in 0..<array.size()) {
-            val obj = array.get(i).getAsJsonObject()
-            val name = if (obj.has("name")) obj.get("name").getAsString() else ""
-            var namespace = if (obj.has("namespace")) obj.get("namespace").getAsString() else ""
-            val id = if (obj.has("id")) obj.get("id").getAsString() else null // 【提取数字ID】
-
+        val array = JsonParser.parseString(json).asJsonArray
+        for (i in 0 until array.size()) {
+            val obj = array[i].asJsonObject
+            val name = if (obj.has("name")) obj.get("name").asString else ""
+            var namespace = if (obj.has("namespace")) obj.get("namespace").asString else ""
+            val id = if (obj.has("id")) obj.get("id").asString else null
 
             // 效果和附魔：不添加minecraft:前缀，保留原始namespace（如protection）
             // 其他：添加minecraft:前缀
-            if ("effect" != category && "enchant" != category) {
+            if (category != "effect" && category != "enchant") {
                 if (!namespace.contains(":")) {
-                    namespace = "minecraft:" + namespace
+                    namespace = "minecraft:$namespace"
                 }
             }
 
-            if (!namespace.isEmpty()) {
+            if (namespace.isNotEmpty()) {
                 list.add(AutocompleteEntry(name, namespace, category, id))
             }
         }
@@ -5489,33 +5409,23 @@ class MainActivity : Activity() {
 
     // 【新增】根据上下文智能判断数据类型
     private fun detectAutocompleteType(
-        key: String?,
         parent: String?,
         grandParent: String?
     ): String {
         // 药水效果
-        if ("ActiveEffects" == parent || "ActiveEffects" == grandParent ||
-            "MobEffects" == parent || "Effects" == parent
+        if (parent == "ActiveEffects" || grandParent == "ActiveEffects" ||
+            parent == "MobEffects" || parent == "Effects"
         ) {
             return "effect"
         }
 
-
         // 附魔（支持多种键名）
-        if ("ench" == parent || "Enchantments" == parent ||
-            "StoredEnchantments" == parent ||
-            "ench" == grandParent || "Enchantments" == grandParent
+        if (parent == "ench" || parent == "Enchantments" ||
+            parent == "StoredEnchantments" ||
+            grandParent == "ench" || grandParent == "Enchantments"
         ) {
             return "enchant"
         }
-
-
-        // 如果是 Id 字段且在特定父级下
-        if ("Id" == key) {
-            if ("ActiveEffects" == parent) return "effect"
-            if ("ench" == parent || "Enchantments" == parent) return "enchant"
-        }
-
 
         // 默认：物品+方块混合
         return "all"
@@ -5536,8 +5446,7 @@ class MainActivity : Activity() {
     // 【新增】统一的自动填充对话框
     private fun showAutocompleteDialog(
         targetInput: EditText,
-        dataType: String,
-        currentValue: String?
+        dataType: String
     ) {
         // 创建布局
         val layout = LinearLayout(this)
@@ -5553,13 +5462,14 @@ class MainActivity : Activity() {
         // 清空按钮
         val btnClear = Button(this)
         btnClear.text = getString(R.string.btn_clear)
-        btnClear.setTextColor(Color.parseColor("#2196F3"))
+        btnClear.setTextColor("#2196F3".toColorInt())
         btnClear.setBackgroundColor(Color.TRANSPARENT)
         layout.addView(btnClear)
 
         // 列表
         val lvSuggestions = ListView(this)
-        lvSuggestions.divider = ColorDrawable(-0x111112)
+        @Suppress("DEPRECATION")
+        lvSuggestions.divider = "#EEEEEE".toColorInt().toDrawable()
         lvSuggestions.dividerHeight = 1
         layout.addView(
             lvSuggestions, LinearLayout.LayoutParams(
@@ -5604,8 +5514,9 @@ class MainActivity : Activity() {
                     "effect" -> label = getString(R.string.title_effect_label)
                     "enchant" -> label = getString(R.string.title_enchant_label)
                 }
-                tv1.text = label + item.name
-                tv1.setTextColor(Color.parseColor("#333333"))
+                tv1.text = getString(R.string.text_autocomplete_label_name, label, item.name)
+                @Suppress("DEPRECATION")
+                tv1.setTextColor("#333333".toColorInt())
                 tv1.textSize = 15f
 
                 // 副标题
@@ -5616,7 +5527,8 @@ class MainActivity : Activity() {
                     subtitle = item.namespace
                 }
                 tv2.text = subtitle
-                tv2.setTextColor(Color.parseColor("#666666"))
+                @Suppress("DEPRECATION")
+                tv2.setTextColor("#666666".toColorInt())
                 tv2.textSize = 12f
 
                 return convertView
@@ -5724,18 +5636,16 @@ class MainActivity : Activity() {
 
     // 【新增】显示调试菜单
     private fun showDebugMenu() {
-        val options = arrayOf<String?>(
-            "💥 崩溃测试（模拟应用崩溃）",
-            "📋 显示日志",
-            "📄 复制日志到剪贴板",
-            "💾 导出日志到文件"
+        val options = arrayOf(
+            getString(R.string.debug_crash_test),
+            getString(R.string.debug_show_logs),
+            getString(R.string.debug_copy_logs),
+            getString(R.string.debug_export_logs)
         )
 
         AlertDialog.Builder(this)
-            .setTitle("🔧 开发者调试菜单")
-            .setItems(
-                options
-            ) { dialog: DialogInterface?, which: Int ->
+            .setTitle(getString(R.string.title_debug_menu))
+            .setItems(options) { _, which ->
                 when (which) {
                     0 -> performCrashTest()
                     1 -> showLogViewer()
@@ -5743,7 +5653,7 @@ class MainActivity : Activity() {
                     3 -> exportLogsToFile()
                 }
             }
-            .setNegativeButton("关闭", null)
+            .setNegativeButton(getString(R.string.debug_close), null)
             .show()
     }
 
@@ -5754,9 +5664,9 @@ class MainActivity : Activity() {
             .setMessage("即将模拟一次应用崩溃，用于测试崩溃处理机制。\n\n是否继续？")
             .setPositiveButton(
                 "立即崩溃"
-            ) { _: DialogInterface?, _: Int ->
+            ) { _, _ ->
                 // 延迟1秒后抛出异常，让对话框先关闭
-                Handler().postDelayed({
+                Handler(Looper.getMainLooper()).postDelayed({
                     throw RuntimeException("【测试】手动触发的崩溃 - 用于验证 CrashHandler 是否正常工作")
                 }, 1000)
             }
@@ -5776,14 +5686,7 @@ class MainActivity : Activity() {
                 val files = crashDir.listFiles()
                 if (files != null && files.size > 0) {
                     // 读取最新的日志
-                    Arrays.sort<File?>(
-                        files,
-                        Comparator { f1: File?, f2: File? ->
-                            Long.compare(
-                                f2!!.lastModified(),
-                                f1!!.lastModified()
-                            )
-                        })
+                    files.sortByDescending { it.lastModified() }
 
                     val latest = files[0]
                     logs.append("最新崩溃日志: ").append(latest.getName()).append("\n\n")
@@ -5857,107 +5760,75 @@ class MainActivity : Activity() {
         try {
             val allLogs = StringBuilder()
 
-
-            // 读取所有日志文件
             val crashDir = File(getExternalFilesDir(null), "CrashLogs")
-            if (crashDir.exists() && crashDir.listFiles() != null) {
-                val files = crashDir.listFiles()
-                Arrays.sort<File?>(
-                    files,
-                    Comparator { f1: File?, f2: File? ->
-                        Long.compare(
-                            f2!!.lastModified(),
-                            f1!!.lastModified()
-                        )
-                    })
+            val files = crashDir.listFiles()
+            if (files != null && files.isNotEmpty()) {
+                files.sortByDescending { it.lastModified() }
 
-                for (file in files!!) {
-                    allLogs.append("===== ").append(file.getName()).append(" =====\n")
-                    val reader = BufferedReader(
-                        FileReader(file)
-                    )
-                    var line: String?
-                    while ((reader.readLine().also { line = it }) != null) {
-                        allLogs.append(line).append("\n")
+                for (file in files) {
+                    allLogs.append("===== ").append(file.name).append(" =====\n")
+                    BufferedReader(FileReader(file)).use { reader ->
+                        reader.forEachLine { line ->
+                            allLogs.append(line).append("\n")
+                        }
                     }
-                    reader.close()
                     allLogs.append("\n\n")
                 }
             }
 
-            if (allLogs.length == 0) {
-                toast("没有日志可复制")
+            if (allLogs.isEmpty()) {
+                toast(getString(R.string.msg_no_logs_to_copy))
                 return
             }
 
-            val cm =
-                getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Logs", allLogs.toString())
             cm.setPrimaryClip(clip)
-            toast("日志已复制到剪贴板")
+            toast(getString(R.string.msg_logs_copied))
         } catch (e: Exception) {
-            toast("复制失败: " + e.message)
+            toast(getString(R.string.msg_copy_failed, e.message.orEmpty()))
         }
     }
 
     // 4. 导出日志到文件
     private fun exportLogsToFile() {
-        Thread(Runnable {
+        Thread {
             try {
-                // 源目录
                 val crashDir = File(getExternalFilesDir(null), "CrashLogs")
-                var files = crashDir.listFiles()
-                if (!crashDir.exists() || files == null || files.size == 0) {
-                    runOnUiThread { toast("没有日志可导出") }
-                    return@Runnable
+                val files = crashDir.listFiles()
+                if (!crashDir.exists() || files == null || files.isEmpty()) {
+                    runOnUiThread { toast(getString(R.string.msg_no_logs_to_export)) }
+                    return@Thread
                 }
 
-                // 目标文件（导出到 Download）
                 val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
                     .format(Date())
-                val exportFile =
-                    File("/storage/emulated/0/Download/NbtEditor_Logs_" + timeStamp + ".txt")
+                val exportFile = File("/storage/emulated/0/Download/NbtEditor_Logs_$timeStamp.txt")
 
-                val writer = FileWriter(exportFile)
+                FileWriter(exportFile).use { writer ->
+                    writer.write("===== NBT Editor 日志导出 =====\n")
+                    writer.write("导出时间: $timeStamp\n\n")
 
-                // 【修正】使用字符串拼接，而不是链式 append
-                writer.write("===== NBT Editor 日志导出 =====\n")
-                writer.write("导出时间: " + timeStamp + "\n\n")
+                    files.sortByDescending { it.lastModified() }
 
-                files = crashDir.listFiles()
-                Arrays.sort<File?>(
-                    files,
-                    Comparator { f1: File?, f2: File? ->
-                        Long.compare(
-                            f2!!.lastModified(),
-                            f1!!.lastModified()
-                        )
-                    })
-
-                for (file in files) {
-                    // 【修正】字符串拼接
-                    writer.write("===== " + file.getName() + " =====\n")
-
-                    val reader = BufferedReader(
-                        FileReader(file)
-                    )
-                    var line: String?
-                    while ((reader.readLine().also { line = it }) != null) {
-                        writer.write(line + "\n") // 【修正】使用 + 拼接
+                    for (file in files) {
+                        writer.write("===== ${file.name} =====\n")
+                        BufferedReader(FileReader(file)).use { reader ->
+                            reader.forEachLine { line ->
+                                writer.write("$line\n")
+                            }
+                        }
+                        writer.write("\n\n")
                     }
-                    reader.close()
-                    writer.write("\n\n")
                 }
 
-                writer.close()
-
-                val path = exportFile.getAbsolutePath()
-                runOnUiThread { toast("日志已导出到: " + path) }
+                val path = exportFile.absolutePath
+                runOnUiThread { toast(getString(R.string.msg_logs_exported_to, path)) }
             } catch (e: Exception) {
-                val error = e.message
-                runOnUiThread { toast("导出失败: " + error) }
+                val error = e.message.orEmpty()
+                runOnUiThread { toast(getString(R.string.msg_export_failed, error)) }
             }
-        }).start()
+        }.start()
     }
 
     companion object {
