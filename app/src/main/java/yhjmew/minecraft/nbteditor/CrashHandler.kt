@@ -79,11 +79,16 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     private fun collectDeviceInfo(ctx: Context): String {
         val sb = StringBuilder()
         try {
-            val pm = ctx.getPackageManager()
-            val pi = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_ACTIVITIES)
+            val pm = ctx.packageManager
+            val pi = pm.getPackageInfo(ctx.packageName, PackageManager.GET_ACTIVITIES)
             if (pi != null) {
-                val versionName: String = (if (pi.versionName == null) "null" else pi.versionName)!!
-                val versionCode = pi.versionCode.toString() + ""
+                val versionName = pi.versionName ?: "null"
+                val versionCode = if (Build.VERSION.SDK_INT >= 28) {
+                    pi.longVersionCode.toString()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pi.versionCode.toString()
+                }
                 sb.append("App Version: ").append(versionName).append(" (").append(versionCode)
                     .append(")\n")
             }
@@ -95,7 +100,12 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             .append(Build.VERSION.SDK_INT).append("\n")
         sb.append("Vendor: ").append(Build.MANUFACTURER).append("\n")
         sb.append("Model: ").append(Build.MODEL).append("\n")
-        sb.append("CPU ABI: ").append(Build.CPU_ABI).append("\n")
+        val abis = Build.SUPPORTED_ABIS
+        if (abis != null && abis.isNotEmpty()) {
+            sb.append("CPU ABI: ").append(abis.joinToString(", ")).append("\n")
+        } else {
+            sb.append("CPU ABI: unknown\n")
+        }
 
         return sb.toString()
     }

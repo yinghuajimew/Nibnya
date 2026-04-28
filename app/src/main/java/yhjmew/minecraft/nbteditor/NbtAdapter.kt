@@ -106,7 +106,18 @@ class NbtAdapter(private val context: Context, val data: JsonObject?) : BaseAdap
         val tvValue = convertView.findViewById<TextView>(R.id.tv_value)
 
         val key = displayKeys!!.get(position)
-        val itemData = data!!.getAsJsonObject(key)
+        val rawItem = data!!.get(key)
+
+        // 安全转换：确保 itemData 是 JsonObject，否则跳过
+        val itemData: JsonObject
+        if (rawItem != null && rawItem.isJsonObject) {
+            itemData = rawItem.asJsonObject
+        } else {
+            // 数据格式异常，创建一个空占位
+            itemData = JsonObject()
+            itemData.addProperty("t", 8)
+            itemData.addProperty("v", rawItem?.toString() ?: "null")
+        }
 
         var type = 0
         if (itemData.has("t")) type = itemData.get("t").getAsInt()

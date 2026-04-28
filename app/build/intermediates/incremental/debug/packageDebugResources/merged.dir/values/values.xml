@@ -335,6 +335,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_clip_saved">Clip saved! (Please don’t forget to click the save button on the main interface to write to disk)</string>
     <string name="toast_clipboard_empty">Clipboard is empty</string>
     <string name="toast_compound_only">Can only be added in Compound</string>
+    <string name="toast_compound_or_list_only">Can only add in Compound or List</string>
     <string name="toast_copied">Copied to clipboard</string>
     <string name="toast_copy_failed">Copy failed:</string>
     <string name="toast_copy_success">Copied successfully</string>
@@ -363,6 +364,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_input_cannot_be_empty">Input cannot be empty</string>
     <string name="toast_input_error">Input error:</string>
     <string name="toast_install_shizuku">Please install and start the Shizuku service first</string>
+    <string name="toast_item_added_to_list">Item added to list</string>
     <string name="toast_key_cannot_be_empty">Key cannot be empty</string>
     <string name="toast_key_copied">Copied Key: %1$s</string>
     <string name="toast_level_dat_saved">✅ level.dat saved</string>

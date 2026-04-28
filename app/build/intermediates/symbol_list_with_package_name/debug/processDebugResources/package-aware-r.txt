@@ -565,6 +565,7 @@ string toast_click_detail
 string toast_clip_saved
 string toast_clipboard_empty
 string toast_compound_only
+string toast_compound_or_list_only
 string toast_copied
 string toast_copy_failed
 string toast_copy_success
@@ -593,6 +594,7 @@ string toast_huge_size_warning
 string toast_input_cannot_be_empty
 string toast_input_error
 string toast_install_shizuku
+string toast_item_added_to_list
 string toast_key_cannot_be_empty
 string toast_key_copied
 string toast_level_dat_saved

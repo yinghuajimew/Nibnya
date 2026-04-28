@@ -423,4 +423,6 @@ Would you like to create a new empty data set?</string>
     <string name="msg_logs_exported_to">Logs exported to: %1$s</string>
     <string name="msg_copy_failed">Copy failed: %1$s</string>
     <string name="msg_export_failed">Export failed: %1$s</string>
+    <string name="toast_item_added_to_list">Item added to list</string>
+    <string name="toast_compound_or_list_only">Can only add in Compound or List</string>
 </resources>

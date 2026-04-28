@@ -383,7 +383,8 @@ class MainActivity : Activity() {
                 }
             } else {
                 val key = nbtAdapter!!.getKey(position)
-                val itemData = nbtAdapter!!.data!!.asJsonObject.get(key).asJsonObject
+                val rawItem = nbtAdapter!!.data!!.get(key)
+                val itemData = wrapRawItem(rawItem)
                 val type = itemData.get("t").asInt
                 if (type == 10) enterFolder(key, itemData.getAsJsonObject("v"), false)
                 else if (type == 9) enterFolder(key, convertListToMap(itemData), true)
@@ -418,7 +419,8 @@ class MainActivity : Activity() {
                 true
             } else {
                 val key = nbtAdapter!!.getKey(position)
-                val itemData = nbtAdapter!!.data!!.asJsonObject.get(key).asJsonObject
+                val rawItem = nbtAdapter!!.data!!.get(key)
+                val itemData = wrapRawItem(rawItem)
                 showLongPressMenu(key, itemData)
                 true
             }
@@ -2426,8 +2428,50 @@ class MainActivity : Activity() {
                                     }
                                 }
                             }
-                        } else {
-                            toast(getString(R.string.toast_compound_only))
+                        } else if (type == 9) {
+                            val itemType = data.get("itemType").asInt
+
+                            // 创建新元素的值（裸值，List 不存包装格式）
+                            val newValue: JsonElement = when (itemType) {
+                                1 -> JsonPrimitive(0.toByte())
+                                2 -> JsonPrimitive(0.toShort())
+                                3 -> JsonPrimitive(0)
+                                4 -> JsonPrimitive(0L)
+                                5 -> JsonPrimitive(0.0f)
+                                6 -> JsonPrimitive(0.0)
+                                8 -> JsonPrimitive("")
+                                10 -> JsonObject()
+                                else -> JsonPrimitive(0)
+                            }
+
+                            if (isTreeMode) {
+                                // 树状图模式：直接修改节点数据中的数组
+                                val listArray = data.getAsJsonArray("v")
+                                listArray.add(newValue)
+                            } else {
+                                // 列表模式：需要找到 rootNbtData 中的原始 List 数组
+                                // 通过 pathStack 回溯定位到原始数据
+                                val originalList = findOriginalListData()
+                                if (originalList != null) {
+                                    originalList.add(newValue)
+                                } else {
+                                    // 回退：直接修改 data 中的数组
+                                    val listArray = data.getAsJsonArray("v")
+                                    listArray.add(newValue)
+                                }
+                            }
+
+                            refreshAfterTreeEdit()
+
+                            // 自动展开
+                            if (isTreeMode) {
+                                nbtTreeAdapter?.getNode(lastTreeClickPosition)?.let { node ->
+                                    if (!node.isExpanded) {
+                                        nbtTreeAdapter?.toggleExpand(lastTreeClickPosition)
+                                    }
+                                }
+                            }
+                            toast(getString(R.string.toast_item_added_to_list))
                         }
                     }
                 }
@@ -2532,7 +2576,7 @@ class MainActivity : Activity() {
                         8 -> t.addProperty("v", "")
                         9 -> {
                             t.add("v", JsonArray())
-                            t.addProperty("itemType", 0) // 默认为 End
+                            t.addProperty("itemType", 10) // 默认为 End
                         }
                         10 -> t.add("v", JsonObject())
                         11 -> t.add("v", JsonArray())
@@ -5694,8 +5738,8 @@ class MainActivity : Activity() {
                     val reader = BufferedReader(
                         FileReader(latest)
                     )
-                    var line: String?
                     var lineCount = 0
+                    var line: String
                     while ((reader.readLine()
                             .also { line = it }) != null && lineCount < 50
                     ) { // 只显示前50行
@@ -5913,6 +5957,75 @@ class MainActivity : Activity() {
         }
         progressDialog = null
         tvProgressMessage = null
+    }
+
+    private fun wrapRawItem(rawItem: JsonElement?): JsonObject {
+        if (rawItem == null) {
+            val empty = JsonObject()
+            empty.addProperty("t", 10)
+            empty.add("v", JsonObject())
+            return empty
+        }
+        if (rawItem.isJsonObject) {
+            val obj = rawItem.asJsonObject
+            if (obj.has("t")) {
+                return obj
+            }
+            // 没有 "t" 字段，说明是裸 Compound 内容，包装为 type 10
+            val wrapped = JsonObject()
+            wrapped.addProperty("t", 10)
+            wrapped.add("v", obj)
+            return wrapped
+        }
+        // 裸值（JsonPrimitive / JsonArray），包装为 String 类型
+        val wrapped = JsonObject()
+        wrapped.addProperty("t", 8)
+        wrapped.addProperty("v", rawItem.toString())
+        return wrapped
+    }
+
+    /**
+     * 根据 pathStack 定位 rootNbtData 中的原始 List 数组
+     * 返回 null 表示定位失败
+     */
+    private fun findOriginalListData(): JsonArray? {
+        if (pathStack.isEmpty()) return null
+
+        try {
+            var current: JsonObject = rootNbtData ?: return null
+
+            // 遍历路径栈，逐层深入
+            for (i in 0 until pathStack.size - 1) {
+                val pathKey = pathStack[i] ?: continue
+                val el = current.get(pathKey) ?: return null
+
+                if (el.isJsonObject) {
+                    val obj = el.asJsonObject
+                    if (obj.has("v") && obj.get("v").isJsonObject) {
+                        current = obj.getAsJsonObject("v")
+                    } else {
+                        current = obj
+                    }
+                } else {
+                    return null
+                }
+            }
+
+            // 最后一层是 List 的 key
+            val listKey = pathStack.peek() ?: return null
+            val listEl = current.get(listKey) ?: return null
+
+            if (listEl.isJsonObject) {
+                val listObj = listEl.asJsonObject
+                if (listObj.has("v") && listObj.get("v").isJsonArray) {
+                    return listObj.getAsJsonArray("v")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "findOriginalListData failed", e)
+        }
+
+        return null
     }
 
 }

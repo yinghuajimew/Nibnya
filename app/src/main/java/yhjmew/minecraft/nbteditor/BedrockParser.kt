@@ -1,6 +1,5 @@
 package yhjmew.minecraft.nbteditor
 
-import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -12,20 +11,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.Double
-import java.lang.Float
-import java.lang.Long
-import java.lang.Short
 import java.nio.charset.StandardCharsets
-import kotlin.Any
-import kotlin.Byte
-import kotlin.ByteArray
-import kotlin.Exception
-import kotlin.Int
-import kotlin.String
-import kotlin.Throws
-import kotlin.text.String
-import kotlin.text.toByteArray
 
 object BedrockParser {
     // === 读取 (直接返回对象，不转String，省内存) ===
@@ -36,7 +22,6 @@ object BedrockParser {
         val fis = FileInputStream(file)
         val dis = DataInputStream(fis)
         if (dis.available() > 8) dis.skipBytes(8) // 跳过头
-
 
         val rootTagId = dis.readByte().toInt()
         if (rootTagId != 10) {
@@ -82,17 +67,6 @@ object BedrockParser {
         writeIntLE(fileDos, nbtBytes.size)
         fileDos.write(nbtBytes)
         fos.close()
-    }
-
-    // 兼容旧接口：如果你一定要传字符串 (建议少用)
-    @Throws(Exception::class)
-    fun write(json: String?, destPath: String?) {   //存在
-        write(Gson().fromJson<JsonObject?>(json, JsonObject::class.java), destPath)
-    }
-
-    @Throws(Exception::class)
-    fun writeToBytes(json: String?): ByteArray {   //存在
-        return writeToBytes(Gson().fromJson<JsonObject?>(json, JsonObject::class.java))
     }
 
     // 核心写入逻辑
@@ -151,10 +125,8 @@ object BedrockParser {
             7 -> {
                 val len = readIntLE(dis)
                 val arr = JsonArray()
-                var i = 0
-                while (i < len) {
+                repeat(len) {
                     arr.add(dis.readByte())
-                    i++
                 }
                 wrapper.add("v", arr)
                 return wrapper
@@ -163,10 +135,8 @@ object BedrockParser {
             11 -> {
                 val len = readIntLE(dis)
                 val arr = JsonArray()
-                var i = 0
-                while (i < len) {
+                repeat(len) {
                     arr.add(readIntLE(dis))
-                    i++
                 }
                 wrapper.add("v", arr)
                 return wrapper
@@ -175,10 +145,8 @@ object BedrockParser {
             12 -> {
                 val len = readIntLE(dis)
                 val arr = JsonArray()
-                var i = 0
-                while (i < len) {
+                repeat(len) {
                     arr.add(readLongLE(dis))
-                    i++
                 }
                 wrapper.add("v", arr)
                 return wrapper
@@ -206,10 +174,8 @@ object BedrockParser {
                 val listSize = readIntLE(dis)
                 val list = JsonArray()
                 wrapper.addProperty("itemType", itemType)
-                var i = 0
-                while (i < listSize) {
+                repeat(listSize) {
                     list.add(extractValue(readTagPayload(dis, itemType)))
-                    i++
                 }
                 wrapper.add("v", list)
                 return wrapper
@@ -232,27 +198,27 @@ object BedrockParser {
         val value = getRealValue(element)
         when (typeId) {
             1 -> dos.writeByte(getSafeByte(value).toInt())
-            2 -> writeShortLE(dos, getSafeShort(value).toShort())
+            2 -> writeShortLE(dos, getSafeShort(value))
             3 -> writeIntLE(dos, getSafeInt(value))
-            4 -> writeLongLE(dos, getSafeLong(value).toLong())
-            5 -> writeFloatLE(dos, getSafeFloat(value).toFloat())
-            6 -> writeDoubleLE(dos, getSafeDouble(value).toDouble())
+            4 -> writeLongLE(dos, getSafeLong(value))
+            5 -> writeFloatLE(dos, getSafeFloat(value))
+            6 -> writeDoubleLE(dos, getSafeDouble(value))
             7 -> {
                 val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) dos.writeByte(e.asByte.toInt())
+                for (e in a) dos.writeByte(getSafeByte(e).toInt())
             }
 
             11 -> {
                 val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) writeIntLE(dos, e.asInt)
+                for (e in a) writeIntLE(dos, getSafeInt(e))
             }
 
             12 -> {
                 val a = value.asJsonArray
                 writeIntLE(dos, a.size())
-                for (e in a) writeLongLE(dos, e.asLong)
+                for (e in a) writeLongLE(dos, getSafeLong(e))
             }
 
             8 -> writeString(dos, if (value.isJsonPrimitive) value.asString else "")
@@ -261,8 +227,6 @@ object BedrockParser {
                 if (element.isJsonObject) {
                     val temp = element.asJsonObject
                     if (temp.has("v") && temp.get("v").isJsonObject) {
-                        temp.getAsJsonObject("v").also { obj.add("v", it.get("v")) }
-                        // 直接使用 temp 的 v
                         for (entry in temp.getAsJsonObject("v").entrySet()) {
                             val name = entry.key
                             val valWrapper = entry.value
@@ -321,84 +285,76 @@ object BedrockParser {
             }
 
             9 -> {
-                var arr = JsonArray()
-                var it = 1
-                if (element.isJsonObject) {
-                    val wrap = element.asJsonObject
-                    if (wrap.has("itemType")) it = wrap.get("itemType").asInt
-                    if (wrap.has("v") && wrap.get("v").isJsonArray) arr = wrap.getAsJsonArray("v")
-                } else if (element.isJsonArray) arr = element.asJsonArray
-
-                dos.writeByte(it)
-                writeIntLE(dos, arr.size())
-                for (e in arr) {
-                    val temp = JsonObject()
-                    temp.add("v", e)
-                    temp.addProperty("t", it)
-                    writeTagPayload(dos, temp, it)
+            var arr = JsonArray()
+            var it = 1
+            if (element.isJsonObject) {
+                val wrap = element.asJsonObject
+                if (wrap.has("itemType")) it = wrap.get("itemType").asInt
+                val vEl = wrap.get("v")
+                if (vEl != null) {
+                    if (vEl.isJsonArray) {
+                        arr = vEl.asJsonArray
+                    } else if (vEl.isJsonObject) {
+                        // v 是 JsonObject 而非 JsonArray（数据异常）
+                        // 将其当作只有一个元素的 List 写入
+                        arr = JsonArray()
+                        arr.add(vEl)
+                    }
                 }
+            } else if (element.isJsonArray) arr = element.asJsonArray
+
+            dos.writeByte(it)
+            writeIntLE(dos, arr.size())
+            for (e in arr) {
+                val temp = JsonObject()
+                temp.add("v", e)
+                temp.addProperty("t", it)
+                writeTagPayload(dos, temp, it)
             }
+        }
         }
     }
 
     private fun getRealValue(el: JsonElement): JsonElement {
-        if (el.isJsonObject() && el.getAsJsonObject().has("v") && el.getAsJsonObject()
-                .has("t")
-        ) return el.getAsJsonObject().get("v")
+        if (el.isJsonObject && el.asJsonObject.has("v") && el.asJsonObject.has("t")) {
+            return el.asJsonObject.get("v")
+        }
         return el
     }
 
     private fun getSafeByte(el: JsonElement): Byte {
-        return try {
-            el.asByte
-        } catch (e: Exception) {
-            0.toByte()
-        }
+        val v = getRealValue(el)
+        return try { v.asByte } catch (_: Exception) { 0.toByte() }
     }
 
-    private fun getSafeShort(el: JsonElement): kotlin.Short {
-        return try {
-            el.asShort
-        } catch (e: Exception) {
-            0.toShort()
-        }
+    private fun getSafeShort(el: JsonElement): Short {
+        val v = getRealValue(el)
+        return try { v.asShort } catch (_: Exception) { 0.toShort() }
     }
 
     private fun getSafeInt(el: JsonElement): Int {
-        return try {
-            el.asInt
-        } catch (e: Exception) {
-            0
-        }
+        val v = getRealValue(el)
+        return try { v.asInt } catch (_: Exception) { 0 }
     }
 
-    private fun getSafeLong(el: JsonElement): kotlin.Long {
-        return try {
-            el.asLong
-        } catch (e: Exception) {
-            0L
-        }
+    private fun getSafeLong(el: JsonElement): Long {
+        val v = getRealValue(el)
+        return try { v.asLong } catch (_: Exception) { 0L }
     }
 
-    private fun getSafeFloat(el: JsonElement): kotlin.Float {
-        return try {
-            el.asFloat
-        } catch (e: Exception) {
-            0.0f
-        }
+    private fun getSafeFloat(el: JsonElement): Float {
+        val v = getRealValue(el)
+        return try { v.asFloat } catch (_: Exception) { 0.0f }
     }
 
-    private fun getSafeDouble(el: JsonElement): kotlin.Double {
-        return try {
-            el.asDouble
-        } catch (e: Exception) {
-            0.0
-        }
+    private fun getSafeDouble(el: JsonElement): Double {
+        val v = getRealValue(el)
+        return try { v.asDouble } catch (_: Exception) { 0.0 }
     }
 
     @Throws(IOException::class)
-    private fun readShortLE(s: DataInputStream): kotlin.Short {
-        return Short.reverseBytes(s.readShort())
+    private fun readShortLE(s: DataInputStream): Short {
+        return java.lang.Short.reverseBytes(s.readShort())
     }
 
     @Throws(IOException::class)
@@ -407,17 +363,17 @@ object BedrockParser {
     }
 
     @Throws(IOException::class)
-    private fun readLongLE(s: DataInputStream): kotlin.Long {
+    private fun readLongLE(s: DataInputStream): Long {
         return java.lang.Long.reverseBytes(s.readLong())
     }
 
     @Throws(IOException::class)
-    private fun readFloatLE(s: DataInputStream): kotlin.Float {
-        return Float.intBitsToFloat(readIntLE(s))
+    private fun readFloatLE(s: DataInputStream): Float {
+        return java.lang.Float.intBitsToFloat(readIntLE(s))
     }
 
     @Throws(IOException::class)
-    private fun readDoubleLE(s: DataInputStream): kotlin.Double {
+    private fun readDoubleLE(s: DataInputStream): Double {
         return java.lang.Double.longBitsToDouble(readLongLE(s))
     }
 
@@ -430,8 +386,8 @@ object BedrockParser {
     }
 
     @Throws(IOException::class)
-    private fun writeShortLE(s: DataOutputStream, v: kotlin.Short) {
-        s.writeShort(Short.reverseBytes(v).toInt())
+    private fun writeShortLE(s: DataOutputStream, v: Short) {
+        s.writeShort(java.lang.Short.reverseBytes(v).toInt())
     }
 
     @Throws(IOException::class)
@@ -440,18 +396,18 @@ object BedrockParser {
     }
 
     @Throws(IOException::class)
-    private fun writeLongLE(s: DataOutputStream, v: kotlin.Long) {
-        s.writeLong(Long.reverseBytes(v))
+    private fun writeLongLE(s: DataOutputStream, v: Long) {
+        s.writeLong(java.lang.Long.reverseBytes(v))
     }
 
     @Throws(IOException::class)
-    private fun writeFloatLE(s: DataOutputStream, v: kotlin.Float) {
-        writeIntLE(s, Float.floatToIntBits(v))
+    private fun writeFloatLE(s: DataOutputStream, v: Float) {
+        writeIntLE(s, java.lang.Float.floatToIntBits(v))
     }
 
     @Throws(IOException::class)
-    private fun writeDoubleLE(s: DataOutputStream, v: kotlin.Double) {
-        writeLongLE(s, Double.doubleToLongBits(v))
+    private fun writeDoubleLE(s: DataOutputStream, v: Double) {
+        writeLongLE(s, java.lang.Double.doubleToLongBits(v))
     }
 
     @Throws(IOException::class)
