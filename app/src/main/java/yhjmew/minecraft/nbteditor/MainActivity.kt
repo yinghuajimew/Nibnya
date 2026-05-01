@@ -81,7 +81,6 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.reflect.Method
 import java.text.SimpleDateFormat
-import java.util.Arrays
 import java.util.Date
 import java.util.Locale
 import java.util.Stack
@@ -117,6 +116,7 @@ import kotlin.require
 import kotlin.synchronized
 import kotlin.toString
 import androidx.core.graphics.drawable.toDrawable
+import kotlin.math.roundToInt
 
 // 必需
 class MainActivity : Activity() {
@@ -197,8 +197,8 @@ class MainActivity : Activity() {
     private var tvProgressMessage: TextView? = null
 
     private var currentWorldsPath: String = PATH_STANDARD
-    private val REQUEST_PERMISSION_RESULT_LISTENER =
-        OnRequestPermissionResultListener { _, grantResult: Int ->
+    private val requestPermissionResultListener =
+        OnRequestPermissionResultListener { _: Int, grantResult: Int ->
             if (grantResult == PackageManager.PERMISSION_GRANTED) toast(getString(R.string.toast_shizuku_granted))
             else toast(getString(R.string.toast_shizuku_denied))
         }
@@ -208,7 +208,7 @@ class MainActivity : Activity() {
     // ============================================
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("nbt_config", MODE_PRIVATE)
-        val defaultLang = if (Locale.getDefault().getLanguage().contains("zh")) "zh" else "en"
+        val defaultLang = if (Locale.getDefault().language.contains("zh")) "zh" else "en"
         val lang: String = prefs.getString("app_language", defaultLang)!!
 
         // 直接设置，无需中间变量
@@ -303,7 +303,7 @@ class MainActivity : Activity() {
             // 可选：toast提示
             toast("Shizuku 初始化异常: ${e.message}")
         }
-        Shizuku.addRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER)
+        Shizuku.addRequestPermissionResultListener(requestPermissionResultListener)
         checkStoragePermission()
 
         if (savedInstanceState == null) {
@@ -373,7 +373,7 @@ class MainActivity : Activity() {
                     nbtTreeAdapter!!.toggleExpand(position)
                 } else {
                     val node = nbtTreeAdapter!!.getNode(position)
-                    val v = node!!.value!!.asJsonObject.get("v")
+                    val v = node.value!!.asJsonObject.get("v")
                     val type = node.type
                     if ((type == 7 || type == 11 || type == 12) && v.isJsonArray && v.asJsonArray.size() > 500) {
                         showArrayPaginationDialog(node.key, v.asJsonArray)
@@ -391,9 +391,9 @@ class MainActivity : Activity() {
                 else {
                     val v = itemData.get("v")
                     if ((type == 7 || type == 11 || type == 12) && v.isJsonArray && v.asJsonArray.size() > 500) {
-                        showArrayPaginationDialog(key!!, v.asJsonArray)
+                        showArrayPaginationDialog(key, v.asJsonArray)
                     } else {
-                        showEditValueDialog(key!!, itemData)
+                        showEditValueDialog(key, itemData)
                     }
                 }
             }
@@ -403,7 +403,7 @@ class MainActivity : Activity() {
             lastTreeClickPosition = position
             if (isTreeMode) {
                 val node = nbtTreeAdapter!!.getNode(position)
-                var key = node!!.key
+                var key = node.key
                 val itemData: JsonObject
                 if (node.parent == null) {
                     key = "ROOT"
@@ -657,7 +657,7 @@ class MainActivity : Activity() {
 
         // === 分支 1：处理拼图 (Puzzle) ===
         if (requestCode == REQUEST_PICK_IMAGE_FOR_PUZZLE) {
-            val puzzleUri = data.getData()
+            val puzzleUri = data.data
             if (puzzleUri != null) {
                 // 直接调用处理方法，然后结束
                 processPuzzleMap(puzzleUri)
@@ -667,8 +667,7 @@ class MainActivity : Activity() {
 
         // === 分支 2：处理单张地图画 (Map Art) ===
         if (requestCode == REQUEST_PICK_IMAGE_FOR_MAP) {
-            val imageUri = data.getData() // 在这里定义 imageUri
-            if (imageUri == null) return
+            val imageUri = data.data ?: return // 在这里定义 imageUri
 
 
             // 下面是你原有的单张图片处理逻辑
@@ -677,11 +676,9 @@ class MainActivity : Activity() {
             Thread {
                 try {
                     // 1. 读取原图
-                    val `is` = getContentResolver().openInputStream(imageUri)
+                    val `is` = contentResolver.openInputStream(imageUri)
                     val original = BitmapFactory.decodeStream(`is`)
-                    if (`is` != null) {
-                        `is`.close()
-                    }
+                    `is`?.close()
 
                     // 2. 创建 128x128 居中画布
                     val targetW = 128
@@ -691,11 +688,11 @@ class MainActivity : Activity() {
                     canvas.drawColor(Color.WHITE)
 
                     // 缩放逻辑
-                    val origW = original.getWidth()
-                    val origH = original.getHeight()
+                    val origW = original.width
+                    val origH = original.height
                     val scale = min(targetW.toFloat() / origW, targetH.toFloat() / origH)
-                    val newW = Math.round(origW * scale)
-                    val newH = Math.round(origH * scale)
+                    val newW = (origW * scale).roundToInt()
+                    val newH = (origH * scale).roundToInt()
                     val left = (targetW - newW) / 2
                     val top = (targetH - newH) / 2
 
@@ -762,10 +759,10 @@ class MainActivity : Activity() {
 
         // 【新增】处理 SAF 路径选择
         if (requestCode == REQUEST_SAF_PATH) {
-            val treeUri = data.getData()
+            val treeUri = data.data
             if (treeUri != null) {
                 // 持久化授权
-                getContentResolver().takePersistableUriPermission(
+                contentResolver.takePersistableUriPermission(
                     treeUri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                             or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -776,7 +773,7 @@ class MainActivity : Activity() {
 
                 // 转换为路径显示
                 val path = treeUri.toString()
-                currentWorldsPath = path + "/" // SAF 路径特殊标记
+                currentWorldsPath = "$path/" // SAF 路径特殊标记
 
 
                 // 保存到 SharedPreferences
@@ -798,7 +795,7 @@ class MainActivity : Activity() {
         outState.putString("currentWorkingFileOrDir", currentWorkingFileOrDir)
         // 保存输入框里的存档名
         if (etWorldName != null) {
-            outState.putString("worldName", etWorldName!!.getText().toString())
+            outState.putString("worldName", etWorldName!!.text.toString())
         }
         // 保存当前的视图模式（是不是树状图）
         outState.putBoolean("isTreeMode", isTreeMode)
@@ -877,7 +874,7 @@ class MainActivity : Activity() {
             if (files != null) {
                 for (f in files) {
                     // 【关键】不要删除 .nomedia 文件
-                    if (f.getName() == ".nomedia") continue
+                    if (f.name == ".nomedia") continue
 
                     deleteRecursive(f)
                 }
@@ -896,9 +893,9 @@ class MainActivity : Activity() {
         if (files != null) {
             for (f in files) {
                 // 如果是工作中的数据库目录或临时文件，删掉
-                if (f.isDirectory() && f.getName().startsWith("working_db_")) deleteRecursive(f)
-                if (f.isDirectory() && f.getName().startsWith("db_restore_")) deleteRecursive(f)
-                if (f.isFile() && f.getName() == LEVEL_DAT_NAME) f.delete()
+                if (f.isDirectory && f.name.startsWith("working_db_")) deleteRecursive(f)
+                if (f.isDirectory && f.name.startsWith("db_restore_")) deleteRecursive(f)
+                if (f.isFile && f.name == LEVEL_DAT_NAME) f.delete()
             }
         }
     }
@@ -921,17 +918,17 @@ class MainActivity : Activity() {
 
         filesArr.sortByDescending { it.lastModified() }
 
-        val fileList: MutableList<File> = ArrayList<File>(Arrays.asList<File?>(*filesArr))
-        val nameList: MutableList<String?> = ArrayList<String?>()
+        val fileList = filesArr.toMutableList()
+        val nameList: MutableList<String?> = ArrayList()
 
         for (f in fileList) {
-            if (f.isDirectory()) nameList.add("📁 " + f.getName())
-            else nameList.add("📄 " + f.getName())
+            if (f.isDirectory) nameList.add("📁 " + f.name)
+            else nameList.add("📄 " + f.name)
         }
 
         val adapter = ArrayAdapter<String?>(this, android.R.layout.simple_list_item_1, nameList)
         val lv = ListView(this)
-        lv.setAdapter(adapter)
+        lv.adapter = adapter
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_manage_cache))
@@ -968,10 +965,10 @@ class MainActivity : Activity() {
         }
 
         lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
-            val target = fileList.get(pos)
+            val target = fileList[pos]
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.btn_delete))
-                .setMessage(String.format(getString(R.string.msg_delete_confirm), target.getName()))
+                .setMessage(String.format(getString(R.string.msg_delete_confirm), target.name))
                 .setPositiveButton(
                     getString(R.string.btn_delete)
                 ) { _: DialogInterface?, _: Int ->
@@ -1008,18 +1005,18 @@ class MainActivity : Activity() {
 
         backups.sortByDescending { it.lastModified() }
 
-        val fileList: MutableList<File> = ArrayList<File>(Arrays.asList<File?>(*backups))
-        val nameList: MutableList<String?> = ArrayList<String?>()
+        val fileList = backups.toMutableList()
+        val nameList: MutableList<String?> = ArrayList()
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         for (f in fileList) {
             val time = sdf.format(Date(f.lastModified()))
-            if (f.isDirectory()) nameList.add("📁 " + f.getName() + "\n" + time)
-            else nameList.add("📄 " + f.getName() + "\n" + time)
+            if (f.isDirectory) nameList.add("📁 " + f.name + "\n" + time)
+            else nameList.add("📄 " + f.name + "\n" + time)
         }
 
         val adapter = ArrayAdapter<String?>(this, android.R.layout.simple_list_item_1, nameList)
         val lv = ListView(this)
-        lv.setAdapter(adapter)
+        lv.adapter = adapter
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_backup_title))
@@ -1029,20 +1026,20 @@ class MainActivity : Activity() {
 
         // 点击恢复
         lv.setOnItemClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
-            restoreBackup(fileList.get(pos))
+            restoreBackup(fileList[pos])
             dialog.dismiss()
         }
 
         // 【修复部分】长按菜单：包含删除和重命名
         lv.setOnItemLongClickListener { _: AdapterView<*>?, _: View?, pos: Int, _: Long ->
-            val target = fileList.get(pos)
+            val target = fileList[pos]
             val ops = arrayOf<String?>(
                 getString(R.string.menu_del_backup),
                 getString(R.string.menu_rename)
             )
 
             AlertDialog.Builder(this@MainActivity)
-                .setTitle(getString(R.string.title_manage_prefix) + target.getName())
+                .setTitle(getString(R.string.title_manage_prefix) + target.name)
                 .setItems(ops) { _: DialogInterface?, w: Int ->
                     if (w == 0) { // 删除
                         deleteRecursive(target)
@@ -1052,18 +1049,18 @@ class MainActivity : Activity() {
                         toast(getString(R.string.toast_deleted))
                     } else { // 重命名
                         val input = EditText(this@MainActivity)
-                        input.setText(target.getName())
+                        input.setText(target.name)
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle(getString(R.string.title_rename))
                             .setView(input)
                             .setPositiveButton(
                                 getString(R.string.btn_confirm)
                             ) { _: DialogInterface?, _: Int ->
-                                val newName = input.getText().toString().trim { it <= ' ' }
+                                val newName = input.text.toString().trim { it <= ' ' }
                                 if (!newName.isEmpty()) {
-                                    val newFile = File(target.getParent(), newName)
+                                    val newFile = File(target.parent, newName)
                                     if (target.renameTo(newFile)) {
-                                        fileList.set(pos, newFile)
+                                        fileList[pos] = newFile
                                         // 重新格式化显示名
                                         val time = SimpleDateFormat(
                                             "yyyy-MM-dd HH:mm:ss",
@@ -1071,8 +1068,8 @@ class MainActivity : Activity() {
                                         ).format(
                                             Date(newFile.lastModified())
                                         )
-                                        val prefix = if (newFile.isDirectory()) "📁 " else "📄 "
-                                        nameList.set(pos, prefix + newName + "\n" + time)
+                                        val prefix = if (newFile.isDirectory) "📁 " else "📄 "
+                                        nameList[pos] = prefix + newName + "\n" + time
 
                                         adapter.notifyDataSetChanged()
                                         toast(getString(R.string.toast_renamed))
@@ -1094,11 +1091,11 @@ class MainActivity : Activity() {
     private fun restoreBackup(backupFile: File) {
         try {
             // 分支 A: 恢复玩家数据 (文件夹)
-            if (backupFile.isDirectory()) {
+            if (backupFile.isDirectory) {
                 val uniqueId = System.currentTimeMillis().toString()
 
                 // 恢复的目标目录
-                val restoreWorkDir = File(this.worksDir, "working_db_restore_" + uniqueId)
+                val restoreWorkDir = File(this.worksDir, "working_db_restore_$uniqueId")
 
                 deleteRecursive(restoreWorkDir)
                 // [修改前] copyDirectory(backupFile, restoreWorkDir);
@@ -1110,7 +1107,7 @@ class MainActivity : Activity() {
                 File(restoreWorkDir, "LOG").delete()
                 File(restoreWorkDir, "LOG.old").delete()
 
-                currentWorkingDbPath = restoreWorkDir.getAbsolutePath()
+                currentWorkingDbPath = restoreWorkDir.absolutePath
 
                 // 读取 LevelDB
                 val db = PlayerDbManager(currentWorkingDbPath!!)
@@ -1127,12 +1124,12 @@ class MainActivity : Activity() {
                 // 注意：旧代码还有一行 JsonParser.parseString... 现在不需要了
                 updateAdapter(rootNbtData)
 
-                if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.path_restored_player))
+                if (tvCurrentPath != null) tvCurrentPath!!.text = getString(R.string.path_restored_player)
                 toast(getString(R.string.toast_player_restored))
             } else {
                 val targetFile = File(this.worksDir, LEVEL_DAT_NAME)
                 copyFileNative(backupFile, targetFile)
-                currentWorkingFileOrDir = targetFile.getAbsolutePath()
+                currentWorkingFileOrDir = targetFile.absolutePath
 
                 // parseLevelDat 我们之前已经修过了，直接调用即可
                 parseLevelDat()
@@ -1170,7 +1167,7 @@ class MainActivity : Activity() {
 
         Thread {
             try {
-                val src = currentWorldsPath + folder + "/level.dat"
+                val src = "$currentWorldsPath$folder/level.dat"
                 val destFile = File(this.worksDir, LEVEL_DAT_NAME)
 
                 if (destFile.exists()) destFile.delete()
@@ -1200,7 +1197,7 @@ class MainActivity : Activity() {
                 }
 
                 if (success) {
-                    currentWorkingFileOrDir = destFile.getAbsolutePath()
+                    currentWorkingFileOrDir = destFile.absolutePath
 
                     runOnUiThread {
                         dismissProgressDialog()
@@ -1252,7 +1249,7 @@ class MainActivity : Activity() {
                 } else {
                     // === 读 Level.dat ===
                     var path = currentWorkingFileOrDir
-                    if (path == null) path = File(this.worksDir, LEVEL_DAT_NAME).getAbsolutePath()
+                    if (path == null) path = File(this.worksDir, LEVEL_DAT_NAME).absolutePath
                     if (!File(path).exists()) throw Exception(getString(R.string.err_work_file_missing))
 
                     newJson = BedrockParser.parse(path!!)
@@ -1264,8 +1261,8 @@ class MainActivity : Activity() {
                         rootNbtData = newJson
 
                         // 更新缓存
-                        if (isEditingPlayer) nbtDataCache.put(currentTargetKey, rootNbtData)
-                        else nbtDataCache.put("level.dat", rootNbtData)
+                        if (isEditingPlayer) nbtDataCache[currentTargetKey] = rootNbtData
+                        else nbtDataCache["level.dat"] = rootNbtData
 
                         // 重置视图
                         navigationStack.clear()
@@ -1328,7 +1325,7 @@ class MainActivity : Activity() {
                 val base = File(currentWorldsPath)
                 val worldDir = File(base, folderName)
                 // 这里的路径构建更安全，避免多余的斜杠
-                val srcPath = File(worldDir, "db").getAbsolutePath()
+                val srcPath = File(worldDir, "db").absolutePath
                 val srcDirFile = File(srcPath)
 
                 // === 5. 判断模式 (Native vs Shizuku) ===
@@ -1364,8 +1361,8 @@ class MainActivity : Activity() {
 
                 // === 7. 准备工作目录 ===
                 val uniqueId = System.currentTimeMillis().toString()
-                val workDir = File(this.worksDir, "working_db_" + uniqueId)
-                val appPrivatePath = workDir.getAbsolutePath()
+                val workDir = File(this.worksDir, "working_db_$uniqueId")
+                val appPrivatePath = workDir.absolutePath
 
                 // === 8. 搬运流程 ===
                 if (useNative) {
@@ -1396,12 +1393,12 @@ class MainActivity : Activity() {
                     val exitCode = pCopy.waitFor()
 
                     if (exitCode != 0) {
-                        val reader = BufferedReader(InputStreamReader(pCopy.getErrorStream()))
+                        val reader = BufferedReader(InputStreamReader(pCopy.errorStream))
                         val errSb = StringBuilder()
                         var line: String?
                         while ((reader.readLine().also { line = it }) != null) errSb.append(line)
                             .append("\n")
-                        throw Exception("Shizuku Copy Error (" + exitCode + "):\n" + errSb + "\nSource: " + srcPath)
+                        throw Exception("Shizuku Copy Error ($exitCode):\n$errSb\nSource: $srcPath")
                     }
 
                     runShizukuCmd(
@@ -1449,7 +1446,7 @@ class MainActivity : Activity() {
                     // 数据加载
                     rootNbtData = playerDataObj
                     // 更新缓存 (Snippet 1 特性)
-                    nbtDataCache.put("~local_player", rootNbtData)
+                    nbtDataCache["~local_player"] = rootNbtData
 
                     // 界面刷新
                     navigationStack.clear()
@@ -1462,9 +1459,7 @@ class MainActivity : Activity() {
                     toast(getString(R.string.toast_player_loaded_success))
 
                     // 执行回调
-                    if (onSuccess != null) {
-                        onSuccess.run()
-                    }
+                    onSuccess?.run()
 
                     // 更新路径显示
                     if (tvCurrentPath != null) tvCurrentPath!!.text = getString(
@@ -1545,7 +1540,7 @@ class MainActivity : Activity() {
                     val dbPath = currentWorkingDbPath ?: throw Exception("Error: DbPath is NULL")
                     val oldWorkDir = File(dbPath)
                     if (!oldWorkDir.exists()) throw Exception("Error: WorkDir lost ($dbPath)")
-                    if (!oldWorkDir.exists()) throw Exception("Error: WorkDir lost (" + currentWorkingDbPath + ")")
+                    if (!oldWorkDir.exists()) throw Exception("Error: WorkDir lost ($currentWorkingDbPath)")
                     if (currentTargetKey == null) {
                         // 如果万一为空，兜底设为本地玩家，防止写飞
                         currentTargetKey = "~local_player"
@@ -1553,7 +1548,7 @@ class MainActivity : Activity() {
 
                     // 创建新的唯一目录
                     val uniqueId = System.currentTimeMillis().toString()
-                    val newWorkDir = File(this.worksDir, "working_db_" + uniqueId)
+                    val newWorkDir = File(this.worksDir, "working_db_$uniqueId")
 
                     // 复制旧环境
                     // [修改前] copyDirectory(oldWorkDir, newWorkDir);
@@ -1566,7 +1561,7 @@ class MainActivity : Activity() {
 
                     // 【核心改动1】JsonObject -> Bytes -> LevelDB (在后台线程序列化)
                     val bytes = writeToBytes(dataToSave)
-                    val db = PlayerDbManager(newWorkDir.getAbsolutePath())
+                    val db = PlayerDbManager(newWorkDir.absolutePath)
                     db.writeSpecificKey(currentTargetKey!!, bytes)
                     db.close()
 
@@ -1583,7 +1578,7 @@ class MainActivity : Activity() {
                     // [修改后] 加速
                     smartCopy(newWorkDir, File(bridgeSave))
 
-                    val mcDbPath = currentWorldsPath + folder + "/db/"
+                    val mcDbPath = "$currentWorldsPath$folder/db/"
                     runShizukuCmd(
                         arrayOf("sh", "-c", "cp -rf \"$bridgeSave/.\" \"$mcDbPath\"")
                     ).waitFor()
@@ -1593,7 +1588,7 @@ class MainActivity : Activity() {
 
                     // 清理
                     deleteRecursive(oldWorkDir)
-                    currentWorkingDbPath = newWorkDir.getAbsolutePath()
+                    currentWorkingDbPath = newWorkDir.absolutePath
 
                     runOnUiThread {
                         dismissProgressDialog()
@@ -1606,7 +1601,7 @@ class MainActivity : Activity() {
 
                     if (currentWorkingFileOrDir == null) {
                         val f = File(this.worksDir, LEVEL_DAT_NAME)
-                        currentWorkingFileOrDir = f.getAbsolutePath()
+                        currentWorkingFileOrDir = f.absolutePath
                     }
 
                     // 【核心改动2】JsonObject -> 文件 (在后台线程序列化)
@@ -1619,7 +1614,7 @@ class MainActivity : Activity() {
                     File(BRIDGE_ROOT).mkdirs()
                     copyFile(workingFile, File(bridgeFile))
 
-                    val targetPath = currentWorldsPath + folder + "/level.dat"
+                    val targetPath = "$currentWorldsPath$folder/level.dat"
 
                     // 4. 尝试原生覆盖
                     var success = copyFileNative(workingFile, File(targetPath))
@@ -1681,7 +1676,7 @@ class MainActivity : Activity() {
                                 ) { _: DialogInterface?, _: Int ->
                                     try {
                                         val intent =
-                                            getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api")
+                                            packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
                                         if (intent != null) {
                                             startActivity(intent)
                                         }
@@ -1728,8 +1723,8 @@ class MainActivity : Activity() {
                 // 世界模式：检查源文件
                 // 【加固】使用 getWorksDir() 确保父目录存在
                 val src = File(this.worksDir, LEVEL_DAT_NAME)
-                if (src.exists() && src.isFile()) {
-                    val dst = File(backupRoot, "level_" + timeStamp + ".dat")
+                if (src.exists() && src.isFile) {
+                    val dst = File(backupRoot, "level_$timeStamp.dat")
                     copyFileNative(src, dst)
                 }
             }
@@ -1909,7 +1904,7 @@ class MainActivity : Activity() {
                             displayArr
                         ) { _: DialogInterface?, i: Int ->
                             // 点击时，从 folderList 里取纯净的文件夹名
-                            val realFolder = folderList.get(i)
+                            val realFolder = folderList[i]
 
                             // 更新输入框，只显示文件夹名 (或者你想显示中文名也可以，但逻辑要改)
                             // 这里建议输入框里还是显示名字+ID，或者只显示ID
@@ -1940,19 +1935,24 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_path_title))
             .setItems(options) { _: DialogInterface?, w: Int ->
-                if (w == 0) {
-                    currentWorldsPath = PATH_STANDARD
-                    toast(getString(R.string.toast_switched_std))
-                    showWorldSelector()
-                } else if (w == 1) {
-                    currentWorldsPath = PATH_LEGACY
-                    toast(getString(R.string.toast_switched_legacy))
-                    showWorldSelector()
-                } else if (w == 2) {
-                    showCustomPathDialog()
-                } else if (w == 3) {
-                    // 【新增】SAF 路径选择
-                    openSafPathSelector()
+                when (w) {
+                    0 -> {
+                        currentWorldsPath = PATH_STANDARD
+                        toast(getString(R.string.toast_switched_std))
+                        showWorldSelector()
+                    }
+                    1 -> {
+                        currentWorldsPath = PATH_LEGACY
+                        toast(getString(R.string.toast_switched_legacy))
+                        showWorldSelector()
+                    }
+                    2 -> {
+                        showCustomPathDialog()
+                    }
+                    3 -> {
+                        // 【新增】SAF 路径选择
+                        openSafPathSelector()
+                    }
                 }
             }
             .show()
@@ -1990,18 +1990,18 @@ class MainActivity : Activity() {
 
         val shizukuClass = Class.forName("rikka.shizuku.Shizuku")
         var m: Method? = null
-        for (mm in shizukuClass.getDeclaredMethods()) {
-            if (mm.getName() == "newProcess" && mm.getParameterTypes().size == 3) {
+        for (mm in shizukuClass.declaredMethods) {
+            if (mm.name == "newProcess" && mm.parameterTypes.size == 3) {
                 m = mm
                 break
             }
         }
-        if (m == null) for (mm in shizukuClass.getMethods()) if (mm.getName() == "newProcess" && mm.getParameterTypes().size == 3) {
+        if (m == null) for (mm in shizukuClass.methods) if (mm.name == "newProcess" && mm.parameterTypes.size == 3) {
             m = mm
             break
         }
         if (m == null) throw Exception("Shizuku API Error")
-        m.setAccessible(true)
+        m.isAccessible = true
 
         try {
             return m.invoke(null, cmd, null, null) as Process
@@ -2075,7 +2075,7 @@ class MainActivity : Activity() {
     // 通用递归复制 (排除 LOCK)
     @Throws(Exception::class)
     private fun copyDirectory(source: File, target: File) {
-        if (source.isDirectory()) {
+        if (source.isDirectory) {
             if (!target.exists()) target.mkdirs()
             val children = source.list()
             if (children != null) {
@@ -2094,7 +2094,7 @@ class MainActivity : Activity() {
     private fun deleteRecursive(f: File?) {
         if (f == null || !f.exists()) return
 
-        if (f.isDirectory()) {
+        if (f.isDirectory) {
             val children = f.listFiles()
             // 【修复】必须要判断 children 是否为 null
             if (children != null) {
@@ -2109,7 +2109,7 @@ class MainActivity : Activity() {
 
     private fun enterFolder(key: String?, content: JsonObject?, isListMode: Boolean) {
         // 1. 在进入下一级之前，记录当前列表滚动到了第几行
-        val currentPos = nbtListView!!.getFirstVisiblePosition()
+        val currentPos = nbtListView!!.firstVisiblePosition
         scrollPositionStack.push(currentPos) // 压入栈
 
         // 2. 原有逻辑：压入数据、压入路径
@@ -2191,29 +2191,28 @@ class MainActivity : Activity() {
 
         if (isTreeMode) {
             // === 树状图模式 ===
-            if (isEditingPlayer) {
+            titleText = if (isEditingPlayer) {
                 // 如果是玩家模式
                 if (currentTargetKey != null && currentTargetKey != "~local_player") {
-                    titleText =
-                        getString(R.string.title_dendrogram) + currentTargetKey // 联机玩家/地图/村庄
+                    getString(R.string.title_dendrogram) + currentTargetKey // 联机玩家/地图/村庄
                 } else {
-                    titleText = getString(R.string.title_treemap_player_data) // 本地玩家
+                    getString(R.string.title_treemap_player_data) // 本地玩家
                 }
             } else {
                 // 如果不是玩家模式，那就是 level.dat
-                titleText = getString(R.string.title_treemap_world_data)
+                getString(R.string.title_treemap_world_data)
             }
         } else {
             // === 列表模式 ===
             if (pathStack.isEmpty()) {
-                if (isEditingPlayer) {
+                titleText = if (isEditingPlayer) {
                     if (currentTargetKey != null && currentTargetKey != "~local_player") {
-                        titleText = getString(R.string.title_current) + currentTargetKey
+                        getString(R.string.title_current) + currentTargetKey
                     } else {
-                        titleText = getString(R.string.path_current_player)
+                        getString(R.string.path_current_player)
                     }
                 } else {
-                    titleText = getString(R.string.path_current_level)
+                    getString(R.string.path_current_level)
                 }
             } else {
                 // 子目录
@@ -2226,8 +2225,8 @@ class MainActivity : Activity() {
         }
 
         // 更新 UI
-        if (tvCurrentPath != null) tvCurrentPath!!.setText(titleText)
-        if (tvFullscreenPath != null) tvFullscreenPath!!.setText(titleText)
+        if (tvCurrentPath != null) tvCurrentPath?.text = titleText
+        if (tvFullscreenPath != null) tvFullscreenPath?.text = titleText
     }
 
     private fun showEditValueDialog(key: String, item: JsonObject) {
@@ -2305,17 +2304,23 @@ class MainActivity : Activity() {
             try {
                 val value = input.text.toString().trim()
 
-                if (type in 1..3) {
-                    item.addProperty("v", value.toInt())
-                } else if (type == 4) {
-                    item.addProperty("v", value.toLong())
-                } else if (type in 5..6) {
-                    item.addProperty("v", value.toDouble())
-                } else if (type == 8) {
-                    item.addProperty("v", value)
-                } else if (type == 7 || type == 11 || type == 12) {
-                    val parsed = JsonParser.parseString(value)
-                    item.add("v", parsed.asJsonArray)
+                when (type) {
+                    in 1..3 -> {
+                        item.addProperty("v", value.toInt())
+                    }
+                    4 -> {
+                        item.addProperty("v", value.toLong())
+                    }
+                    in 5..6 -> {
+                        item.addProperty("v", value.toDouble())
+                    }
+                    8 -> {
+                        item.addProperty("v", value)
+                    }
+                    7, 11, 12 -> {
+                        val parsed = JsonParser.parseString(value)
+                        item.add("v", parsed.asJsonArray)
+                    }
                 }
 
                 if (!isTreeMode) {
@@ -2333,18 +2338,18 @@ class MainActivity : Activity() {
 
     // 辅助：获取类型名称显示在标题里，方便识别
     private fun getTypeName(type: Int): String {
-        when (type) {
-            1 -> return "Byte"
-            2 -> return "Short"
-            3 -> return "Int"
-            4 -> return "Long"
-            5 -> return "Float"
-            6 -> return "Double"
-            7 -> return "ByteArray"
-            8 -> return "String"
-            11 -> return "IntArray"
-            12 -> return "LongArray"
-            else -> return "Unknown"
+        return when (type) {
+            1 -> "Byte"
+            2 -> "Short"
+            3 -> "Int"
+            4 -> "Long"
+            5 -> "Float"
+            6 -> "Double"
+            7 -> "ByteArray"
+            8 -> "String"
+            11 -> "IntArray"
+            12 -> "LongArray"
+            else -> "Unknown"
         }
     }
 
@@ -2624,91 +2629,97 @@ class MainActivity : Activity() {
             .setItems(ops) { _, w ->
                 val container = current ?: return@setItems
 
-                if (w == 0) {
-                    // === 1. 添加子项 ===
-                    showAddChildDialog(container)
-                } else if (w == 1) {
-                    // === 2. 粘贴 (作为子节点插入) ===
-                    if (clipboard == null) {
-                        toast(getString(R.string.toast_clipboard_empty))
-                        return@setItems
+                when (w) {
+                    0 -> {
+                        // === 1. 添加子项 ===
+                        showAddChildDialog(container)
                     }
-                    val clip = clipboard ?: return@setItems
-                    val input = EditText(this@MainActivity)
-                    input.hint = getString(R.string.hint_new_tag_name)
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(getString(R.string.title_paste_as))
-                        .setView(input)
-                        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
-                            val n = input.text.toString()
-                            if (n.isNotEmpty() && !container.has(n)) {
-                                container.add(n, clip.deepCopy())
-                                refreshAfterTreeEdit()
-                                toast(getString(R.string.toast_pasted))
-                            } else {
-                                toast(getString(R.string.toast_name_empty_or_exists))
-                            }
-                        }.show()
-                } else if (w == 2) {
-                    // === 3. 复制当前完整数据 (JSON 导出) ===
-                    val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                    val clipData = ClipData.newPlainText("NBT_JSON", container.toString())
-                    cm.setPrimaryClip(clipData)
-                    toast(getString(R.string.toast_copy_success))
-                } else if (w == 3) {
-                    // === 4. 粘贴并替换当前数据 (导入) ===
-                    val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                    if (!cm.hasPrimaryClip()) {
-                        toast(getString(R.string.toast_clipboard_empty))
-                        return@setItems
-                    }
-                    val clip = cm.primaryClip
-                    if (clip == null || clip.itemCount == 0) {
-                        toast(getString(R.string.toast_clipboard_empty))
-                        return@setItems
-                    }
-
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(getString(R.string.msg_confirm_replace))
-                        .setMessage(getString(R.string.msg_replace_warning))
-                        .setPositiveButton(getString(R.string.btn_replace)) { _, _ ->
-                            try {
-                                val text = cm.primaryClip?.getItemAt(0)?.text
-                                if (text == null) return@setPositiveButton
-
-                                val newObj = JsonParser.parseString(text.toString()).asJsonObject
-
-                                // 清空当前界面并填入新数据
-                                val oldKeys = ArrayList(container.keySet())
-                                for (k in oldKeys) container.remove(k)
-
-                                for (entry in newObj.entrySet()) {
-                                    container.add(entry.key, entry.value)
+                    1 -> {
+                        // === 2. 粘贴 (作为子节点插入) ===
+                        if (clipboard == null) {
+                            toast(getString(R.string.toast_clipboard_empty))
+                            return@setItems
+                        }
+                        val clip = clipboard ?: return@setItems
+                        val input = EditText(this@MainActivity)
+                        input.hint = getString(R.string.hint_new_tag_name)
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(getString(R.string.title_paste_as))
+                            .setView(input)
+                            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
+                                val n = input.text.toString()
+                                if (n.isNotEmpty() && !container.has(n)) {
+                                    container.add(n, clip.deepCopy())
+                                    refreshAfterTreeEdit()
+                                    toast(getString(R.string.toast_pasted))
+                                } else {
+                                    toast(getString(R.string.toast_name_empty_or_exists))
                                 }
+                            }.show()
+                    }
+                    2 -> {
+                        // === 3. 复制当前完整数据 (JSON 导出) ===
+                        val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                        val clipData = ClipData.newPlainText("NBT_JSON", container.toString())
+                        cm.setPrimaryClip(clipData)
+                        toast(getString(R.string.toast_copy_success))
+                    }
+                    3 -> {
+                        // === 4. 粘贴并替换当前数据 (导入) ===
+                        val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                        if (!cm.hasPrimaryClip()) {
+                            toast(getString(R.string.toast_clipboard_empty))
+                            return@setItems
+                        }
+                        val clip = cm.primaryClip
+                        if (clip == null || clip.itemCount == 0) {
+                            toast(getString(R.string.toast_clipboard_empty))
+                            return@setItems
+                        }
 
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(getString(R.string.msg_confirm_replace))
+                            .setMessage(getString(R.string.msg_replace_warning))
+                            .setPositiveButton(getString(R.string.btn_replace)) { _, _ ->
+                                try {
+                                    val text = cm.primaryClip?.getItemAt(0)?.text
+                                        ?: return@setPositiveButton
+
+                                    val newObj = JsonParser.parseString(text.toString()).asJsonObject
+
+                                    // 清空当前界面并填入新数据
+                                    val oldKeys = ArrayList(container.keySet())
+                                    for (k in oldKeys) container.remove(k)
+
+                                    for (entry in newObj.entrySet()) {
+                                        container.add(entry.key, entry.value)
+                                    }
+
+                                    refreshAfterTreeEdit()
+                                    toast(getString(R.string.toast_pasted))
+                                } catch (_: Exception) {
+                                    toast(getString(R.string.err_json_parse))
+                                }
+                            }
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    }
+                    4 -> {
+                        // === 5. 清空所有 ===
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(getString(R.string.dialog_danger_title))
+                            .setMessage(getString(R.string.dialog_clear_msg))
+                            .setPositiveButton(getString(R.string.btn_confirm_clear)) { _, _ ->
+                                val keys = ArrayList(container.keySet())
+                                for (key in keys) {
+                                    container.remove(key)
+                                }
                                 refreshAfterTreeEdit()
-                                toast(getString(R.string.toast_pasted))
-                            } catch (_: Exception) {
-                                toast(getString(R.string.err_json_parse))
+                                toast(getString(R.string.toast_cleared))
                             }
-                        }
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show()
-                } else if (w == 4) {
-                    // === 5. 清空所有 ===
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(getString(R.string.dialog_danger_title))
-                        .setMessage(getString(R.string.dialog_clear_msg))
-                        .setPositiveButton(getString(R.string.btn_confirm_clear)) { _, _ ->
-                            val keys = ArrayList(container.keySet())
-                            for (key in keys) {
-                                container.remove(key)
-                            }
-                            refreshAfterTreeEdit()
-                            toast(getString(R.string.toast_cleared))
-                        }
-                        .setNegativeButton(getString(R.string.btn_cancel), null)
-                        .show()
+                            .setNegativeButton(getString(R.string.btn_cancel), null)
+                            .show()
+                    }
                 }
             }.show()
     }
@@ -2781,27 +2792,27 @@ class MainActivity : Activity() {
     private fun toggleFullScreen(enable: Boolean) {
         isFullScreen = enable
 
-        if (layoutNormalUi == null) layoutNormalUi = findViewById<View?>(R.id.layout_normal_ui)
+        if (layoutNormalUi == null) layoutNormalUi = findViewById(R.id.layout_normal_ui)
         if (layoutEditorHeader == null) layoutEditorHeader =
-            findViewById<View?>(R.id.layout_editor_header)
+            findViewById(R.id.layout_editor_header)
         if (layoutFullscreenBar == null) layoutFullscreenBar =
-            findViewById<View?>(R.id.layout_fullscreen_bar)
+            findViewById(R.id.layout_fullscreen_bar)
 
         // 获取新加入的路径 TextView
         if (tvFullscreenPath == null) tvFullscreenPath =
-            findViewById<TextView?>(R.id.tv_fullscreen_path)
+            findViewById(R.id.tv_fullscreen_path)
 
         if (enable) {
-            layoutNormalUi!!.setVisibility(View.GONE)
-            layoutEditorHeader!!.setVisibility(View.GONE)
-            layoutFullscreenBar!!.setVisibility(View.VISIBLE)
+            layoutNormalUi!!.visibility = View.GONE
+            layoutEditorHeader!!.visibility = View.GONE
+            layoutFullscreenBar!!.visibility = View.VISIBLE
 
             // 【关键】全屏时，同步一次路径显示
             updatePathTitle()
         } else {
-            layoutNormalUi!!.setVisibility(View.VISIBLE)
-            layoutEditorHeader!!.setVisibility(View.VISIBLE)
-            layoutFullscreenBar!!.setVisibility(View.GONE)
+            layoutNormalUi!!.visibility = View.VISIBLE
+            layoutEditorHeader!!.visibility = View.VISIBLE
+            layoutFullscreenBar!!.visibility = View.GONE
         }
     }
 
@@ -2939,23 +2950,22 @@ class MainActivity : Activity() {
 
     // 加载指定 Key 的数据 (修复：优先恢复未保存的草稿，其次才是缓存)
     private fun loadSpecificPlayer(keyName: String) {
-        val finalKey = keyName
 
         // 1. 【核心新增】切走前，先把当前正在编辑的界面保存为"草稿"
         saveCurrentSessionToMemory()
 
         // 2. 【核心新增】尝试恢复目标 Key 的"草稿"
         // 如果之前编辑过这个 Key 且没保存，这里会直接恢复现场，包括滚动位置
-        if (tryRestoreSession(finalKey)) {
+        if (tryRestoreSession(keyName)) {
             return
         }
 
         // 3. 如果没有草稿，再检查静态缓存 (这是没修改过的原始数据)
-        if (nbtDataCache.containsKey(finalKey)) {
-            currentTargetKey = finalKey
+        if (nbtDataCache.containsKey(keyName)) {
+            currentTargetKey = keyName
             isEditingPlayer = true
 
-            rootNbtData = nbtDataCache[finalKey]
+            rootNbtData = nbtDataCache[keyName]
 
             // 如果是读缓存（说明是第一次打开或重置过），重置视图到顶部
             navigationStack.clear()
@@ -2964,12 +2974,12 @@ class MainActivity : Activity() {
 
             updateAdapter(rootNbtData)
 
-            tvCurrentPath?.text = getString(R.string.title_current, finalKey)
+            tvCurrentPath?.text = getString(R.string.title_current, keyName)
             return
         }
 
         // 4. 既没草稿也没缓存，只能读硬盘
-        showProgressDialog(getString(R.string.msg_read), getString(R.string.msg_load) + finalKey)
+        showProgressDialog(getString(R.string.msg_read), getString(R.string.msg_load) + keyName)
 
         Thread {
             try {
@@ -2981,14 +2991,14 @@ class MainActivity : Activity() {
 
                 val dbPath = currentWorkingDbPath ?: throw Exception("DB path is null")
                 val db = PlayerDbManager(dbPath)
-                val data = db.readSpecificKey(finalKey)
+                val data = db.readSpecificKey(keyName)
                 db.close()
 
                 val jsonData = parseBytes(data)
 
                 runOnUiThread {
                     dismissProgressDialog()
-                    currentTargetKey = finalKey
+                    currentTargetKey = keyName
                     isEditingPlayer = true
 
                     navigationStack.clear()
@@ -2997,12 +3007,12 @@ class MainActivity : Activity() {
 
                     rootNbtData = jsonData
                     // 存入静态缓存
-                    nbtDataCache[finalKey] = rootNbtData
+                    nbtDataCache[keyName] = rootNbtData
 
                     updateAdapter(rootNbtData)
 
-                    tvCurrentPath?.text = getString(R.string.title_current, finalKey)
-                    toast(getString(R.string.toast_loaded) + finalKey)
+                    tvCurrentPath?.text = getString(R.string.title_current, keyName)
+                    toast(getString(R.string.toast_loaded) + keyName)
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -3014,13 +3024,13 @@ class MainActivity : Activity() {
                             .setMessage(
                                 getString(
                                     R.string.msg_this_archive_has_not_generated_data_yet,
-                                    finalKey
+                                    keyName
                                 )
                             )
                             .setPositiveButton(
                                 getString(R.string.btn_create_and_open)
                             ) { _: DialogInterface?, _: Int ->
-                                createNewGlobalData(finalKey)
+                                createNewGlobalData(keyName)
                             }
                             .setNegativeButton(getString(R.string.btn_cancel), null)
                             .show()
@@ -3062,8 +3072,8 @@ class MainActivity : Activity() {
             toast(getString(R.string.toast_clipboard_empty))
             return
         }
-        val clip = cm.getPrimaryClip()
-        if (clip == null || clip.getItemCount() == 0) {
+        val clip = cm.primaryClip
+        if (clip == null || clip.itemCount == 0) {
             toast(getString(R.string.toast_clipboard_empty))
             return
         }
@@ -3074,7 +3084,7 @@ class MainActivity : Activity() {
             .setPositiveButton(
                 getString(R.string.btn_cover)
             ) { _: DialogInterface?, _: Int ->
-                val jsonStr = cm.getPrimaryClip()!!.getItemAt(0).getText().toString()
+                val jsonStr = cm.primaryClip!!.getItemAt(0).text.toString()
                 Thread {
                     try {
                         val jo = JsonParser.parseString(jsonStr).getAsJsonObject()
@@ -3087,7 +3097,7 @@ class MainActivity : Activity() {
 
                         runOnUiThread {
                             toast(getString(R.string.toast_data_covered))
-                            if (onSuccess != null) onSuccess.run()
+                            onSuccess?.run()
                         }
                     } catch (e: Exception) {
                         runOnUiThread { toast(getString(R.string.toast_paste_failed) + e) }
@@ -3117,7 +3127,7 @@ class MainActivity : Activity() {
 
                         runOnUiThread {
                             toast(getString(R.string.toast_deleted) + key)
-                            if (onSuccess != null) onSuccess.run()
+                            onSuccess?.run()
                         }
                     } catch (e: Exception) {
                         runOnUiThread { toast(getString(R.string.toast_delete_failed) + e) }
@@ -3147,17 +3157,21 @@ class MainActivity : Activity() {
         // Index 2: 删除所有
         menuList.add(getString(R.string.msg_delete_all_data_in_the_list))
 
-        if (dataType == TYPE_MAP) {
-            typeName = getString(R.string.msg_map_data)
-            hintName = getString(R.string.msg_for_example_map)
-            // Index 3: [新增] 只有地图模式才有拼图功能
-            menuList.add(getString(R.string.msg_create_a_giant_jigsaw_puzzle))
-        } else if (dataType == TYPE_VILLAGE) {
-            typeName = getString(R.string.mag_village_data)
-            hintName = getString(R.string.msg_for_example_village)
-        } else {
-            typeName = getString(R.string.msg_player_data)
-            hintName = getString(R.string.msg_for_example_player)
+        when (dataType) {
+            TYPE_MAP -> {
+                typeName = getString(R.string.msg_map_data)
+                hintName = getString(R.string.msg_for_example_map)
+                // Index 3: [新增] 只有地图模式才有拼图功能
+                menuList.add(getString(R.string.msg_create_a_giant_jigsaw_puzzle))
+            }
+            TYPE_VILLAGE -> {
+                typeName = getString(R.string.mag_village_data)
+                hintName = getString(R.string.msg_for_example_village)
+            }
+            else -> {
+                typeName = getString(R.string.msg_player_data)
+                hintName = getString(R.string.msg_for_example_player)
+            }
         }
 
         val ops = menuList.toTypedArray<String?>()
@@ -3215,11 +3229,10 @@ class MainActivity : Activity() {
 
                 // === 情况 C: 新建或粘贴 (Index 0 or 1) ===
                 val finalTypeName = typeName
-                val finalHintName = hintName
                 val mode = w // 0=新建, 1=粘贴
 
                 val input = EditText(this@MainActivity)
-                input.hint = finalHintName
+                input.hint = hintName
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.title_new) + finalTypeName + " Key")
                     .setView(input)
@@ -3525,67 +3538,72 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.title_choose_puzzle_size))
             .setItems(options) { _, w ->
-                if (w == 0) {
-                    puzzleRows = 1
-                    puzzleCols = 1
-                    pickPuzzleImage()
-                } else if (w == 1) {
-                    puzzleRows = 2
-                    puzzleCols = 2
-                    pickPuzzleImage()
-                } else if (w == 2) {
-                    puzzleRows = 3
-                    puzzleCols = 3
-                    pickPuzzleImage()
-                } else if (w == 3) {
-                    // 自定义输入布局
-                    val layout = LinearLayout(this@MainActivity)
-                    layout.orientation = LinearLayout.HORIZONTAL
-                    layout.setPadding(30, 20, 30, 0)
+                when (w) {
+                    0 -> {
+                        puzzleRows = 1
+                        puzzleCols = 1
+                        pickPuzzleImage()
+                    }
+                    1 -> {
+                        puzzleRows = 2
+                        puzzleCols = 2
+                        pickPuzzleImage()
+                    }
+                    2 -> {
+                        puzzleRows = 3
+                        puzzleCols = 3
+                        pickPuzzleImage()
+                    }
+                    3 -> {
+                        // 自定义输入布局
+                        val layout = LinearLayout(this@MainActivity)
+                        layout.orientation = LinearLayout.HORIZONTAL
+                        layout.setPadding(30, 20, 30, 0)
 
-                    val etW = EditText(this@MainActivity)
-                    etW.hint = getString(R.string.hint_width_col)
-                    etW.inputType = InputType.TYPE_CLASS_NUMBER
-                    etW.layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+                        val etW = EditText(this@MainActivity)
+                        etW.hint = getString(R.string.hint_width_col)
+                        etW.inputType = InputType.TYPE_CLASS_NUMBER
+                        etW.layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
 
-                    val etH = EditText(this@MainActivity)
-                    etH.hint = getString(R.string.hint_height_row)
-                    etH.inputType = InputType.TYPE_CLASS_NUMBER
-                    etH.layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+                        val etH = EditText(this@MainActivity)
+                        etH.hint = getString(R.string.hint_height_row)
+                        etH.inputType = InputType.TYPE_CLASS_NUMBER
+                        etH.layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
 
-                    layout.addView(etW)
-                    layout.addView(etH)
+                        layout.addView(etW)
+                        layout.addView(etH)
 
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(getString(R.string.title_input_dimensions))
-                        .setView(layout)
-                        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
-                            try {
-                                val strW = etW.text.toString()
-                                val strH = etH.text.toString()
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(getString(R.string.title_input_dimensions))
+                            .setView(layout)
+                            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
+                                try {
+                                    val strW = etW.text.toString()
+                                    val strH = etH.text.toString()
 
-                                if (strW.isEmpty() || strH.isEmpty()) {
-                                    toast(getString(R.string.toast_please_enter_size))
-                                    return@setPositiveButton
+                                    if (strW.isEmpty() || strH.isEmpty()) {
+                                        toast(getString(R.string.toast_please_enter_size))
+                                        return@setPositiveButton
+                                    }
+
+                                    puzzleCols = strW.toInt()
+                                    puzzleRows = strH.toInt()
+
+                                    // 提示大尺寸
+                                    if (puzzleCols * puzzleRows > 100) {
+                                        val warning = getString(
+                                            R.string.toast_huge_size_warning,
+                                            puzzleCols * puzzleRows
+                                        )
+                                        toast(warning)
+                                    }
+
+                                    pickPuzzleImage()
+                                } catch (e: Exception) {
+                                    toast(getString(R.string.toast_input_error) + e.message)
                                 }
-
-                                puzzleCols = strW.toInt()
-                                puzzleRows = strH.toInt()
-
-                                // 提示大尺寸
-                                if (puzzleCols * puzzleRows > 100) {
-                                    val warning = getString(
-                                        R.string.toast_huge_size_warning,
-                                        puzzleCols * puzzleRows
-                                    )
-                                    toast(warning)
-                                }
-
-                                pickPuzzleImage()
-                            } catch (e: Exception) {
-                                toast(getString(R.string.toast_input_error) + e.message)
-                            }
-                        }.show()
+                            }.show()
+                    }
                 }
             }.show()
     }
@@ -3593,7 +3611,7 @@ class MainActivity : Activity() {
     private fun pickPuzzleImage() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
-        intent.setType("image/*")
+        intent.type = "image/*"
         startActivityForResult(intent, REQUEST_PICK_IMAGE_FOR_PUZZLE)
     }
 
@@ -3631,12 +3649,12 @@ class MainActivity : Activity() {
                 if (inventory != null) {
                     for (item in inventory) {
                         try {
-                            if (!item.isJsonObject()) continue
+                            if (!item.isJsonObject) continue
                             val itemObj = item.getAsJsonObject()
 
                             // 解包装获取实际内容
                             var itemContent = itemObj
-                            if (itemObj.has("v") && itemObj.get("v").isJsonObject()) {
+                            if (itemObj.has("v") && itemObj.get("v").isJsonObject) {
                                 itemContent = itemObj.getAsJsonObject("v")
                             }
 
@@ -3644,13 +3662,13 @@ class MainActivity : Activity() {
                             var slot: Byte = -1
                             if (itemContent.has("Slot")) {
                                 val slotEl = itemContent.get("Slot")
-                                if (slotEl.isJsonObject()) {
-                                    slot = slotEl.getAsJsonObject().get("v").getAsByte()
-                                } else if (slotEl.isJsonPrimitive()) {
-                                    slot = slotEl.getAsByte()
+                                if (slotEl.isJsonObject) {
+                                    slot = slotEl.getAsJsonObject().get("v").asByte
+                                } else if (slotEl.isJsonPrimitive) {
+                                    slot = slotEl.asByte
                                 }
                             }
-                            if (slot < 0 || slot >= 36) continue
+                            if (slot !in 0..<36) continue
 
                             // 【关键】判断这个槽位是否真的被占用了（不是空气）
                             var isRealItem = true
@@ -3659,10 +3677,10 @@ class MainActivity : Activity() {
                             if (itemContent.has("Name")) {
                                 val nameEl = itemContent.get("Name")
                                 var name = ""
-                                if (nameEl.isJsonObject() && nameEl.getAsJsonObject().has("v")) {
-                                    name = nameEl.getAsJsonObject().get("v").getAsString()
-                                } else if (nameEl.isJsonPrimitive()) {
-                                    name = nameEl.getAsString()
+                                if (nameEl.isJsonObject && nameEl.getAsJsonObject().has("v")) {
+                                    name = nameEl.getAsJsonObject().get("v").asString
+                                } else if (nameEl.isJsonPrimitive) {
+                                    name = nameEl.asString
                                 }
                                 if (name.isEmpty() || name == "minecraft:air") {
                                     isRealItem = false
@@ -3673,10 +3691,10 @@ class MainActivity : Activity() {
                             if (isRealItem && itemContent.has("Count")) {
                                 val countEl = itemContent.get("Count")
                                 var count = 1 // 默认至少1个
-                                if (countEl.isJsonObject() && countEl.getAsJsonObject().has("v")) {
-                                    count = countEl.getAsJsonObject().get("v").getAsInt()
-                                } else if (countEl.isJsonPrimitive()) {
-                                    count = countEl.getAsInt()
+                                if (countEl.isJsonObject && countEl.getAsJsonObject().has("v")) {
+                                    count = countEl.getAsJsonObject().get("v").asInt
+                                } else if (countEl.isJsonPrimitive) {
+                                    count = countEl.asInt
                                 }
                                 if (count <= 0) {
                                     isRealItem = false
@@ -3721,21 +3739,21 @@ class MainActivity : Activity() {
                 val startMapId = if (maxMapId < 0) 0 else (maxMapId + 1)
 
                 // 5. 图片处理
-                val `is` = getContentResolver().openInputStream(imageUri)
+                val `is` = contentResolver.openInputStream(imageUri)
                 var rawSrc = BitmapFactory.decodeStream(`is`)
                 `is`!!.close() //暂时忽略
 
-                if (rawSrc.getWidth() < puzzleCols || rawSrc.getHeight() < puzzleRows) {
-                    val newW = max(rawSrc.getWidth(), puzzleCols)
-                    val newH = max(rawSrc.getHeight(), puzzleRows)
+                if (rawSrc.width < puzzleCols || rawSrc.height < puzzleRows) {
+                    val newW = max(rawSrc.width, puzzleCols)
+                    val newH = max(rawSrc.height, puzzleRows)
                     val scaledSrc = rawSrc.scale(newW, newH)
                     rawSrc.recycle()
                     rawSrc = scaledSrc
                 }
                 val src = rawSrc
 
-                val cellW = src.getWidth() / puzzleCols
-                val cellH = src.getHeight() / puzzleRows
+                val cellW = src.width / puzzleCols
+                val cellH = src.height / puzzleRows
                 val totalMaps = puzzleRows * puzzleCols
 
                 val itemsMap = ConcurrentHashMap<Int, JsonObject>()
@@ -3757,8 +3775,6 @@ class MainActivity : Activity() {
                 var globalIndex = 0
                 for (r in 0..<puzzleRows) {
                     for (c in 0..<puzzleCols) {
-                        val fr = r
-                        val fc = c
                         val fIndex = globalIndex
                         val fMapId = startMapId + fIndex
 
@@ -3767,7 +3783,7 @@ class MainActivity : Activity() {
                                 if (errorRef.get() != null) return@submit
 
                                 val chunk = Bitmap.createBitmap(
-                                    src, fc * cellW, fr * cellH, cellW, cellH
+                                    src, c * cellW, r * cellH, cellW, cellH
                                 )
                                 val scaled = chunk.scale(128, 128)
 
@@ -3811,7 +3827,7 @@ class MainActivity : Activity() {
                                 val mapBytes = writeToBytes(mapContent)
 
                                 synchronized(db) {
-                                    db.writeSpecificKey("map_" + fMapId, mapBytes)
+                                    db.writeSpecificKey("map_$fMapId", mapBytes)
                                 }
 
                                 val itemContent = JsonObject()
@@ -3831,7 +3847,7 @@ class MainActivity : Activity() {
                                 val displayContent = JsonObject()
                                 displayContent.add(
                                     "Name",
-                                    wrapTag(8, "Puzzle " + (fr + 1) + "-" + (fc + 1))
+                                    wrapTag(8, "Puzzle " + (r + 1) + "-" + (c + 1))
                                 )
                                 displayTag.add("v", displayContent)
                                 tagContent.add("display", displayTag)
@@ -3918,9 +3934,7 @@ class MainActivity : Activity() {
                     for (i in 0..<mapsInThisLayer) {
                         val mapIdx = startIdx + i
                         var mapItem = itemsMap[mapIdx]
-                        if (mapItem == null) {
-                            throw Exception(getString(R.string.msg_slice_missing) + mapIdx)
-                        }
+                            ?: throw Exception(getString(R.string.msg_slice_missing) + mapIdx)
                         mapItem = mapItem.deepCopy()
                         mapItem.add("Slot", wrapTag(1, (i + 1).toByte()))
                         itemsArr.add(mapItem)
@@ -3938,11 +3952,11 @@ class MainActivity : Activity() {
                             "Name",
                             wrapTag(
                                 8,
-                                "Puzzle Set (" + totalMaps + " maps, " + totalLayers + " layers)"
+                                "Puzzle Set ($totalMaps maps, $totalLayers layers)"
                             )
                         )
                     } else {
-                        displayContent.add("Name", wrapTag(8, "Layer " + layer + " →"))
+                        displayContent.add("Name", wrapTag(8, "Layer $layer →"))
                     }
                     displayTag.add("v", displayContent)
                     tagContent.add("display", displayTag)
@@ -3969,18 +3983,15 @@ class MainActivity : Activity() {
                 // 【添加这行】声明为 final，供内部类使用
                 val finalPlayerRoot: JsonObject = playerRoot
 
-                val finalStartId = startMapId
-                val finalTotalLayers = totalLayers
-
                 runOnUiThread {
                     dismissProgressDialog()
                     val msg =
                         getString(R.string.msg_success) + totalMaps + getString(R.string.msg_maps_have_been_packed) +
-                                getString(R.string.msg_nesting_depth) + finalTotalLayers + getString(
+                                getString(R.string.msg_nesting_depth) + totalLayers + getString(
                             R.string.msg_layer
                         ) +
                                 getString(R.string.msg_backpack_only_1_slot) +
-                                getString(R.string.msg_start_id) + finalStartId + "+\n\n" +
+                                getString(R.string.msg_start_id) + startMapId + "+\n\n" +
                                 getString(R.string.open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes)
                     toast(msg)
 
@@ -3993,7 +4004,7 @@ class MainActivity : Activity() {
                     pathStack.clear()
                     scrollPositionStack.clear()
                     updateAdapter(rootNbtData)
-                    if (tvCurrentPath != null) tvCurrentPath!!.setText(getString(R.string.text_player_data_has_been_modified))
+                    if (tvCurrentPath != null) tvCurrentPath!!.text = getString(R.string.text_player_data_has_been_modified)
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "Puzzle map generation failed", e)
@@ -4021,7 +4032,7 @@ class MainActivity : Activity() {
             return items
         }
 
-        val packedContainers: MutableList<JsonObject> = ArrayList<JsonObject>()
+        val packedContainers: MutableList<JsonObject> = ArrayList()
         val containerCount = ceil(items.size.toDouble() / 27.0).toInt()
 
         for (i in 0..<containerCount) {
@@ -4060,7 +4071,7 @@ class MainActivity : Activity() {
 
             for (k in start..<end) {
                 // 取出物品 (注意：items 里的已经是 Content 对象了)
-                val innerItem = items.get(k)
+                val innerItem = items[k]
 
 
                 // 修改 Slot 为箱子内的位置 (0-26)
@@ -4101,9 +4112,11 @@ class MainActivity : Activity() {
     private fun wrapTag(type: Int, value: Any?): JsonObject {
         val tag = JsonObject()
         tag.addProperty("t", type)
-        if (value is Number) tag.addProperty("v", value)
-        else if (value is String) tag.addProperty("v", value)
-        else if (value is Boolean) tag.addProperty("v", value)
+        when (value) {
+            is Number -> tag.addProperty("v", value)
+            is String -> tag.addProperty("v", value)
+            is Boolean -> tag.addProperty("v", value)
+        }
         return tag
     }
 
@@ -4117,7 +4130,7 @@ class MainActivity : Activity() {
         }
 
         // 2. 如果还没加载，检查有没有选存档
-        val folder = etWorldName?.getText().toString()
+        val folder = etWorldName?.text.toString()
         val hint = getString(R.string.hint_select_world)
         if (folder.isEmpty() || folder == hint || folder.contains("...")) {
             toast(getString(R.string.toast_please_click_the_blue_button_to_select_an_archive_first))
@@ -4157,35 +4170,36 @@ class MainActivity : Activity() {
 
         if (nbtAdapter != null) {
             nbtAdapter = NbtAdapter(this, JsonObject())
-            nbtListView!!.setAdapter(nbtAdapter)
+            nbtListView!!.adapter = nbtAdapter
         }
         if (nbtTreeAdapter != null) {
             // 如果用了树状图，也清空
             nbtTreeAdapter = NbtTreeAdapter(this, null)
-            nbtListView!!.setAdapter(nbtTreeAdapter)
+            nbtListView!!.adapter = nbtTreeAdapter
         }
 
         if (tvCurrentPath != null) {
-            tvCurrentPath!!.setText(getString(R.string.text_loading_new_save))
+            tvCurrentPath!!.text = getString(R.string.text_loading_new_save)
         }
 
 
         // 5. (可选) 关闭侧边栏，防止误触
         val sidebar = findViewById<View?>(R.id.custom_sidebar_container)
-        if (sidebar != null) sidebar.setVisibility(View.GONE)
+        if (sidebar != null) sidebar.visibility = View.GONE
 
         val tvName = findViewById<TextView?>(R.id.tv_app_title)
         val tvSeed = findViewById<TextView?>(R.id.tv_info_seed)
-        if (tvName != null) tvName.setText(getString(R.string.app_name))
-        if (tvSeed != null) tvSeed.setVisibility(View.GONE)
+        if (tvName != null) tvName.text = getString(R.string.app_name)
+        if (tvSeed != null) tvSeed.visibility = View.GONE
     }
 
     // 通用列表弹窗构建器 (完美交互版：点击垃圾桶显隐复选框)
     private fun showListDialogInternal(dataList: MutableList<String>, type: Int) {
-        val baseTitle: String
-        if (type == TYPE_MAP) baseTitle = getString(R.string.msg_map_data)
-        else if (type == TYPE_VILLAGE) baseTitle = getString(R.string.mag_village_data)
-        else baseTitle = getString(R.string.label_player_data)
+        val baseTitle: String = when (type) {
+            TYPE_MAP -> getString(R.string.msg_map_data)
+            TYPE_VILLAGE -> getString(R.string.mag_village_data)
+            else -> getString(R.string.label_player_data)
+        }
 
         if (dataList.isEmpty()) {
             toast(getString(R.string.toast_currently_none) + baseTitle + getString(R.string.title_you_can_click_more_pperations_to_create_a_new))
@@ -4365,23 +4379,27 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(getString(R.string.title_manage_prefix) + targetKey)
                 .setItems(ops) { _, w ->
-                    if (w == 0) copyPlayerJson(targetKey)
-                    else if (w == 1) pastePlayerJson(targetKey) {
-                        loadSpecificPlayer(targetKey)
-                        dialog.dismiss()
-                    }
-                    else if (w == 2) renamePlayerKey(targetKey) {
-                        invalidateListCache(type)
-                        dialog.dismiss()
-                        if (type == TYPE_MAP) showMapListDialog()
-                        else if (type == TYPE_VILLAGE) showVillageListDialog()
-                        else showMultiPlayerDialog()
-                        toast(getString(R.string.toast_rename_successful))
-                    }
-                    else if (w == 3) deletePlayerKey(targetKey) {
-                        adapter.remove(targetKey)
-                        dataList.remove(targetKey)
-                        tvTitle.text = getString(R.string.title_with_count, baseTitle, adapter.count)
+                    when (w) {
+                        0 -> copyPlayerJson(targetKey)
+                        1 -> pastePlayerJson(targetKey) {
+                            loadSpecificPlayer(targetKey)
+                            dialog.dismiss()
+                        }
+                        2 -> renamePlayerKey(targetKey) {
+                            invalidateListCache(type)
+                            dialog.dismiss()
+                            when (type) {
+                                TYPE_MAP -> showMapListDialog()
+                                TYPE_VILLAGE -> showVillageListDialog()
+                                else -> showMultiPlayerDialog()
+                            }
+                            toast(getString(R.string.toast_rename_successful))
+                        }
+                        3 -> deletePlayerKey(targetKey) {
+                            adapter.remove(targetKey)
+                            dataList.remove(targetKey)
+                            tvTitle.text = getString(R.string.title_with_count, baseTitle, adapter.count)
+                        }
                     }
                 }.show()
             true
@@ -4393,7 +4411,7 @@ class MainActivity : Activity() {
     // === 自定义模糊搜索适配器 (支持多选+模式切换版) ===
     private inner class FuzzyArrayAdapter(context: Context?, data: MutableList<String>) :
         BaseAdapter(), Filterable {
-        private val originalList: MutableList<String>
+        private val originalList: MutableList<String> = ArrayList(data)
         private var displayedList: MutableList<String>
         private val inflater: LayoutInflater
 
@@ -4403,7 +4421,6 @@ class MainActivity : Activity() {
         private var isSelectionMode = false
 
         init {
-            this.originalList = ArrayList(data)
             this.displayedList = ArrayList(data)
             this.inflater = LayoutInflater.from(context)
         }
@@ -4502,8 +4519,8 @@ class MainActivity : Activity() {
     // NBT 编辑器内的即时搜索弹窗
     private fun showEditorSearchDialog() {
         val etSearch = EditText(this)
-        etSearch.setHint(getString(R.string.text_search_key_or_translate))
-        etSearch.setSingleLine(true)
+        etSearch.hint = getString(R.string.text_search_key_or_translate)
+        etSearch.isSingleLine = true
 
 
         // 创建一个包含 EditText 的容器，设置边距
@@ -4513,7 +4530,7 @@ class MainActivity : Activity() {
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
         params.setMargins(50, 20, 50, 0)
-        etSearch.setLayoutParams(params)
+        etSearch.layoutParams = params
         container.addView(etSearch)
 
         val dialog = AlertDialog.Builder(this)
@@ -4556,7 +4573,7 @@ class MainActivity : Activity() {
     private fun convertListToMap(listData: JsonObject): JsonObject {
         val fakeMap = JsonObject()
         val arr = listData.get("v").getAsJsonArray()
-        val itemType = listData.get("itemType").getAsInt()
+        val itemType = listData.get("itemType").asInt
 
         for (i in 0..<arr.size()) {
             val wrapper = JsonObject()
@@ -4576,7 +4593,7 @@ class MainActivity : Activity() {
         scrollPositionStack.clear()
         currentListData = rootNbtData // 从根开始
 
-        if (path == null || path.isEmpty()) return
+        if (path.isNullOrEmpty()) return
 
         // 2. 模拟逐层进入
         // currentListData 始终持有当前层级的内容（Map结构）
@@ -4589,7 +4606,7 @@ class MainActivity : Activity() {
 
                 // 获取下一层的数据包装 {t, v}
                 val itemWrapper = currentPtr.getAsJsonObject(key)
-                val type = itemWrapper.get("t").getAsInt()
+                val type = itemWrapper.get("t").asInt
 
                 // 准备进入下一层：先把当前层压栈
                 navigationStack.push(currentPtr)
@@ -4599,13 +4616,13 @@ class MainActivity : Activity() {
                 // 解析下一层的内容 (剥壳)
                 val v = itemWrapper.get("v")
 
-                if (type == 10) {
+                currentPtr = if (type == 10) {
                     // Compound: 直接取 v (它是 JsonObject)
-                    currentPtr = v.getAsJsonObject()
+                    v.getAsJsonObject()
                 } else if (type == 9) {
                     // List: 需要转成 FakeMap ("0":{}, "1":{}...)
                     // 复用我们之前写的 convertListToMap
-                    currentPtr = convertListToMap(itemWrapper)
+                    convertListToMap(itemWrapper)
                 } else {
                     // 如果路径里混入了非容器（理论上不可能），停止
                     break
@@ -4815,7 +4832,7 @@ class MainActivity : Activity() {
                     rootNbtData = playerDataObj
 
                     // 存入缓存
-                    nbtDataCache.put("~local_player", rootNbtData)
+                    nbtDataCache["~local_player"] = rootNbtData
 
                     updateAdapter(rootNbtData)
                     toast(getString(R.string.toast_player_loaded_success))
@@ -4880,59 +4897,59 @@ class MainActivity : Activity() {
     private fun showGlobalDataDialog() {
         // 定义 Key 和 描述的映射关系
         val globalKeys = arrayOf<Array<String?>?>(
-            arrayOf<String?>(
+            arrayOf(
                 "LevelChunkMetaDataDictionary",
                 getString(R.string.msg_global_system_data_list_metadata)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "BiomeData",
                 getString(R.string.msg_global_system_data_list_community)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "Overworld",
                 getString(R.string.msg_global_system_data_list_main_world_data)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "Nether",
                 getString(R.string.msg_global_system_data_list_iower_bound_data)
             ),
-            arrayOf<String?>("TheEnd", getString(R.string.msg_global_system_data_list_end_data)),
-            arrayOf<String?>("Villages", getString(R.string.msg_global_system_data_list_village)),
-            arrayOf<String?>("Portals", getString(R.string.msg_global_system_data_list_portal)),
-            arrayOf<String?>(
+            arrayOf("TheEnd", getString(R.string.msg_global_system_data_list_end_data)),
+            arrayOf("Villages", getString(R.string.msg_global_system_data_list_village)),
+            arrayOf("Portals", getString(R.string.msg_global_system_data_list_portal)),
+            arrayOf(
                 "AutonomousEntities",
                 getString(R.string.msg_global_system_data_list_autonoous_entity)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "schedulerWT",
                 getString(R.string.msg_global_system_data_list_scheduler)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "Scoreboard",
                 getString(R.string.msg_global_system_data_list_scoreboard_data)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "Mobevents",
                 getString(R.string.msg_global_system_data_list_biological_events)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "PositionTrackDBLastID",
                 getString(R.string.msg_global_system_data_list_last_targeting_id)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "dimension0",
                 getString(R.string.msg_global_system_data_list_main_world_0)
             ),
-            arrayOf<String?>(
+            arrayOf(
                 "dimension1",
                 getString(R.string.msg_global_system_data_list_nether_1)
             ),
-            arrayOf<String?>("dimension2", getString(R.string.msg_global_system_data_list_end_2))
+            arrayOf("dimension2", getString(R.string.msg_global_system_data_list_end_2))
         )
 
         // 构建显示列表 (Key + 描述)
-        val displayList: MutableList<String?> = ArrayList<String?>()
-        val realKeys: MutableList<String> = ArrayList<String>()
+        val displayList: MutableList<String?> = ArrayList()
+        val realKeys: MutableList<String> = ArrayList()
 
         for (pair in globalKeys) {
             // 格式：Scoreboard (计分板数据)
@@ -4949,12 +4966,12 @@ class MainActivity : Activity() {
                 override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                     // 小优化：让显示更好看一点，把字体改小
                     val view = super.getView(position, convertView, parent) as TextView
-                    view.setTextSize(14f) // 稍微小一点
+                    view.textSize = 14f // 稍微小一点
                     view.setPadding(30, 20, 30, 20) // 增加间距
                     return view
                 }
             }
-        listView.setAdapter(adapter)
+        listView.adapter = adapter
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(getString(R.string.msg_global_system_data) + displayList.size + ")")
@@ -4963,7 +4980,7 @@ class MainActivity : Activity() {
             .create()
 
         listView.setOnItemClickListener { _: AdapterView<*>?, _: View?, position: Int, _: Long ->
-            val key = realKeys.get(position)
+            val key = realKeys[position]
             // 尝试加载
             // 这里的 loadSpecificPlayer 其实是通用的 loadByKey，直接复用
             loadSpecificPlayer(key)
@@ -5013,8 +5030,8 @@ class MainActivity : Activity() {
 
         if (rootJson == null) {
             // 如果数据为空，恢复默认
-            tvName.setText(getString(R.string.app_name))
-            tvSeed.setVisibility(View.GONE)
+            tvName.text = getString(R.string.app_name)
+            tvSeed.visibility = View.GONE
             return
         }
 
@@ -5023,41 +5040,41 @@ class MainActivity : Activity() {
             var nameStr: String? = null
             if (rootJson.has("LevelName")) {
                 val obj = rootJson.getAsJsonObject("LevelName")
-                if (obj.has("v")) nameStr = obj.get("v").getAsString()
+                if (obj.has("v")) nameStr = obj.get("v").asString
             }
 
             // 尝试提取 RandomSeed
             var seedStr: String? = null
             if (rootJson.has("RandomSeed")) {
                 val obj = rootJson.getAsJsonObject("RandomSeed")
-                if (obj.has("v")) seedStr = obj.get("v").getAsString()
+                if (obj.has("v")) seedStr = obj.get("v").asString
             }
 
             // 如果读到了名字，就更新标题
-            if (nameStr != null && !nameStr.isEmpty()) {
-                tvName.setText(nameStr)
+            if (!nameStr.isNullOrEmpty()) {
+                tvName.text = nameStr
             } else {
-                tvName.setText(getString(R.string.app_name))
+                tvName.text = getString(R.string.app_name)
             }
 
             // 如果读到了种子，显示小字
-            if (seedStr != null && !seedStr.isEmpty()) {
-                tvSeed.setText(getString(R.string.key_seed_display))
-                tvSeed.setVisibility(View.VISIBLE)
+            if (!seedStr.isNullOrEmpty()) {
+                tvSeed.text = getString(R.string.key_seed_display)
+                tvSeed.visibility = View.VISIBLE
             } else {
-                tvSeed.setVisibility(View.GONE)
+                tvSeed.visibility = View.GONE
             }
         } catch (e: Exception) {
             e.printStackTrace()
             // 出错时恢复默认
-            tvName.setText(getString(R.string.app_name))
-            tvSeed.setVisibility(View.GONE)
+            tvName.text = getString(R.string.app_name)
+            tvSeed.visibility = View.GONE
         }
     }
 
     // 【新增】读取存档真实名称 (从 levelname.txt)
     private fun getWorldRealName(folderName: String): String? {
-        val fullPath = currentWorldsPath + folderName + "/levelname.txt"
+        val fullPath = "$currentWorldsPath$folderName/levelname.txt"
         val file = File(fullPath)
 
         // 1. 尝试原生读取
@@ -5078,7 +5095,7 @@ class MainActivity : Activity() {
             try {
                 // 使用 cat 命令读取内容
                 val p = runShizukuCmd(arrayOf("sh", "-c", "cat \"$fullPath\""))
-                val reader = BufferedReader(InputStreamReader(p.getInputStream()))
+                val reader = BufferedReader(InputStreamReader(p.inputStream))
                 val name = reader.readLine()
                 p.waitFor()
                 if (name != null && !name.trim { it <= ' ' }.isEmpty()) return name
@@ -5105,9 +5122,11 @@ class MainActivity : Activity() {
 
     // 辅助：当数据变动时清空对应缓存
     private fun invalidateListCache(type: Int) {
-        if (type == TYPE_MAP) cacheMapList = null
-        else if (type == TYPE_VILLAGE) cacheVillageList = null
-        else cachePlayerList = null
+        when (type) {
+            TYPE_MAP -> cacheMapList = null
+            TYPE_VILLAGE -> cacheVillageList = null
+            else -> cachePlayerList = null
+        }
     }
 
     // 1. 切走前：把当前编辑状态存入内存
@@ -5116,11 +5135,10 @@ class MainActivity : Activity() {
 
 
         // 决定 Session 的 Key
-        val sessionKey: String?
-        if (isEditingPlayer) {
-            sessionKey = currentTargetKey // 例如 "~local_player", "map_123"
+        val sessionKey = if (isEditingPlayer) {
+            currentTargetKey // 例如 "~local_player", "map_123"
         } else {
-            sessionKey = "level.dat" // 世界文件固定 Key
+            "level.dat" // 世界文件固定 Key
         }
 
         if (sessionKey == null) return
@@ -5138,7 +5156,7 @@ class MainActivity : Activity() {
 
 
         // 存入 Map
-        sessionCacheMap.put(sessionKey, session)
+        sessionCacheMap[sessionKey] = session
         // System.out.println("Session saved: " + sessionKey);
     }
 
@@ -5146,10 +5164,7 @@ class MainActivity : Activity() {
     // 返回 true 表示恢复成功，不需要读盘了
     private fun tryRestoreSession(sessionKey: String?): Boolean {
         if (sessionCacheMap.containsKey(sessionKey)) {
-            val session = sessionCacheMap.get(sessionKey)
-            if (session == null) {
-                return false
-            }
+            val session = sessionCacheMap[sessionKey] ?: return false
             rootNbtData = session.data
             // 恢复栈 (拷贝回来)
             navigationStack.clear()
@@ -5194,7 +5209,8 @@ class MainActivity : Activity() {
         db: String?,
         k: String?
     ) {
-        var navStack: Stack<JsonObject?> // 导航历史
+        // 必须深拷贝栈，因为主界面的栈会被 clear
+        var navStack: Stack<JsonObject?> = Stack<JsonObject?>() // 导航历史
         var pathStack: Stack<String?> // 路径历史
         var scrollStack: Stack<Int?> // 滚动位置
         var isPlayerMode: Boolean // 是不是 DB 模式
@@ -5203,8 +5219,6 @@ class MainActivity : Activity() {
 
         // 构造函数：保存当前现场
         init {
-            // 必须深拷贝栈，因为主界面的栈会被 clear
-            this.navStack = Stack<JsonObject?>()
             this.navStack.addAll(n)
             this.pathStack = Stack<String?>()
             this.pathStack.addAll(p)
@@ -5371,15 +5385,6 @@ class MainActivity : Activity() {
         var name: String, var namespace: String, var category: String, // 【新增】纯数字ID（用于效果和附魔）
         var id: String?
     ) {
-        var searchKey: String?
-
-        init {
-            // 【搜索键】包含中文、namespace、数字ID
-            this.searchKey =
-                (name + " " + namespace + " " + (if (id != null) id else "")).lowercase(
-                    Locale.getDefault()
-                )
-        }
 
         val fillValue: String?
             // 【获取填充值】效果和附魔返回数字ID，其他返回minecraft:namespace
@@ -5397,19 +5402,19 @@ class MainActivity : Activity() {
 
     // 【新增】统一加载四类数据
     private fun loadAutocompleteData(dataType: String): MutableList<AutocompleteEntry> {
-        val list: MutableList<AutocompleteEntry> = ArrayList<AutocompleteEntry>()
+        val list: MutableList<AutocompleteEntry> = ArrayList()
         val langFolder = if ("zh" == currentLang) "zh" else "en"
 
         try {
             when (dataType) {
-                "item" -> loadJsonToList(list, langFolder + "/item_translation.json", "item")
-                "block" -> loadJsonToList(list, langFolder + "/block_translation.json", "block")
-                "effect" -> loadJsonToList(list, langFolder + "/potion_translation.json", "effect")
-                "enchant" -> loadJsonToList(list, langFolder + "/ench_translation.json", "enchant")
+                "item" -> loadJsonToList(list, "$langFolder/item_translation.json", "item")
+                "block" -> loadJsonToList(list, "$langFolder/block_translation.json", "block")
+                "effect" -> loadJsonToList(list, "$langFolder/potion_translation.json", "effect")
+                "enchant" -> loadJsonToList(list, "$langFolder/ench_translation.json", "enchant")
                 "all" -> {
                     // 加载所有（用于物品+方块混合场景）
-                    loadJsonToList(list, langFolder + "/item_translation.json", "item")
-                    loadJsonToList(list, langFolder + "/block_translation.json", "block")
+                    loadJsonToList(list, "$langFolder/item_translation.json", "item")
+                    loadJsonToList(list, "$langFolder/block_translation.json", "block")
                 }
             }
         } catch (e: Exception) {
@@ -5477,13 +5482,13 @@ class MainActivity : Activity() {
 
     // 获取类型显示标签
     private fun getTypeLabel(type: String): String {
-        when (type) {
-            "item" -> return getString(R.string.title_item)
-            "block" -> return getString(R.string.title_block)
-            "effect" -> return getString(R.string.title_effect)
-            "enchant" -> return getString(R.string.title_enchant)
-            "all" -> return getString(R.string.title_all)
-            else -> return getString(R.string.title_data)
+        return when (type) {
+            "item" -> getString(R.string.title_item)
+            "block" -> getString(R.string.title_block)
+            "effect" -> getString(R.string.title_effect)
+            "enchant" -> getString(R.string.title_enchant)
+            "all" -> getString(R.string.title_all)
+            else -> getString(R.string.title_data)
         }
     }
 
@@ -5539,7 +5544,7 @@ class MainActivity : Activity() {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 var convertView = convertView
                 if (convertView == null) {
-                    convertView = getLayoutInflater().inflate(
+                    convertView = layoutInflater.inflate(
                         android.R.layout.simple_list_item_2,
                         parent,
                         false
@@ -5564,11 +5569,10 @@ class MainActivity : Activity() {
                 tv1.textSize = 15f
 
                 // 副标题
-                val subtitle: String?
-                if ("effect" == item.category || "enchant" == item.category) {
-                    subtitle = "ID:" + item.id + " | " + item.namespace
+                val subtitle = if ("effect" == item.category || "enchant" == item.category) {
+                    "ID:" + item.id + " | " + item.namespace
                 } else {
-                    subtitle = item.namespace
+                    item.namespace
                 }
                 tv2.text = subtitle
                 @Suppress("DEPRECATION")
@@ -5587,7 +5591,7 @@ class MainActivity : Activity() {
                             val filtered: MutableList<AutocompleteEntry?> = ArrayList()
 
                             // constraint 为空时，返回完整的 allItems (这里 allItems 始终是完整的，因为没被破坏)
-                            if (constraint == null || constraint.length == 0) {
+                            if (constraint.isNullOrEmpty()) {
                                 filtered.addAll(allItems)
                             } else {
                                 val pattern = constraint.toString().lowercase(Locale.getDefault()).trim()
@@ -5733,7 +5737,7 @@ class MainActivity : Activity() {
                     files.sortByDescending { it.lastModified() }
 
                     val latest = files[0]
-                    logs.append("最新崩溃日志: ").append(latest.getName()).append("\n\n")
+                    logs.append("最新崩溃日志: ").append(latest.name).append("\n\n")
 
                     val reader = BufferedReader(
                         FileReader(latest)
@@ -5765,8 +5769,8 @@ class MainActivity : Activity() {
         // 显示在可滚动的对话框中
         val scrollView = ScrollView(this)
         val tvLog = TextView(this)
-        tvLog.setText(logs.toString())
-        tvLog.setTextSize(12f)
+        tvLog.text = logs.toString()
+        tvLog.textSize = 12f
         tvLog.setPadding(20, 20, 20, 20)
         tvLog.setTypeface(Typeface.MONOSPACE) // 等宽字体
 
@@ -5776,17 +5780,15 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
-        tvLog.setLayoutParams(params)
+        tvLog.layoutParams = params
 
         scrollView.addView(tvLog)
 
 
         // 设置 ScrollView 的高度限制
-        scrollView.setLayoutParams(
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                800 // 最大高度800像素
-            )
+        scrollView.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            800 // 最大高度800像素
         )
 
         AlertDialog.Builder(this)
@@ -5900,7 +5902,7 @@ class MainActivity : Activity() {
             "/storage/emulated/0/Android/data/com.mojang.minecraftpe/files/games/com.mojang/minecraftWorlds/"
         private const val PATH_LEGACY = "/storage/emulated/0/games/com.mojang/minecraftWorlds/"
         private const val PUBLIC_ROOT = "/storage/emulated/0/Download/NbtEditor_Data/"
-        private val BRIDGE_ROOT: String = PUBLIC_ROOT + "Bridge/"
+        private const val BRIDGE_ROOT: String = PUBLIC_ROOT + "Bridge/"
         private const val LEVEL_DAT_NAME = "level_working.dat"
 
         fun getFullStackTrace(e: Throwable): String {
