@@ -3,6 +3,7 @@ attr alpha
 attr font
 attr fontProviderAuthority
 attr fontProviderCerts
+attr fontProviderFallbackQuery
 attr fontProviderFetchStrategy
 attr fontProviderFetchTimeout
 attr fontProviderPackage
@@ -63,6 +64,7 @@ drawable notification_bg_low_pressed
 drawable notification_bg_normal
 drawable notification_bg_normal_pressed
 drawable notification_icon_background
+drawable notification_oversize_large_icon_bg
 drawable notification_template_icon_bg
 drawable notification_template_icon_low_bg
 drawable notification_tile_bg
@@ -141,9 +143,11 @@ id cb_item_select
 id chronometer
 id custom_sidebar_container
 id dialog_button
+id edit_text_id
 id et_search_input
 id et_world_name
 id forever
+id hide_ime_id
 id icon
 id icon_group
 id in_app_icon
@@ -166,6 +170,7 @@ id notification_background
 id notification_main_column
 id notification_main_column_container
 id progress_bar
+id report_drawn
 id right_icon
 id right_side
 id root_layout_container
@@ -176,11 +181,13 @@ id tag_accessibility_actions
 id tag_accessibility_clickable_spans
 id tag_accessibility_heading
 id tag_accessibility_pane_title
+id tag_compat_insets_dispatch
 id tag_on_apply_window_listener
 id tag_on_receive_content_listener
 id tag_on_receive_content_mime_types
 id tag_screen_reader_focusable
 id tag_state_description
+id tag_system_bar_state_monitor
 id tag_transition_group
 id tag_unhandled_key_event_manager
 id tag_unhandled_key_listeners
@@ -208,12 +215,19 @@ id tv_type_icon
 id tv_value
 id view_indentation
 id view_mask
+id view_tree_disjoint_parent
 id view_tree_lifecycle_owner
+id view_tree_navigation_event_dispatcher_owner
+id view_tree_on_back_pressed_dispatcher_owner
+id view_tree_saved_state_registry_owner
+id view_tree_view_model_store_owner
 integer status_bar_notification_info_maxnum
 layout custom_dialog
 layout dialog_app_info
 layout dialog_progress
 layout dialog_title_with_search
+layout ime_base_split_test_activity
+layout ime_secondary_split_test_activity
 layout item_checkbox
 layout item_nbt
 layout item_nbt_tree
@@ -232,6 +246,7 @@ string action_paste_root
 string action_paste_tag
 string action_switch_day
 string action_switch_night
+string androidx_startup
 string app_name
 string author_name
 string box_enable_multi_thread_acceleration
@@ -664,7 +679,8 @@ style Widget_Compat_NotificationActionContainer
 style Widget_Compat_NotificationActionText
 styleable Capability queryPatterns shortcutMatchRequired
 styleable ColorStateListItem android_color android_alpha android_lStar alpha lStar
-styleable FontFamily fontProviderAuthority fontProviderCerts fontProviderFetchStrategy fontProviderFetchTimeout fontProviderPackage fontProviderQuery fontProviderSystemFontFamily
+styleable FontFamily fontProviderAuthority fontProviderCerts fontProviderFallbackQuery fontProviderFetchStrategy fontProviderFetchTimeout fontProviderPackage fontProviderQuery fontProviderSystemFontFamily
 styleable FontFamilyFont android_font android_fontWeight android_fontStyle android_ttcIndex android_fontVariationSettings font fontStyle fontVariationSettings fontWeight ttcIndex
+styleable FontFamilyProviderFallback fontProviderQuery fontProviderSystemFontFamily fontVariationSettings
 styleable GradientColor android_startColor android_endColor android_type android_centerX android_centerY android_gradientRadius android_tileMode android_centerColor android_startX android_startY android_endX android_endY
 styleable GradientColorItem android_color android_offset

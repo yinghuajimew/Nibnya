@@ -1,16 +1,16 @@
 {
     "logs": [
         {
-            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeDebugResources-6:/values-pt/values-pt.xml",
+            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeDebugResources-21:/values-pt/values-pt.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\yinghuaji\\.gradle\\caches\\9.0.0\\transforms\\cff30f28e54c521916fa88b517e209fc\\transformed\\core-1.10.1\\res\\values-pt\\values-pt.xml",
+                    "source": "C:\\Users\\yinghuaji\\.gradle\\caches\\9.0.0\\transforms\\60300be9bc1803e0ec5396b35ca4d16e\\transformed\\core-1.18.0\\res\\values-pt\\values-pt.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,152,254,353,453,560,670,790",
-                        "endColumns": "96,101,98,99,106,109,119,100",
-                        "endOffsets": "147,249,348,448,555,665,785,886"
+                        "startOffsets": "55,152,254,353,453,563,673,793",
+                        "endColumns": "96,101,98,99,109,109,119,100",
+                        "endOffsets": "147,249,348,448,558,668,788,889"
                     }
                 }
             ]
