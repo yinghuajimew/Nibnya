@@ -13,11 +13,7 @@ import android.text.Html
 import android.text.InputType
 import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
-import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.core.graphics.toColorInt
@@ -31,53 +27,52 @@ import com.google.gson.JsonPrimitive
 import yhjmew.minecraft.nbteditor.MainActivity
 import yhjmew.minecraft.nbteditor.NbtTranslator
 import yhjmew.minecraft.nbteditor.R
-import yhjmew.minecraft.nbteditor.viewmodel.EditorViewModel
 
 // ============================================
 // 根菜单
 // ============================================
 fun MainActivity.showRootMenu() {
-    val current = editorVM.nbtData.value ?: run { toast("No data"); return }
-    val ops = arrayOf("Add Tag", "Paste Child", "Copy All", "Paste/Replace", "Clear All")
-    AlertDialog.Builder(this).setTitle("Root Menu").setItems(ops) { _, w ->
+    val current = editorVM.nbtData.value ?: run { toast(getString(R.string.toast_no_data)); return }
+    val ops = arrayOf(getString(R.string.action_add_tag), getString(R.string.action_paste_tag), getString(R.string.action_copy_root), getString(R.string.action_paste_root), getString(R.string.action_clear_all))
+    AlertDialog.Builder(this).setTitle(getString(R.string.menu_root_title)).setItems(ops) { _, w ->
         when (w) {
             0 -> showAddChildDialog(current)
             1 -> {
-                if (MainActivity.clipboard == null) { toast("Clipboard empty"); return@setItems }
-                val input = EditText(this).apply { hint = "New tag name" }
-                AlertDialog.Builder(this).setTitle("Paste as").setView(input)
-                    .setPositiveButton("Confirm") { _, _ ->
+                if (MainActivity.clipboard == null) { toast(getString(R.string.toast_clipboard_empty)); return@setItems }
+                val input = EditText(this).apply { hint = getString(R.string.hint_new_tag_name) }
+                AlertDialog.Builder(this).setTitle(getString(R.string.title_paste_as)).setView(input)
+                    .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                         val n = input.text.toString()
                         if (n.isNotEmpty() && !current.has(n)) {
                             current.add(n, MainActivity.clipboard!!.deepCopy())
-                            refreshAfterEdit(); toast("Pasted")
-                        } else toast("Name empty or exists")
+                            refreshAfterEdit(); toast(getString(R.string.toast_pasted))
+                        } else toast(getString(R.string.toast_name_empty_or_exists))
                     }.show()
             }
             2 -> {
                 (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("NBT", current.toString()))
-                toast("Copied")
+                toast(getString(R.string.toast_copy_success))
             }
             3 -> {
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                if (!cm.hasPrimaryClip()) { toast("Clipboard empty"); return@setItems }
-                AlertDialog.Builder(this).setTitle("Replace?").setMessage("Replace all data?")
-                    .setPositiveButton("Replace") { _, _ ->
+                if (!cm.hasPrimaryClip()) { toast(getString(R.string.toast_clipboard_empty)); return@setItems }
+                AlertDialog.Builder(this).setTitle(getString(R.string.msg_confirm_replace)).setMessage(getString(R.string.msg_replace_all_data))
+                    .setPositiveButton(getString(R.string.btn_replace)) { _, _ ->
                         try {
                             val text = cm.primaryClip!!.getItemAt(0).text ?: return@setPositiveButton
                             val newObj = JsonParser.parseString(text.toString()).asJsonObject
                             ArrayList(current.keySet()).forEach { current.remove(it) }
                             newObj.entrySet().forEach { current.add(it.key, it.value) }
-                            refreshAfterEdit(); toast("Replaced")
-                        } catch (_: Exception) { toast("JSON parse error") }
-                    }.setNegativeButton("Cancel", null).show()
+                            refreshAfterEdit(); toast(getString(R.string.toast_replaced))
+                        } catch (_: Exception) { toast(getString(R.string.err_json_parse)) }
+                    }.setNegativeButton(getString(R.string.btn_cancel), null).show()
             }
-            4 -> AlertDialog.Builder(this).setTitle("⚠️ Danger").setMessage("Clear all?")
-                .setPositiveButton("Clear") { _, _ ->
+            4 -> AlertDialog.Builder(this).setTitle(getString(R.string.dialog_danger_title)).setMessage(getString(R.string.btn_confirm_clear))
+                .setPositiveButton(getString(R.string.btn_clear)) { _, _ ->
                     ArrayList(current.keySet()).forEach { current.remove(it) }
-                    refreshAfterEdit(); toast("Cleared")
-                }.setNegativeButton("Cancel", null).show()
+                    refreshAfterEdit(); toast(getString(R.string.toast_cleared))
+                }.setNegativeButton(getString(R.string.btn_cancel), null).show()
         }
     }.show()
 }
@@ -86,7 +81,7 @@ fun MainActivity.showRootMenu() {
 // 长按菜单
 // ============================================
 fun MainActivity.showLongPressMenu(key: String?, itemData: JsonObject) {
-    val ops = arrayOf("Copy", "Paste", "Delete", "Rename", "Add Child")
+    val ops = arrayOf(getString(R.string.menu_copy), getString(R.string.menu_paste), getString(R.string.menu_delete), getString(R.string.menu_rename), getString(R.string.menu_add_child))
     AlertDialog.Builder(this).setTitle("Manage: $key").setItems(ops) { _, w ->
         var parent: JsonObject?
         var nodeKey = key
@@ -110,13 +105,13 @@ fun MainActivity.showLongPressMenu(key: String?, itemData: JsonObject) {
             1 -> {
                 if (MainActivity.clipboard == null) { toast("Clipboard empty"); return@setItems }
                 val pasteKey = nodeKey + "_copy"
-                if (parent!!.has(pasteKey)) { toast("Name exists"); return@setItems }
+                if (parent.has(pasteKey)) { toast("Name exists"); return@setItems }
                 parent.add(pasteKey, MainActivity.clipboard!!.deepCopy())
                 refreshAfterEdit(); toast("Pasted")
             }
-            2 -> { parent!!.remove(nodeKey); refreshAfterEdit(); toast("Deleted") }
-            3 -> showRenameDialog(nodeKey, nodeData, parent!!)
-            4 -> addChildToNode(nodeData, parent!!)
+            2 -> { parent.remove(nodeKey); refreshAfterEdit(); toast("Deleted") }
+            3 -> showRenameDialog(nodeKey, nodeData, parent)
+            4 -> addChildToNode(nodeData)
         }
     }.show()
 }
@@ -138,7 +133,7 @@ private fun MainActivity.showRenameDialog(oldKey: String?, itemData: JsonObject?
 // ============================================
 // 添加子项到节点
 // ============================================
-private fun MainActivity.addChildToNode(nodeData: JsonObject?, parent: JsonObject) {
+private fun MainActivity.addChildToNode(nodeData: JsonObject?) {
     val data = nodeData ?: return
     val type = data.get("t").asInt
     if (type == 10) {
@@ -283,13 +278,7 @@ fun MainActivity.showArrayPaginationDialog(key: String, arr: JsonArray) {
             text = "Import Image → Map"
             setOnClickListener {
                 currentTargetMapArray = arr
-                startActivityForResult(
-                    android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                        type = "image/*"
-                    },
-                    MainActivity.REQUEST_PICK_IMAGE_FOR_MAP
-                )
+                mapImageLauncher.launch(arrayOf("image/*"))
             }
         })
     }
@@ -320,7 +309,7 @@ private fun MainActivity.showSubArrayEditDialog(original: JsonArray, start: Int,
                 for (i in 0..<count) original[start + i] = parsed.asJsonArray[i]
                 refreshAfterEdit(); toast("Saved")
             } catch (e: Exception) { toast("Format error: ${e.message}") }
-        }.setNegativeButton("Cancel", null).show()
+        }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 // ============================================
@@ -376,7 +365,7 @@ fun MainActivity.showOpenByKeyDialog() {
             val input = etKey.text.toString()
             if (input.isEmpty()) { toast("Input cannot be empty"); return@setPositiveButton }
             worldVM.loadCustomKey(input, cbHex.isChecked)
-        }.setNegativeButton("Cancel", null).show()
+        }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 // ============================================

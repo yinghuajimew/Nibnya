@@ -9,7 +9,6 @@ import androidx.core.graphics.toColorInt
 import androidx.core.graphics.drawable.toDrawable
 import com.google.gson.JsonParser
 import yhjmew.minecraft.nbteditor.MainActivity
-import yhjmew.minecraft.nbteditor.R
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Locale
@@ -111,7 +110,7 @@ fun MainActivity.showAutocompleteDialog(targetInput: EditText, dataType: String)
                                         || item.name.lowercase(Locale.getDefault()).contains(pattern)
                                         || item.namespace.lowercase(Locale.getDefault()).contains(pattern)
                                         || ((item.category == "effect" || item.category == "enchant")
-                                        && item.id != null && item.id!!.contains(pattern))
+                                        && item.id != null && item.id.contains(pattern))
                                 if (match) filtered.add(item)
                             }
                         }

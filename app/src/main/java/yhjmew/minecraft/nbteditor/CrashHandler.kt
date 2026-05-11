@@ -16,6 +16,7 @@ import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.system.exitProcess
 
 /** 全局异常捕获器 当程序发生未捕获异常时，由该类接管程序，并记录发送错误报告  */
 class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
@@ -43,7 +44,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             }
             // 退出程序
             Process.killProcess(Process.myPid())
-            System.exit(1)
+            exitProcess(1)
         }
     }
 
@@ -149,7 +150,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             val fos = FileOutputStream(privateFile)
             fos.write(logContent.toByteArray())
             fos.close()
-            Log.i(TAG, "Private Log saved: " + privateFile.getAbsolutePath())
+            Log.i(TAG, "Private Log saved: " + privateFile.absolutePath)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save private log", e)
         }
@@ -164,7 +165,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             val fos = FileOutputStream(publicFile)
             fos.write(logContent.toByteArray())
             fos.close()
-            Log.i(TAG, "Public Log saved: " + publicFile.getAbsolutePath())
+            Log.i(TAG, "Public Log saved: " + publicFile.absolutePath)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save public log (Permission denied?)", e)
         }

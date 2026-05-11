@@ -15,7 +15,7 @@
     <string name="btn_clean_cache">clear cache</string>
     <string name="btn_clear_all">🧹 Clear with one click</string>
     <string name="btn_clear_filter">Clear filter</string>
-    <string name="btn_close">closure</string>
+    <string name="btn_close">Close</string>
     <string name="btn_confirm">Sure</string>
     <string name="btn_confirm_clear">OK to clear</string>
     <string name="btn_copy_error">Copy error</string>
@@ -30,7 +30,7 @@
     <string name="btn_load">📂 Load archive</string>
     <string name="btn_more_actions">More actions</string>
     <string name="btn_reparse">⟳ Re-parse</string>
-    <string name="btn_replace">replace</string>
+    <string name="btn_replace">Replace</string>
     <string name="btn_restore">🕒 Restore backup</string>
     <string name="btn_save">💾 Save changes</string>
     <string name="btn_save_clip">save clip</string>
@@ -57,7 +57,7 @@
     <string name="err_work_file_missing">The working file cannot be found, please [load archive] first</string>
     <string name="hint_height_row">high (row)</string>
     <string name="hint_input_name">Enter tag name</string>
-    <string name="hint_new_tag_name">New label name</string>
+    <string name="hint_new_tag_name">New tag name</string>
     <string name="hint_select_world">Click here to select/load archive...</string>
     <string name="hint_width_col">Width (column)</string>
     <string name="key_boolean_logic_closure">0 (Off / False)</string>
@@ -269,7 +269,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_cleared_short">Cleared</string>
     <string name="toast_click_detail">Please click to enter the list to view details</string>
     <string name="toast_clip_saved">Clip saved! (Please don’t forget to click the save button on the main interface to write to disk)</string>
-    <string name="toast_clipboard_empty">Clipboard is empty</string>
+    <string name="toast_clipboard_empty">Clipboard empty</string>
     <string name="toast_compound_only">Can only be added in Compound</string>
     <string name="toast_copied">Copied to clipboard</string>
     <string name="toast_copy_failed">Copy failed:</string>
@@ -303,18 +303,18 @@ Would you like to create a new empty data set?</string>
     <string name="toast_level_dat_saved">✅ level.dat saved</string>
     <string name="toast_level_restored">The world backup has been restored, please save!</string>
     <string name="toast_loaded">Loaded:</string>
-    <string name="toast_loading">Loading:</string>
+    <string name="toast_loading">Loading: %s</string>
     <string name="toast_loading_successfully">Loading successfully</string>
     <string name="toast_lock_delete">Abnormal LOCK file detected, forced cleanup using Shizuku</string>
     <string name="toast_mode_changed">display mode updated</string>
     <string name="toast_multi_thread_acceleration_enabled">Multi-thread acceleration enabled</string>
-    <string name="toast_name_empty_or_exists">Name is empty or already exists</string>
+    <string name="toast_name_empty_or_exists">Name is empty or exists</string>
     <string name="toast_name_exists">name already exists</string>
     <string name="toast_no_backups">No backup yet</string>
     <string name="toast_no_data">No data!</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">Operation canceled, please check archive integrity</string>
     <string name="toast_paste_failed">Paste failed:</string>
-    <string name="toast_pasted">Paste successfully</string>
+    <string name="toast_pasted">Pasted</string>
     <string name="toast_path_updated">Path updated</string>
     <string name="toast_player_data_copied_to_clipboard">Player data copied to clipboard</string>
     <string name="toast_player_loaded_success">Player data loaded successfully!</string>
@@ -372,7 +372,7 @@ Would you like to create a new empty data set?</string>
 <string name="toast_shizuku_disabled">Shizuku disabled</string>
 <string name="toast_shizuku_enabled">Shizuku enabled</string>
 <string name="path_saf">SAF Path</string>
-<string name="msg_saf_selected">Selected: %s</string>
+<string name="msg_saf_selected">SAF path selected</string>
 <string name="err_direct_access_failed">Direct access to the file failed, please check whether "All file access permissions" have been granted</string>
 <string name="btn_open_settings">Open settings</string>
 <string name="title_shizuku_error">Shizuku service abnormality</string>
@@ -425,4 +425,13 @@ Would you like to create a new empty data set?</string>
     <string name="msg_export_failed">Export failed: %1$s</string>
     <string name="toast_item_added_to_list">Item added to list</string>
     <string name="toast_compound_or_list_only">Can only add in Compound or List</string>
+    
+    
+    <string name="toast_shizuku_init">shizuku init: %s</string>
+    <string name="log_please_wait">Please wait</string>
+    <string name="toast_no_saves_found">No saves found</string>
+    <string name="select_world_count">Select World (%d)</string>
+    <string name="toast_no_data_to_parse">No data to parse</string>
+    <string name="msg_replace_all_data">Replace all data?</string>
+    <string name="toast_replaced">Replaced</string>
 </resources>

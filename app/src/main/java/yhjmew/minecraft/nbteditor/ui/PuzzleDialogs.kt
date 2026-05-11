@@ -1,7 +1,6 @@
 package yhjmew.minecraft.nbteditor.ui
 
 import android.app.AlertDialog
-import android.content.Intent
 import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -75,9 +74,5 @@ private fun MainActivity.showPuzzleCustomSizeDialog() {
 }
 
 fun MainActivity.pickPuzzleImage() {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-        addCategory(Intent.CATEGORY_OPENABLE)
-        type = "image/*"
-    }
-    startActivityForResult(intent, MainActivity.REQUEST_PICK_IMAGE_FOR_PUZZLE)
+    puzzleImageLauncher.launch(arrayOf("image/*"))
 }

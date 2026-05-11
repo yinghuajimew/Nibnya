@@ -355,6 +355,7 @@ string key_world_generator_type_unlimited
 string key_world_generator_type_void
 string label_editor
 string label_player_data
+string log_please_wait
 string long_press_here_to_open_the_root_menu
 string mag_village_data
 string menu_add_child
@@ -458,6 +459,7 @@ string msg_read
 string msg_reading
 string msg_reading_details
 string msg_reading_repaired_data
+string msg_replace_all_data
 string msg_replace_warning
 string msg_retrying
 string msg_saf_selected
@@ -497,6 +499,7 @@ string puzzle_opt_2x2
 string puzzle_opt_3x3
 string puzzle_opt_custom
 string puzzle_opt_default
+string select_world_count
 string settings_header
 string status_bar_notification_info_overflow
 string switch_to_chinese
@@ -624,6 +627,8 @@ string toast_name_empty_or_exists
 string toast_name_exists
 string toast_no_backups
 string toast_no_data
+string toast_no_data_to_parse
+string toast_no_saves_found
 string toast_operation_canceled_please_check_archive_integrity
 string toast_paste_failed
 string toast_pasted
@@ -645,12 +650,14 @@ string toast_rename_successful
 string toast_renamed
 string toast_repair_completed_trying_to_load_again
 string toast_repair_failed
+string toast_replaced
 string toast_retry_failed
 string toast_select_world
 string toast_shizuku_denied
 string toast_shizuku_disabled
 string toast_shizuku_enabled
 string toast_shizuku_granted
+string toast_shizuku_init
 string toast_shizuku_needed
 string toast_shizuku_normal
 string toast_shizuku_not_installed

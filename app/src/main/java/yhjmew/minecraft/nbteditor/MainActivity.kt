@@ -2,25 +2,15 @@ package yhjmew.minecraft.nbteditor
 
 import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import android.app.AlertDialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
-import android.util.Log
 import android.view.*
-import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.core.content.edit
-import androidx.core.graphics.scale
-import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -38,7 +28,6 @@ import yhjmew.minecraft.nbteditor.viewmodel.WorldViewModel.BackupItem
 import yhjmew.minecraft.nbteditor.viewmodel.WorldViewModel.CacheItem
 import yhjmew.minecraft.nbteditor.viewmodel.WorldViewModel.WorldItem
 import java.io.*
-import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : ComponentActivity() {
@@ -90,6 +79,37 @@ class MainActivity : ComponentActivity() {
     var puzzleRows = 1
     var puzzleCols = 1
     var currentTargetMapArray: JsonArray? = null
+
+
+
+
+    private val safPathLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            worldVM.setSafPath(uri)
+            prefs?.edit()?.putString("saf_tree_uri", uri.toString())?.apply()
+            toast(getString(R.string.msg_saf_selected))
+            showWorldSelector()
+        }
+    }
+
+    internal val puzzleImageLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { mapVM.generatePuzzleMap(this, it, puzzleRows, puzzleCols) }
+    }
+
+    internal val mapImageLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { mapVM.generateMapFromImage(this, it, currentTargetMapArray) }
+    }
+
 
     // ============================================
     // 进度对话框
@@ -155,7 +175,7 @@ class MainActivity : ComponentActivity() {
         setupObservers(); setupButtons()
 
         try { Class.forName("rikka.shizuku.Shizuku") }
-        catch (e: Exception) { toast("Shizuku init: ${e.message}") }
+        catch (e: Exception) { toast(getString(R.string.toast_shizuku_init, e.message)) }
         Shizuku.addRequestPermissionResultListener { _, grant ->
             toast(if (grant == PackageManager.PERMISSION_GRANTED)
                 getString(R.string.toast_shizuku_granted)
@@ -198,7 +218,7 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             combine(worldVM.isLoading, mapVM.isGenerating) { w, m -> w || m }
-                .collect { if (it) showProgressDialog("Please wait",
+                .collect { if (it) showProgressDialog(getString(R.string.log_please_wait),
                     worldVM.loadingMessage.value.ifEmpty { mapVM.progressMessage.value }.ifEmpty { "..." })
                 else dismissProgressDialog() }
         }
@@ -222,7 +242,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             worldVM.worldSeedForDisplay.collect { seed ->
                 findViewById<TextView?>(R.id.tv_info_seed)?.let {
-                    if (seed != null) { it.text = "Seed: $seed"; it.isVisible = true }
+                    if (seed != null) { it.text = getString(R.string.key_seed_display, seed); it.isVisible = true }
                     else it.isVisible = false
                 }
             }
@@ -237,7 +257,7 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             worldVM.backupList.drop(1).collect { list ->
-                pendingBackupListFolder?.let { showBackupDialog(it, list); pendingBackupListFolder = null }
+                pendingBackupListFolder?.let { showBackupDialog(list); pendingBackupListFolder = null }
             }
         }
         lifecycleScope.launch {
@@ -264,7 +284,7 @@ class MainActivity : ComponentActivity() {
         findViewById<Button?>(R.id.btn_copy)?.setOnClickListener {
             val f = etWorldName!!.text.toString().trim()
             if (f.isEmpty() || f == getString(R.string.hint_select_world)) showWorldSelector()
-            else { toast("Loading $f..."); worldVM.loadLevelDat(this, f) }
+            else { toast(getString(R.string.toast_loading, f)); worldVM.loadLevelDat(this, f) }
         }
         etWorldName?.setOnClickListener { showWorldSelector() }
 
@@ -319,14 +339,14 @@ class MainActivity : ComponentActivity() {
             sc?.isVisible = false; ensureDbLoaded { showGlobalDataDialog() }
         }
         findViewById<View?>(R.id.btn_search_nbt)?.setOnClickListener {
-            if (editorVM.isTreeMode.value) toast("Search only supports list mode")
+            if (editorVM.isTreeMode.value) toast(getString(R.string.toast_the_search_function_currently_only_supports_list_mode))
             else showEditorSearchDialog()
         }
         findViewById<View?>(R.id.btn_fullscreen_search)?.setOnClickListener {
             findViewById<View?>(R.id.btn_search_nbt)?.performClick()
         }
         findViewById<View?>(R.id.btn_open_any_key)?.setOnClickListener {
-            if (worldVM.currentWorkingDbPath == null) toast("Initialize database first")
+            if (worldVM.currentWorkingDbPath == null) toast(getString(R.string.toast_please_initialize_the_database_first))
             else { sc?.isVisible = false; showOpenByKeyDialog() }
         }
 
@@ -434,29 +454,6 @@ class MainActivity : ComponentActivity() {
         editorVM.updatePathTitle()
     }
 
-    // ============================================
-    // 生命周期
-    // ============================================
-    @SuppressLint("UseKtx")
-    override fun onActivityResult(rc: Int, result: Int, data: Intent?) {
-        super.onActivityResult(rc, result, data)
-        if (result != RESULT_OK || data == null) return
-        when (rc) {
-            REQUEST_PICK_IMAGE_FOR_PUZZLE -> data.data?.let {
-                mapVM.generatePuzzleMap(this, it, puzzleRows, puzzleCols)
-            }
-            REQUEST_PICK_IMAGE_FOR_MAP -> data.data?.let {
-                mapVM.generateMapFromImage(this, it, currentTargetMapArray)
-            }
-            REQUEST_SAF_PATH -> data.data?.let { uri ->
-                contentResolver.takePersistableUriPermission(uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                worldVM.setSafPath(uri); prefs!!.edit { putString("saf_tree_uri", uri.toString()) }
-                toast("SAF path selected"); showWorldSelector()
-            }
-        }
-    }
-
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         val sc = findViewById<View?>(R.id.custom_sidebar_container)
@@ -470,14 +467,14 @@ class MainActivity : ComponentActivity() {
         super.onBackPressed()
     }
 
-    override fun onSaveInstanceState(out: Bundle) {
-        super.onSaveInstanceState(out)
-        out.putBoolean("isEditingPlayer", editorVM.isEditingPlayer.value)
-        out.putString("currentTargetKey", editorVM.currentTargetKey.value)
-        out.putString("currentWorkingDbPath", worldVM.currentWorkingDbPath)
-        out.putString("currentWorkingFileOrDir", worldVM.currentWorkingFileOrDir)
-        out.putBoolean("isTreeMode", editorVM.isTreeMode.value)
-        etWorldName?.text?.toString()?.let { out.putString("worldName", it) }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("isEditingPlayer", editorVM.isEditingPlayer.value)
+        outState.putString("currentTargetKey", editorVM.currentTargetKey.value)
+        outState.putString("currentWorkingDbPath", worldVM.currentWorkingDbPath)
+        outState.putString("currentWorkingFileOrDir", worldVM.currentWorkingFileOrDir)
+        outState.putBoolean("isTreeMode", editorVM.isTreeMode.value)
+        etWorldName?.text?.toString()?.let { outState.putString("worldName", it) }
     }
 
     private fun restoreSavedState(savedInstanceState: Bundle?) {
@@ -508,17 +505,14 @@ class MainActivity : ComponentActivity() {
                     0 -> { worldVM.switchPath(PATH_STANDARD); showWorldSelector() }
                     1 -> { worldVM.switchPath(PATH_LEGACY); showWorldSelector() }
                     2 -> showCustomPathDialog()
-                    3 -> startActivityForResult(
-                        Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        }, REQUEST_SAF_PATH)
+                    3 -> safPathLauncher.launch(null)
                 }
             }.show()
     }
 
     private fun showCustomPathDialog() {
         val input = EditText(this).apply { setText(worldVM.currentPath.value) }
-        AlertDialog.Builder(this).setTitle("Custom path").setView(input)
+        AlertDialog.Builder(this).setTitle(getString(R.string.path_custom)).setView(input)
             .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                 var p = input.text.toString().trim()
                 if (p.isNotEmpty()) { worldVM.switchPath(if (p.endsWith("/")) p else "$p/"); showWorldSelector() }
@@ -526,8 +520,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showWorldSelectorDialog(list: List<WorldItem>) {
-        if (list.isEmpty()) { toast("No saves found"); return }
-        AlertDialog.Builder(this).setTitle("Select World (${list.size})")
+        if (list.isEmpty()) { toast(getString(R.string.toast_no_saves_found)); return }
+        AlertDialog.Builder(this).setTitle(getString(R.string.select_world_count, list.size))
             .setItems(list.map { "${it.displayName}\n${it.folderName}" }.toTypedArray()) { _, i ->
                 val f = list[i].folderName; etWorldName?.setText(f); worldVM.loadLevelDat(this, f)
             }.show()
@@ -540,50 +534,50 @@ class MainActivity : ComponentActivity() {
             editorVM.navigationStack.clear(); editorVM.pathStack.clear(); editorVM.scrollPositionStack.clear()
             editorVM.currentListData = json; editorVM.setEditingPlayer(false)
             editorVM.updatePathTitle(); worldVM.updateWorldInfoFromNbt(json)
-        } ?: toast("No data to parse")
+        } ?: toast(getString(R.string.toast_no_data_to_parse))
     }
 
     // ============================================
     // 缓存 & 备份 & 错误（轻量包装）
     // ============================================
     private fun showCacheDialog(list: List<CacheItem>) {
-        if (list.isEmpty()) { toast("Cache empty"); return }
+        if (list.isEmpty()) { toast(getString(R.string.toast_cache_empty)); return }
         val lv = ListView(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_list_item_1,
                 list.map { "${if (it.isDirectory) "📁" else "📄"} ${it.name}" })
         }
-        AlertDialog.Builder(this).setTitle("Manage Cache").setView(lv)
-            .setNeutralButton("Close", null)
-            .setPositiveButton("Clear All") { _, _ -> worldVM.clearAllCache(this); toast("Cleared") }.show()
+        AlertDialog.Builder(this).setTitle(getString(R.string.title_manage_cache)).setView(lv)
+            .setNeutralButton(getString(R.string.btn_close), null)
+            .setPositiveButton(getString(R.string.btn_clear_all)) { _, _ -> worldVM.clearAllCache(this); toast(getString(R.string.toast_cleared)) }.show()
         lv.onItemLongClickListener = AdapterView.OnItemLongClickListener { _, _, p, _ ->
-            AlertDialog.Builder(this).setTitle("Delete").setMessage("Delete ${list[p].name}?")
-                .setPositiveButton("Delete") { _, _ -> worldVM.deleteCacheItem(list[p]); worldVM.scanCache(this) }.show()
+            AlertDialog.Builder(this).setTitle(getString(R.string.btn_delete)).setMessage(getString(R.string.msg_delete_confirm, list[p].name))
+                .setPositiveButton(getString(R.string.btn_delete)) { _, _ -> worldVM.deleteCacheItem(list[p]); worldVM.scanCache(this) }.show()
             true
         }
     }
 
-    private fun showBackupDialog(folder: String, list: List<BackupItem>) {
-        if (list.isEmpty()) { toast("No backups"); return }
+    private fun showBackupDialog(list: List<BackupItem>) {
+        if (list.isEmpty()) { toast(getString(R.string.toast_no_backups)); return }
         val lv = ListView(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_list_item_1,
                 list.map { "${if (it.isDirectory) "📁" else "📄"} ${it.name}\n${it.time}" })
         }
-        AlertDialog.Builder(this).setTitle("Backups").setView(lv)
-            .setNeutralButton("Close", null).show()
+        AlertDialog.Builder(this).setTitle(getString(R.string.dialog_backup_title)).setView(lv)
+            .setNeutralButton(getString(R.string.btn_close), null).show()
         lv.setOnItemClickListener { _, _, p, _ -> worldVM.restoreBackup(this, list[p]) }
     }
 
     private fun showErrorDialog(msg: String) {
         if (msg.startsWith("DB_CORRUPT:")) {
             val parts = msg.removePrefix("DB_CORRUPT:").split(":")
-            AlertDialog.Builder(this).setTitle("Database Corruption")
-                .setMessage("Corrupt LevelDB detected.\n\nTry brute force repair?")
-                .setPositiveButton("Try Repair") { _, _ ->
+            AlertDialog.Builder(this).setTitle(getString(R.string.title_database_corruption))
+                .setMessage(getString(R.string.msg_have_you_tried_a_brute_force_repair))
+                .setPositiveButton(getString(R.string.btn_try_to_fix)) { _, _ ->
                     worldVM.tryRepairDb(parts[0]) { ok ->
-                        if (ok) { toast("Repaired, retrying..."); parts.getOrNull(1)?.let { worldVM.loadPlayerData(this, it) } }
+                        if (ok) { toast(getString(R.string.msg_under_repair)); parts.getOrNull(1)?.let { worldVM.loadPlayerData(this, it) } }
                     }
-                }.setNegativeButton("Cancel") { _, _ -> toast("Cancelled") }.setCancelable(false).show()
-        } else AlertDialog.Builder(this).setTitle("Error").setMessage(msg).setPositiveButton("OK", null).show()
+                }.setNegativeButton(getString(R.string.btn_cancel)) { _, _ -> toast(getString(R.string.toast_operation_canceled_please_check_archive_integrity)) }.setCancelable(false).show()
+        } else AlertDialog.Builder(this).setTitle("Error").setMessage(msg).setPositiveButton(getString(R.string.btn_close), null).show()
     }
 
     // ============================================
@@ -679,9 +673,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         var clipboard: JsonElement? = null
         const val TYPE_PLAYER = 0; const val TYPE_MAP = 1; const val TYPE_VILLAGE = 2
-        const val REQUEST_PICK_IMAGE_FOR_MAP = 1001
-        const val REQUEST_PICK_IMAGE_FOR_PUZZLE = 1002
-        const val REQUEST_SAF_PATH = 1003
         const val PATH_STANDARD =
             "/storage/emulated/0/Android/data/com.mojang.minecraftpe/files/games/com.mojang/minecraftWorlds/"
         const val PATH_LEGACY = "/storage/emulated/0/games/com.mojang/minecraftWorlds/"

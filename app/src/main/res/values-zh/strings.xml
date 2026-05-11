@@ -178,7 +178,7 @@
     <string name="toast_crash_collapse">喵？炸了？\n日志已保存到 Download/NbtEditor_Data/Crash_Logs 文件夹\n或该应用私有目录Crash_Logs 文件夹</string>
     <string name="toast_err_permission_denied_shizuku">原生读取失败，Shizuku 未准备</string>
     
-    <string name="toast_loading">正在加载: </string>
+    <string name="toast_loading">正在加载: %s</string>
     <string name="toast_multi_thread_acceleration_enabled">已启用多线程加速</string>
     <string name="toast_switched_to_single_threaded_stable_mode">已切换为单线程稳定模式</string>
     <string name="toast_the_search_function_currently_only_supports_list_mode">搜索功能暂仅支持列表模式 (默认视图)</string>
@@ -409,7 +409,7 @@
 <string name="toast_shizuku_disabled">已禁用 Shizuku</string>
 <string name="toast_shizuku_enabled">已启用 Shizuku</string>
 <string name="path_saf">SAF 路径选择</string>
-<string name="msg_saf_selected">已选择: %s</string>
+<string name="msg_saf_selected">已选择 SAF 路径</string>
 <string name="err_direct_access_failed">直接访问文件失败，请检查「所有文件访问权限」是否已授予</string>
 <string name="btn_open_settings">打开设置</string>
 <string name="title_shizuku_error">Shizuku 服务异常</string>
@@ -461,4 +461,13 @@
     <string name="msg_export_failed">导出失败: %1$s</string>
     <string name="toast_item_added_to_list">已添加到列表</string>
     <string name="toast_compound_or_list_only">只能在 Compound 或 List 中添加</string>
+    
+    
+    <string name="toast_shizuku_init">shizuku 初始化: %s</string>
+    <string name="log_please_wait">请稍等</string>
+    <string name="toast_no_saves_found">未找到保存内容</string>
+    <string name="select_world_count">选择世界 (%d)</string>
+    <string name="toast_no_data_to_parse">没有要解析的数据</string>
+    <string name="msg_replace_all_data">替换所有数据？</string>
+    <string name="toast_replaced">已更换</string>
 </resources>
