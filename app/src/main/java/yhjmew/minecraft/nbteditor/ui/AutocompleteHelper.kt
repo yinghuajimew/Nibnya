@@ -9,6 +9,7 @@ import androidx.core.graphics.toColorInt
 import androidx.core.graphics.drawable.toDrawable
 import com.google.gson.JsonParser
 import yhjmew.minecraft.nbteditor.MainActivity
+import yhjmew.minecraft.nbteditor.R
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Locale
@@ -39,13 +40,13 @@ fun MainActivity.showAutocompleteDialog(targetInput: EditText, dataType: String)
     }
 
     val etSearch = EditText(this).apply {
-        hint = "Search ${getTypeLabel(dataType)}..."
+        getString(R.string.search_type_hint, getTypeLabel(dataType))
         textSize = 14f
     }
     layout.addView(etSearch)
 
     val btnClear = Button(this).apply {
-        text = "Clear"
+        text = getString(R.string.btn_clear)
         setTextColor("#2196F3".toColorInt())
         setBackgroundColor(Color.TRANSPARENT)
     }
@@ -134,9 +135,9 @@ fun MainActivity.showAutocompleteDialog(targetInput: EditText, dataType: String)
     btnClear.setOnClickListener { etSearch.setText("") }
 
     val dialog = AlertDialog.Builder(this)
-        .setTitle("Choose ${getTypeLabel(dataType)}")
+        .setTitle(getString(R.string.title_choose_type, getTypeLabel(dataType)))
         .setView(layout)
-        .setNegativeButton("Cancel", null)
+        .setNegativeButton(getString(R.string.btn_cancel), null)
         .create()
 
     dialog.window?.setLayout(

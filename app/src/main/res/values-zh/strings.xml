@@ -68,7 +68,7 @@
     <string name="toast_hold_delete">请长按以删除</string>
     <string name="toast_deleted">已删除</string>
     <string name="toast_renamed">已重命名</string>
-    <string name="toast_rename_failed">重命名失败</string>
+    <string name="toast_rename_failed">重命名失败: %s</string>
     <string name="toast_no_backups">暂无备份</string>
 
     <!-- 进度条 / 加载中 -->
@@ -78,12 +78,12 @@
     <string name="msg_init_player">正在初始化...</string>
     <string name="msg_saving">保存中</string>
     <string name="msg_scanning">扫描中</string>
-    <string name="msg_reading_details">正在重读数据...</string>
+    <string name="searching_label_data">正在搜索 %s 数据...</string>
 
     <!-- 错误提示 -->
     <string name="err_load_failed">读取失败: </string>
-    <string name="err_save_failed">保存失败: </string>
-    <string name="err_format">格式错误: </string>
+    <string name="err_save_failed">保存失败: %s</string>
+    <string name="err_format">格式错误: %s</string>
 
     <!-- 编辑器逻辑 -->
     <string name="toast_enter_list">进入列表: </string>
@@ -152,7 +152,7 @@
     <string name="title_paste_as">粘贴为...</string>
     <string name="hint_new_tag_name">新标签名字</string>
     <string name="toast_name_empty_or_exists">名字为空或已存在</string>
-    <string name="title_manage_prefix">管理: </string>
+    <string name="title_manage">管理: [%s]</string>
     <!-- 全屏模式 -->
     <string name="btn_fullscreen">⛶ 全屏编辑</string>
     <!-- 根菜单新增 -->
@@ -210,18 +210,17 @@
     <string name="btn_create_and_open">创建并打开</string>
     <string name="toast_player_data_copied_to_clipboard">玩家数据已复制到剪贴板</string>
     <string name="toast_copy_failed">复制失败: </string>
-    <string name="title_override_warning">覆盖警告</string>
+    <string name="title_overwride_warning">⚠️ 覆盖警告</string>
     <string name="msg_full_coverage">确定要用剪贴板的内容【完全覆盖】 </string>
     <string name="msg_this_action_is_irreversible"> 的数据吗？此操作不可撤销！</string>
     <string name="btn_cover">覆盖</string>
     <string name="toast_data_covered">数据已覆盖！</string>
-    <string name="toast_paste_failed">粘贴失败: </string>
-    <string name="title_remove_warning">删除警告</string>
-    <string name="msg_confirm_deletion">确定删除 </string>
-    <string name="toast_delete_failed">删除失败: </string>
-    <string name="msg_create_new_blank">➕ 新建空白</string>
+    <string name="toast_paste_failed">粘贴失败: %s</string>
+    <string name="title_remove_warning">⚠️ 删除警告</string>
+    <string name="toast_delete_failed">删除失败: %s</string>
+    <string name="msg_create_new_blank">➕ 新建空白 %s</string>
     <string name="msg_map">地图</string>
-    <string name="msg_paste_as_new">📋 粘贴为新</string>
+    <string name="msg_paste_as_new">📋 粘贴为新 %s</string>
     <string name="msg_delete_all_data_in_the_list">🗑️ [危险] 删除列表中的所有数据</string>
     <string name="msg_map_data">地图数据 (%1$d)</string>
     <string name="msg_for_example_map">例如: map_123</string>
@@ -240,11 +239,10 @@
     <string name="toast_cleared_all">已清空所有</string>
     <string name="title_new">新建 </string>
     <string name="toast_key_cannot_be_empty">Key不能为空</string>
-    <string name="toast_yes_created">已创建</string>
-    <string name="toast_creation_failed">创建失败: </string>
+    <string name="toast_type_created">%s 已创建</string>
+    <string name="toast_creation_failed">创建失败: %s</string>
     <string name="title_rename_key">重命名 Key</string>
     <string name="msg_move_data_to_new_key_and_delete_old_key">这将移动数据到新 Key，并删除旧 Key</string>
-    <string name="toast_rename_failed_colon">重命名失败: </string>
     <string name="msg_search_map_data">搜索地图数据...</string>
     <string name="text_huge_array_detected">检测到巨型数组，共有 %1$d 个元素\n直接编辑会导致卡死，请选择操作：</string>
     <string name="text_starting_position_eg_0">起始位置 (例如: 0)</string>
@@ -299,10 +297,10 @@
     <string name="title_batch_delete">⚠️ 批量删除</string>
     <string name="msg_are_you_sure_you_want_to_delete_the_selected">确定要删除选中的 </string>
     <string name="msg_item_this_action_is_irreversible"> 项吗？\n此操作不可撤销！</string>
-    <string name="msg_processing_ing">处理中</string>
+    <string name="msg_processing_ing">处理中...</string>
     <string name="msg_are_deleting">正在删除...</string>
     <string name="toast_successfully_deleted">成功删除 </string>
-    <string name="toast_deleted_item"> 项</string>
+    <string name="toast_delete_key_confirm">删除 %s</string>
     <string name="btn_more_actions">更多操作</string>
     <string name="msg_list_long_press_copy_data_json">📄 复制数据 (JSON)</string>
     <string name="msg_list_long_press_paste_overlay">📝 粘贴覆盖</string>
@@ -350,7 +348,7 @@
 <string name="msg_global_system_data_list_main_world_0">主世界 (Dimension 0)</string>
 <string name="msg_global_system_data_list_nether_1">下界 (Dimension 1)</string>
     <string name="msg_global_system_data_list_end_2">末地 (Dimension 2)</string>
-    <string name="msg_global_system_data">全局系统数据 (</string>
+    <string name="title_global_system_data_count">全局系统数据 (%d)</string>
     <string name="toast_key_copied">已复制 Key: %1$s</string>
     <string name="text_newly_created"> (新创建)</string>
     <string name="toast_empty_data_has_been_created_please_edit_and_save">已创建空数据，请编辑后保存</string>
@@ -451,15 +449,14 @@
     <string name="debug_show_logs">📋 显示日志</string>
     <string name="debug_copy_logs">📄 复制日志到剪贴板</string>
     <string name="debug_export_logs">💾 导出日志到文件</string>
-    <string name="debug_close">关闭</string>
     <string name="text_autocomplete_label_name">%1$s%2$s</string>
     <string name="msg_no_logs_to_copy">没有日志可复制</string>
     <string name="msg_logs_copied">日志已复制到剪贴板</string>
     <string name="msg_no_logs_to_export">没有日志可导出</string>
     <string name="msg_logs_exported_to">日志已导出到: %1$s</string>
-    <string name="msg_copy_failed">复制失败: %1$s</string>
+    <string name="msg_copy_failed">复制失败: %s</string>
     <string name="msg_export_failed">导出失败: %1$s</string>
-    <string name="toast_item_added_to_list">已添加到列表</string>
+    <string name="toast_added_to_list">已添加到列表</string>
     <string name="toast_compound_or_list_only">只能在 Compound 或 List 中添加</string>
     
     
@@ -470,4 +467,28 @@
     <string name="toast_no_data_to_parse">没有要解析的数据</string>
     <string name="msg_replace_all_data">替换所有数据？</string>
     <string name="toast_replaced">已更换</string>
+    
+    <string name="search_type_hint">搜索 %s...</string>
+    <string name="toast_Invalid_name">无效名称</string>
+    <string name="text_name">名称</string>
+    <string name="btn_save_n">保存</string>
+    <string name="hint_start_0">起始 (0)</string>
+    <string name="hint_count_200">结束 (~200)</string>
+    <string name="title_edit_range">编辑 [%1$d ~ %2$d]</string>
+    <string name="toast_count_mismatch">计数不匹配</string>
+    <string name="toast_saved">已保存</string>
+    <string name="title_logs">日志</string>
+    <string name="text_debug_logs">调试日志</string>
+    <string name="title_label_data">%s 数据</string>
+    <string name="toast_no_label_data">没有 %s 数据</string>
+    <string name="msg_delete_items_confirm">删除 %d 项？无法撤销</string>
+    <string name="toast_deleted_count">已删除 %d</string>
+    <string name="msg_full_overwrite_confirm">完全覆盖 %s？这是不可逆转的</string>
+    <string name="btn_delete_all_in_list">删除列表中的所有内容</string>
+    <string name="title_more_operations">更多功能</string>
+    <string name="msg_delete_all_type_data">删除所有 %1$d %2$s 数据？无法撤销！</string>
+    <string name="toast_all_type_deleted">所有 %s 已删除</string>
+    <string name="toast_failed">失败: %s</string>
+    <string name="title_new_type_key">新 %s key</string>
+    <string name="toast_created_item">已创建: %s</string>
 </resources>

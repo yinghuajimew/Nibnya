@@ -82,7 +82,7 @@ fun MainActivity.showRootMenu() {
 // ============================================
 fun MainActivity.showLongPressMenu(key: String?, itemData: JsonObject) {
     val ops = arrayOf(getString(R.string.menu_copy), getString(R.string.menu_paste), getString(R.string.menu_delete), getString(R.string.menu_rename), getString(R.string.menu_add_child))
-    AlertDialog.Builder(this).setTitle("Manage: $key").setItems(ops) { _, w ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_manage, key)).setItems(ops) { _, w ->
         var parent: JsonObject?
         var nodeKey = key
         var nodeData: JsonObject? = itemData
@@ -100,16 +100,16 @@ fun MainActivity.showLongPressMenu(key: String?, itemData: JsonObject) {
         when (w) {
             0 -> {
                 MainActivity.clipboard = nodeData!!.deepCopy()
-                toast("Copied")
+                toast(getString(R.string.toast_copied))
             }
             1 -> {
-                if (MainActivity.clipboard == null) { toast("Clipboard empty"); return@setItems }
+                if (MainActivity.clipboard == null) { toast(getString(R.string.toast_clipboard_empty)); return@setItems }
                 val pasteKey = nodeKey + "_copy"
-                if (parent.has(pasteKey)) { toast("Name exists"); return@setItems }
+                if (parent.has(pasteKey)) { toast(getString(R.string.toast_name_exists)); return@setItems }
                 parent.add(pasteKey, MainActivity.clipboard!!.deepCopy())
-                refreshAfterEdit(); toast("Pasted")
+                refreshAfterEdit(); toast(getString(R.string.toast_pasted))
             }
-            2 -> { parent.remove(nodeKey); refreshAfterEdit(); toast("Deleted") }
+            2 -> { parent.remove(nodeKey); refreshAfterEdit(); toast(getString(R.string.toast_deleted)) }
             3 -> showRenameDialog(nodeKey, nodeData, parent)
             4 -> addChildToNode(nodeData)
         }
@@ -121,12 +121,12 @@ fun MainActivity.showLongPressMenu(key: String?, itemData: JsonObject) {
 // ============================================
 private fun MainActivity.showRenameDialog(oldKey: String?, itemData: JsonObject?, parent: JsonObject) {
     val input = EditText(this).apply { setText(oldKey) }
-    AlertDialog.Builder(this).setTitle("Rename").setView(input)
-        .setPositiveButton("Confirm") { _, _ ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_rename)).setView(input)
+        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
             val nk = input.text.toString().trim()
-            if (nk.isEmpty() || parent.has(nk)) { toast("Invalid name"); return@setPositiveButton }
+            if (nk.isEmpty() || parent.has(nk)) { toast(getString(R.string.toast_Invalid_name)); return@setPositiveButton }
             parent.remove(oldKey); parent.add(nk, itemData)
-            refreshAfterEdit(); toast("Renamed")
+            refreshAfterEdit(); toast(getString(R.string.toast_renamed))
         }.show()
 }
 
@@ -153,7 +153,7 @@ private fun MainActivity.addChildToNode(nodeData: JsonObject?) {
         }
         if (editorVM.isTreeMode.value) data.getAsJsonArray("v").add(newVal)
         else editorVM.findOriginalListData()?.add(newVal) ?: data.getAsJsonArray("v").add(newVal)
-        refreshAfterEdit(); toast("Added to list")
+        refreshAfterEdit(); toast(getString(R.string.toast_added_to_list))
     }
 }
 
@@ -164,17 +164,17 @@ fun MainActivity.showAddChildDialog(parent: JsonObject) {
     val types = arrayOf("Byte(1)","Short(2)","Int(3)","Long(4)","Float(5)","Double(6)",
         "ByteArray(7)","String(8)","List(9)","Compound(10)","IntArray(11)","LongArray(12)")
     val ids = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-    AlertDialog.Builder(this).setTitle("Add Child").setItems(types) { _, w ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.menu_add_child)).setItems(types) { _, w ->
         showNameInputDialog(parent, ids[w])
     }.show()
 }
 
 private fun MainActivity.showNameInputDialog(parent: JsonObject, type: Int) {
-    val input = EditText(this).apply { hint = "Name" }
-    AlertDialog.Builder(this).setTitle("New Tag").setView(input)
-        .setPositiveButton("Create") { _, _ ->
+    val input = EditText(this).apply { hint = getString(R.string.text_name) }
+    AlertDialog.Builder(this).setTitle(getString(R.string.hint_new_tag_name)).setView(input)
+        .setPositiveButton(getString(R.string.btn_create)) { _, _ ->
             val name = input.text.toString()
-            if (name.isEmpty() || parent.has(name)) { toast("Invalid name"); return@setPositiveButton }
+            if (name.isEmpty() || parent.has(name)) { toast(getString(R.string.toast_Invalid_name)); return@setPositiveButton }
             val t = JsonObject().apply { addProperty("t", type) }
             when (type) {
                 1 -> t.addProperty("v", 0.toByte()); 2 -> t.addProperty("v", 0.toShort())
@@ -187,7 +187,7 @@ private fun MainActivity.showNameInputDialog(parent: JsonObject, type: Int) {
             }
             parent.add(name, t)
             if (nbtAdapter?.data === parent) nbtAdapter?.refreshKeys()
-            toast("Created: $name")
+            toast(getString(R.string.toast_created_item, name))
         }.show()
 }
 
@@ -196,7 +196,7 @@ private fun MainActivity.showNameInputDialog(parent: JsonObject, type: Int) {
 // ============================================
 fun MainActivity.showEditValueDialog(key: String, item: JsonObject) {
     val type = item.get("t").asInt
-    if (type == 9 || type == 10) { toast("Click to enter"); return }
+    if (type == 9 || type == 10) { toast(getString(R.string.toast_click_detail)); return }
 
     val input = EditText(this)
     if (item.has("v")) {
@@ -219,13 +219,13 @@ fun MainActivity.showEditValueDialog(key: String, item: JsonObject) {
     }
 
     val builder = AlertDialog.Builder(this)
-    builder.setTitle("Edit [${getTypeName(type)}] $key")
+    builder.setTitle(getString(R.string.title_edit_type_key, getTypeName(type), key))
 
     if (showAutocomplete) {
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         layout.addView(input)
         layout.addView(Button(this).apply {
-            text = "Choose ${getTypeLabel(detectedType)}"
+            text = getString(R.string.title_choose_type)
             setTextColor("#2196F3".toColorInt())
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { showAutocompleteDialog(input, detectedType) }
@@ -235,7 +235,7 @@ fun MainActivity.showEditValueDialog(key: String, item: JsonObject) {
         builder.setView(input)
     }
 
-    builder.setPositiveButton("Save") { _, _ ->
+    builder.setPositiveButton(getString(R.string.btn_save)) { _, _ ->
         try {
             val value = input.text.toString().trim()
             when (type) {
@@ -246,7 +246,7 @@ fun MainActivity.showEditValueDialog(key: String, item: JsonObject) {
                 7, 11, 12 -> item.add("v", JsonParser.parseString(value).asJsonArray)
             }
             refreshAfterEdit()
-        } catch (e: Exception) { toast("Save failed: ${e.message}") }
+        } catch (e: Exception) { toast(getString(R.string.err_save_failed, e.message)) }
     }.show()
 }
 
@@ -263,35 +263,36 @@ fun MainActivity.showArrayPaginationDialog(key: String, arr: JsonArray) {
         orientation = LinearLayout.VERTICAL; setPadding(50, 30, 50, 0)
     }
     layout.addView(TextView(this).apply {
-        text = "Huge array: ${arr.size()} elements"; textSize = 16f
+        text = getString(R.string.text_huge_array_detected, arr.size()); textSize = 16f
     })
     val etStart = EditText(this).apply {
-        hint = "Start (0)"; inputType = InputType.TYPE_CLASS_NUMBER; setText("0")
+        hint = getString(R.string.hint_start_0); inputType = InputType.TYPE_CLASS_NUMBER; setText("0")
     }
     val etCount = EditText(this).apply {
-        hint = "Count (~200)"; inputType = InputType.TYPE_CLASS_NUMBER; setText("200")
+        hint = getString(R.string.hint_count_200); inputType = InputType.TYPE_CLASS_NUMBER; setText("200")
     }
     layout.addView(etStart); layout.addView(etCount)
 
     if (key == "colors" && arr.size() >= 16384) {
         layout.addView(Button(this).apply {
-            text = "Import Image → Map"
+            text = getString(R.string.text_import_images_to_generate_map_images)
             setOnClickListener {
                 currentTargetMapArray = arr
+
                 mapImageLauncher.launch(arrayOf("image/*"))
             }
         })
     }
-    AlertDialog.Builder(this).setTitle("Manage [$key]").setView(layout)
-        .setPositiveButton("View/Edit") { _, _ ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_manage, key)).setView(layout)
+        .setPositiveButton(getString(R.string.btn_view_and_edit_clips)) { _, _ ->
             try {
                 var s = etStart.text.toString().toInt()
                 var c = etCount.text.toString().toInt()
                 if (s < 0) s = 0; if (c > 2000) c = 2000
                 if (s + c > arr.size()) c = arr.size() - s
                 showSubArrayEditDialog(arr, s, c)
-            } catch (_: NumberFormatException) { toast("Enter valid numbers") }
-        }.setNegativeButton("Close", null).show()
+            } catch (_: NumberFormatException) { toast(getString(R.string.toast_please_enter_valid_numbers)) }
+        }.setNegativeButton(getString(R.string.btn_close), null).show()
 }
 
 private fun MainActivity.showSubArrayEditDialog(original: JsonArray, start: Int, count: Int) {
@@ -299,16 +300,16 @@ private fun MainActivity.showSubArrayEditDialog(original: JsonArray, start: Int,
     for (i in 0..<count) { sb.append(original[start + i]); if (i < count - 1) sb.append(",") }
     sb.append("]")
     val input = EditText(this).apply { setText(sb.toString()) }
-    AlertDialog.Builder(this).setTitle("Edit [$start ~ ${start + count - 1}]").setView(input)
-        .setPositiveButton("Save") { _, _ ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_edit_range)).setView(input)
+        .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
             try {
                 val parsed = JsonParser.parseString(input.text.toString())
                 if (!parsed.isJsonArray || parsed.asJsonArray.size() != count) {
-                    toast("Count mismatch"); return@setPositiveButton
+                    toast(getString(R.string.toast_count_mismatch)); return@setPositiveButton
                 }
                 for (i in 0..<count) original[start + i] = parsed.asJsonArray[i]
-                refreshAfterEdit(); toast("Saved")
-            } catch (e: Exception) { toast("Format error: ${e.message}") }
+                refreshAfterEdit(); toast(getString(R.string.toast_saved))
+            } catch (e: Exception) { toast(getString(R.string.err_format, e.message)) }
         }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
@@ -316,10 +317,10 @@ private fun MainActivity.showSubArrayEditDialog(original: JsonArray, start: Int,
 // NBT 搜索
 // ============================================
 fun MainActivity.showEditorSearchDialog() {
-    val et = EditText(this).apply { hint = "Search key or translation"; isSingleLine = true }
-    val dialog = AlertDialog.Builder(this).setTitle("Search NBT").setView(et)
-        .setPositiveButton("Close", null)
-        .setNeutralButton("Clear") { _, _ -> nbtAdapter?.filter(null) }
+    val et = EditText(this).apply { hint = getString(R.string.text_search_key_or_translate); isSingleLine = true }
+    val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.title_search_nbt_data)).setView(et)
+        .setPositiveButton(getString(R.string.btn_close), null)
+        .setNeutralButton(getString(R.string.btn_clear)) { _, _ -> nbtAdapter?.filter(null) }
         .create()
     et.addTextChangedListener(object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {}
@@ -340,13 +341,13 @@ fun MainActivity.showEditorSearchDialog() {
 // 视图选项
 // ============================================
 fun MainActivity.showViewOptionsDialog() {
-    val items = arrayOf("Raw", "Raw+Trans", "Smart", "Simple")
-    AlertDialog.Builder(this).setTitle("View Mode")
+    val items = arrayOf(getString(R.string.mode_raw), getString(R.string.mode_raw_trans), getString(R.string.mode_smart), getString(R.string.mode_simple))
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_view_mode))
         .setSingleChoiceItems(items, editorVM.viewMode.value) { d, which ->
             editorVM.setViewMode(which)
             prefs?.edit { putInt("view_mode", which) }
             nbtAdapter?.setViewMode(which); nbtTreeAdapter?.setViewMode(which)
-            d.dismiss(); toast("Mode changed")
+            d.dismiss(); toast(getString(R.string.toast_mode_changed))
         }.show()
 }
 
@@ -357,13 +358,13 @@ fun MainActivity.showOpenByKeyDialog() {
     val layout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL; setPadding(50, 40, 50, 20)
     }
-    layout.addView(TextView(this).apply { text = "Open NBT by name/hex key" })
+    layout.addView(TextView(this).apply { text = getString(R.string.text_open_nbt_by_name_hint) })
     val etKey = EditText(this); layout.addView(etKey)
-    val cbHex = CheckBox(this).apply { text = "Hex mode" }; layout.addView(cbHex)
-    AlertDialog.Builder(this).setTitle("Open by Key").setView(layout)
-        .setPositiveButton("Confirm") { _, _ ->
+    val cbHex = CheckBox(this).apply { text = getString(R.string.title_hex_16_hexadecimal_mode) }; layout.addView(cbHex)
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_open_nbt_by_name)).setView(layout)
+        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
             val input = etKey.text.toString()
-            if (input.isEmpty()) { toast("Input cannot be empty"); return@setPositiveButton }
+            if (input.isEmpty()) { toast(getString(R.string.toast_input_cannot_be_empty)); return@setPositiveButton }
             worldVM.loadCustomKey(input, cbHex.isChecked)
         }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
@@ -417,14 +418,14 @@ fun MainActivity.showAppInfoDialog() {
         }
     }
     dialogView.findViewById<Button?>(R.id.btn_dialog_theme)?.let {
-        it.text = if (isNightMode) "Switch Day" else "Switch Night"
+        it.text = if (isNightMode) getString(R.string.action_switch_day) else getString(R.string.action_switch_night)
         it.setOnClickListener {
             isNightMode = !isNightMode; prefs?.edit { putBoolean("night_mode", isNightMode) }
             applyTheme(); dialog.dismiss(); recreate()
         }
     }
     dialogView.findViewById<Button?>(R.id.btn_dialog_lang)?.let {
-        it.text = if ("zh" == currentLang) "Switch to English" else "切换到中文"
+        it.text = if ("zh" == currentLang) getString(R.string.switch_to_english) else getString(R.string.switch_to_chinese)
         it.setOnClickListener {
             currentLang = if ("zh" == currentLang) "en" else "zh"
             prefs?.edit { putString("app_language", currentLang) }
@@ -445,8 +446,8 @@ fun MainActivity.showAppInfoDialog() {
 // 调试菜单
 // ============================================
 fun MainActivity.showDebugMenu() {
-    AlertDialog.Builder(this).setTitle("Debug")
-        .setItems(arrayOf("Crash Test", "Show Logs", "Copy Logs")) { _, w ->
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_debug_menu))
+        .setItems(arrayOf(getString(R.string.debug_crash_test), getString(R.string.debug_show_logs), getString(R.string.debug_copy_logs))) { _, w ->
             when (w) {
                 0 -> Handler(Looper.getMainLooper()).postDelayed(
                     { throw RuntimeException("Manual crash test") }, 1000
@@ -454,17 +455,17 @@ fun MainActivity.showDebugMenu() {
                 1 -> {
                     val sv = ScrollView(this)
                     val tv = TextView(this).apply {
-                        text = "Logs loaded"; typeface = Typeface.MONOSPACE
+                        text = getString(R.string.msg_no_logs_to_export); typeface = Typeface.MONOSPACE
                         textSize = 12f; setPadding(20, 20, 20, 20)
                     }
                     sv.addView(tv)
-                    AlertDialog.Builder(this).setTitle("Logs").setView(sv)
-                        .setPositiveButton("Close", null).show()
+                    AlertDialog.Builder(this).setTitle(getString(R.string.title_logs)).setView(sv)
+                        .setPositiveButton(getString(R.string.btn_close), null).show()
                 }
                 2 -> {
                     (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                        .setPrimaryClip(ClipData.newPlainText("Logs", "Debug logs"))
-                    toast("Copied")
+                        .setPrimaryClip(ClipData.newPlainText(getString(R.string.title_logs), getString(R.string.text_debug_logs)))
+                    toast(getString(R.string.msg_logs_copied))
                 }
             }
         }.show()

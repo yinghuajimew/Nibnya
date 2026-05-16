@@ -34,7 +34,7 @@ fun MainActivity.showGlobalDataDialog()  = showGlobalDataListDialog()
 private fun MainActivity.showDataListDialog(type: Int, label: String) {
     val dbPath = worldVM.currentWorkingDbPath
     if (dbPath == null || !File(dbPath).exists()) {
-        toast("Load database first"); return
+        toast(getString(R.string.toast_please_initialize_the_database_first)); return
     }
     val cachedList: MutableList<String>? = when (type) {
         MainActivity.TYPE_PLAYER -> cachePlayerList
@@ -46,7 +46,7 @@ private fun MainActivity.showDataListDialog(type: Int, label: String) {
         showListDialogUI(cachedList, type, label)
         return
     }
-    showProgressDialog("Scanning", "Searching $label data...")
+    showProgressDialog(getString(R.string.msg_scanning), getString(R.string.searching_label_data, label))
     Thread {
         try {
             val db = PlayerDbManager(dbPath)
@@ -78,21 +78,21 @@ private fun MainActivity.showDataListDialog(type: Int, label: String) {
 // ============================================
 private fun MainActivity.showGlobalDataListDialog() {
     val globalKeys = arrayOf(
-        arrayOf("LevelChunkMetaDataDictionary", "Metadata"),
-        arrayOf("BiomeData", "Biome"),
-        arrayOf("Overworld", "Overworld"),
-        arrayOf("Nether", "Nether"),
-        arrayOf("TheEnd", "The End"),
-        arrayOf("Villages", "Villages"),
-        arrayOf("Portals", "Portals"),
-        arrayOf("AutonomousEntities", "Entities"),
-        arrayOf("schedulerWT", "Scheduler"),
-        arrayOf("Scoreboard", "Scoreboard"),
-        arrayOf("Mobevents", "Mob Events"),
-        arrayOf("PositionTrackDBLastID", "Track Last ID"),
-        arrayOf("dimension0", "Dim 0"),
-        arrayOf("dimension1", "Dim 1"),
-        arrayOf("dimension2", "Dim 2"),
+        arrayOf("LevelChunkMetaDataDictionary", getString(R.string.msg_global_system_data_list_metadata)),
+        arrayOf("BiomeData", getString(R.string.msg_global_system_data_list_community)),
+        arrayOf("Overworld", getString(R.string.msg_global_system_data_list_main_world_data)),
+        arrayOf("Nether", getString(R.string.msg_global_system_data_list_iower_bound_data)),
+        arrayOf("TheEnd", getString(R.string.msg_global_system_data_list_end_data)),
+        arrayOf("Villages", getString(R.string.msg_global_system_data_list_village)),
+        arrayOf("Portals", getString(R.string.msg_global_system_data_list_portal)),
+        arrayOf("AutonomousEntities", getString(R.string.msg_global_system_data_list_autonoous_entity)),
+        arrayOf("schedulerWT", getString(R.string.msg_global_system_data_list_scheduler)),
+        arrayOf("Scoreboard", getString(R.string.msg_global_system_data_list_scoreboard_data)),
+        arrayOf("Mobevents", getString(R.string.msg_global_system_data_list_biological_events)),
+        arrayOf("PositionTrackDBLastID", getString(R.string.msg_global_system_data_list_last_targeting_id)),
+        arrayOf("dimension0", getString(R.string.msg_global_system_data_list_main_world_0)),
+        arrayOf("dimension1", getString(R.string.msg_global_system_data_list_nether_1)),
+        arrayOf("dimension2", getString(R.string.msg_global_system_data_list_end_2)),
     )
     val displayList = mutableListOf<String>()
     val realKeys = mutableListOf<String>()
@@ -110,16 +110,16 @@ private fun MainActivity.showGlobalDataListDialog() {
     }
     val lv = ListView(this).apply { this.adapter = adapter }
     val dialog = AlertDialog.Builder(this)
-        .setTitle("Global System Data (${displayList.size})")
+        .setTitle(getString(R.string.title_global_system_data_count))
         .setView(lv)
-        .setNegativeButton("Close", null)
+        .setNegativeButton(getString(R.string.btn_close), null)
         .create()
     lv.setOnItemClickListener { _, _, pos, _ -> worldVM.loadSpecificKey(this, realKeys[pos]); dialog.dismiss() }
     lv.setOnItemLongClickListener { _, _, pos, _ ->
         val key = realKeys[pos]
         (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
             .setPrimaryClip(ClipData.newPlainText("Key", key))
-        toast("Key copied: $key")
+        toast(getString(R.string.toast_key_copied, key))
         true
     }
     dialog.show()
@@ -131,13 +131,13 @@ private fun MainActivity.showGlobalDataListDialog() {
 private fun MainActivity.showListDialogUI(
     dataList: MutableList<String>, type: Int, label: String
 ) {
-    val baseTitle = "$label Data"
-    if (dataList.isEmpty()) { toast("No $label data"); return }
+    val baseTitle = getString(R.string.title_label_data, label)
+    if (dataList.isEmpty()) { toast(getString(R.string.toast_no_label_data, label)); return }
 
     val adapter = FuzzyListAdapter(this, dataList)
     val listView = ListView(this).apply { this.adapter = adapter }
     val emptyView = TextView(this).apply {
-        text = "No data or no search results"; gravity = Gravity.CENTER
+        text = getString(R.string.text_no_data_or_no_search_results_found); gravity = Gravity.CENTER
     }
     val container = FrameLayout(this).apply { addView(listView); addView(emptyView) }
     listView.emptyView = emptyView
@@ -183,16 +183,16 @@ private fun MainActivity.showListDialogUI(
     btnBatchDelete.setOnClickListener {
         if (!adapter.isSelectionMode()) {
             adapter.setSelectionMode(true)
-            toast("Check items to delete")
+            toast(getString(R.string.toast_please_check_the_items_you_want_to_delete))
             return@setOnClickListener
         }
         val toDelete = adapter.selectedList
-        if (toDelete.isEmpty()) { adapter.setSelectionMode(false); toast("Exited batch mode"); return@setOnClickListener }
+        if (toDelete.isEmpty()) { adapter.setSelectionMode(false); toast(getString(R.string.toast_exited_from_batch_management)); return@setOnClickListener }
         AlertDialog.Builder(this)
-            .setTitle("Batch Delete")
-            .setMessage("Delete ${toDelete.size} item(s)? This cannot be undone.")
-            .setPositiveButton("Delete") { _, _ ->
-                showProgressDialog("Deleting", "Processing...")
+            .setTitle(getString(R.string.title_batch_delete))
+            .setMessage(getString(R.string.msg_delete_items_confirm, toDelete.size))
+            .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
+                showProgressDialog(getString(R.string.msg_deleting), getString(R.string.msg_processing_ing))
                 val dbPath = worldVM.currentWorkingDbPath
                 Thread {
                     try {
@@ -209,19 +209,19 @@ private fun MainActivity.showListDialogUI(
                                 MainActivity.TYPE_MAP -> cacheMapList = null
                                 MainActivity.TYPE_VILLAGE -> cacheVillageList = null
                             }
-                            toast("Deleted ${toDelete.size}")
+                            toast(getString(R.string.toast_deleted_count, toDelete.size))
                         }
                     } catch (e: Exception) {
-                        runOnUiThread { dismissProgressDialog(); toast("Delete failed: $e") }
+                        runOnUiThread { dismissProgressDialog(); toast(getString(R.string.toast_delete_failed, e)) }
                     }
                 }.start()
-            }.setNegativeButton("Cancel", null).show()
+            }.setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
     val dialog = AlertDialog.Builder(this)
         .setCustomTitle(customTitle)
-        .setNeutralButton("More") { _, _ -> showPlayerRootMenu(dataList, type) }
-        .setNegativeButton("Cancel", null)
+        .setNeutralButton(getString(R.string.btn_more_actions)) { _, _ -> showPlayerRootMenu(dataList, type) }
+        .setNegativeButton(getString(R.string.btn_cancel), null)
         .setView(container)
         .create()
 
@@ -243,9 +243,9 @@ private fun MainActivity.showListDialogUI(
     listView.onItemLongClickListener = AdapterView.OnItemLongClickListener { _, _, pos, _ ->
         if (adapter.isSelectionMode()) return@OnItemLongClickListener false
         val targetKey = adapter.getItem(pos)
-        val ops = arrayOf("Copy JSON", "Paste/Overwrite", "Rename", "Delete")
+        val ops = arrayOf(getString(R.string.msg_list_long_press_copy_data_json), getString(R.string.msg_list_long_press_paste_overlay), getString(R.string.msg_list_long_press_rename), getString(R.string.msg_list_long_press_delete))
         AlertDialog.Builder(this)
-            .setTitle("Manage: $targetKey")
+            .setTitle(getString(R.string.title_manage, targetKey))
             .setItems(ops) { _, w ->
                 when (w) {
                     0 -> copyPlayerJson(targetKey)
@@ -283,21 +283,21 @@ private fun MainActivity.copyPlayerJson(key: String) {
             runOnUiThread {
                 (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("PLAYER_DATA", json))
-                toast("Copied")
+                toast(getString(R.string.toast_copied))
             }
-        } catch (e: Exception) { runOnUiThread { toast("Copy failed: $e") } }
+        } catch (e: Exception) { runOnUiThread { toast(getString(R.string.msg_copy_failed, e)) } }
     }.start()
 }
 
 private fun MainActivity.pastePlayerJson(targetKey: String, onSuccess: Runnable?) {
     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    if (!cm.hasPrimaryClip()) { toast("Clipboard empty"); return }
+    if (!cm.hasPrimaryClip()) { toast(getString(R.string.toast_clipboard_empty)); return }
     val clip = cm.primaryClip ?: return
 
     AlertDialog.Builder(this)
-        .setTitle("⚠️ Overwrite Warning")
-        .setMessage("Full overwrite $targetKey? This is irreversible.")
-        .setPositiveButton("Overwrite") { _, _ ->
+        .setTitle(getString(R.string.title_overwride_warning))
+        .setMessage(getString(R.string.msg_full_overwrite_confirm, targetKey))
+        .setPositiveButton(getString(R.string.btn_cover)) { _, _ ->
             val jsonStr = cm.primaryClip!!.getItemAt(0).text.toString()
             Thread {
                 try {
@@ -305,25 +305,26 @@ private fun MainActivity.pastePlayerJson(targetKey: String, onSuccess: Runnable?
                     val bytes = BedrockParser.writeToBytes(jo)
                     val db = PlayerDbManager(worldVM.currentWorkingDbPath!!)
                     db.writeSpecificKey(targetKey, bytes); db.close()
-                    runOnUiThread { toast("Overwritten"); onSuccess?.run() }
-                } catch (e: Exception) { runOnUiThread { toast("Paste failed: $e") } }
+                    runOnUiThread { toast(getString(R.string.toast_data_covered)); onSuccess?.run() }
+                } catch (e: Exception) { runOnUiThread { toast(getString(R.string.toast_paste_failed, e)) } }
             }.start()
-        }.setNegativeButton("Cancel", null).show()
+        }
+        .setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 private fun MainActivity.deletePlayerKey(key: String, onSuccess: Runnable?) {
     AlertDialog.Builder(this)
-        .setTitle("⚠️ Delete")
-        .setMessage("Delete $key?")
-        .setPositiveButton("Delete") { _, _ ->
+        .setTitle(getString(R.string.title_remove_warning))
+        .setMessage(getString(R.string.msg_delete_confirm, key))
+        .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
             Thread {
                 try {
                     val db = PlayerDbManager(worldVM.currentWorkingDbPath!!)
                     db.deleteKey(key); db.close()
-                    runOnUiThread { toast("Deleted: $key"); onSuccess?.run() }
-                } catch (e: Exception) { runOnUiThread { toast("Delete failed: $e") } }
+                    runOnUiThread { toast(getString(R.string.toast_delete_key_confirm, key)); onSuccess?.run() }
+                } catch (e: Exception) { runOnUiThread { toast(getString(R.string.toast_delete_failed, e)) } }
             }.start()
-        }.setNegativeButton("Cancel", null).show()
+        }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 private fun MainActivity.renamePlayerKey(
@@ -331,10 +332,10 @@ private fun MainActivity.renamePlayerKey(
 ) {
     val input = EditText(this).apply { setText(oldKey) }
     AlertDialog.Builder(this)
-        .setTitle("Rename Key")
-        .setMessage("Move data to new key, delete old.")
+        .setTitle(getString(R.string.title_rename_key))
+        .setMessage(getString(R.string.msg_move_data_to_new_key_and_delete_old_key))
         .setView(input)
-        .setPositiveButton("Rename") { _, _ ->
+        .setPositiveButton(getString(R.string.menu_rename)) { _, _ ->
             val newKey = input.text.toString().trim()
             if (newKey.isEmpty() || newKey == oldKey) return@setPositiveButton
             Thread {
@@ -344,9 +345,9 @@ private fun MainActivity.renamePlayerKey(
                     db.writeSpecificKey(newKey, data)
                     db.deleteKey(oldKey); db.close()
                     runOnUiThread { onSuccess?.run() }
-                } catch (e: Exception) { runOnUiThread { toast("Rename failed: $e") } }
+                } catch (e: Exception) { runOnUiThread { toast(getString(R.string.toast_rename_failed, e)) } }
             }.start()
-        }.setNegativeButton("Cancel", null).show()
+        }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 private fun MainActivity.invalidateCache(type: Int) {
@@ -367,27 +368,27 @@ fun MainActivity.showPlayerRootMenu(currentList: MutableList<String>, dataType: 
         else -> "Player"
     }
     val hintName = when (dataType) {
-        MainActivity.TYPE_MAP -> "e.g. map_0"
-        MainActivity.TYPE_VILLAGE -> "e.g. village_xxx"
-        else -> "e.g. ~local_player"
+        MainActivity.TYPE_MAP -> getString(R.string.msg_for_example_map)
+        MainActivity.TYPE_VILLAGE -> getString(R.string.msg_for_example_village)
+        else -> getString(R.string.msg_for_example_player)
     }
     val menuList = mutableListOf<String>(
-        "Create New Blank $typeName",
-        "Paste as New $typeName",
-        "Delete ALL in list"
+        getString(R.string.msg_create_new_blank, typeName),
+        getString(R.string.msg_paste_as_new, typeName),
+        getString(R.string.btn_delete_all_in_list)
     )
-    if (dataType == MainActivity.TYPE_MAP) menuList.add("Create Giant Puzzle")
+    if (dataType == MainActivity.TYPE_MAP) menuList.add(getString(R.string.msg_create_a_giant_jigsaw_puzzle))
 
     AlertDialog.Builder(this)
-        .setTitle("More Operations")
+        .setTitle(getString(R.string.title_more_operations))
         .setItems(menuList.toTypedArray()) { _, w ->
             when {
                 // 删除全部
                 w == 2 -> AlertDialog.Builder(this)
-                    .setTitle("⚠️ High Energy Warning")
-                    .setMessage("Delete all ${currentList.size} $typeName data? Cannot undo!")
-                    .setPositiveButton("Delete All") { _, _ ->
-                        showProgressDialog("Deleting", "Cleaning up...")
+                    .setTitle(getString(R.string.title_high_energy_early_warning))
+                    .setMessage(getString(R.string.msg_delete_all_type_data, currentList.size, typeName))
+                    .setPositiveButton(getString(R.string.btn_delete_all)) { _, _ ->
+                        showProgressDialog(getString(R.string.msg_deleting), getString(R.string.msg_cleaning_up))
                         Thread {
                             try {
                                 val db = PlayerDbManager(worldVM.currentWorkingDbPath!!)
@@ -396,13 +397,13 @@ fun MainActivity.showPlayerRootMenu(currentList: MutableList<String>, dataType: 
                                 runOnUiThread {
                                     dismissProgressDialog()
                                     currentList.clear(); invalidateCache(dataType)
-                                    toast("All $typeName deleted")
+                                    toast(getString(R.string.toast_all_type_deleted, typeName))
                                 }
                             } catch (e: Exception) {
-                                runOnUiThread { dismissProgressDialog(); toast("Failed: $e") }
+                                runOnUiThread { dismissProgressDialog(); toast(getString(R.string.toast_failed, e)) }
                             }
                         }.start()
-                    }.setNegativeButton("Cancel", null).show()
+                    }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 
                 // 拼图入口（仅地图模式）
                 dataType == MainActivity.TYPE_MAP && w == 3 -> {
@@ -414,17 +415,17 @@ fun MainActivity.showPlayerRootMenu(currentList: MutableList<String>, dataType: 
                     val mode = w
                     val input = EditText(this).apply { hint = hintName }
                     AlertDialog.Builder(this)
-                        .setTitle("New $typeName Key")
+                        .setTitle(getString(R.string.title_new_type_key, typeName))
                         .setView(input)
-                        .setPositiveButton("Create") { _, _ ->
+                        .setPositiveButton(getString(R.string.btn_create)) { _, _ ->
                             val newKey = input.text.toString()
-                            if (newKey.isEmpty()) { toast("Key cannot be empty"); return@setPositiveButton }
+                            if (newKey.isEmpty()) { toast(getString(R.string.toast_key_cannot_be_empty)); return@setPositiveButton }
                             val jsonContent: String = when (mode) {
                                 0 -> "{}"
                                 else -> {
                                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     if (!cm.hasPrimaryClip()) {
-                                        toast("Clipboard empty"); return@setPositiveButton
+                                        toast(getString(R.string.toast_clipboard_empty)); return@setPositiveButton
                                     }
                                     cm.primaryClip!!.getItemAt(0).text.toString()
                                 }
@@ -438,10 +439,10 @@ fun MainActivity.showPlayerRootMenu(currentList: MutableList<String>, dataType: 
                                     runOnUiThread {
                                         if (!currentList.contains(newKey)) currentList.add(newKey)
                                         invalidateCache(dataType)
-                                        toast("$typeName created")
+                                        toast(getString(R.string.toast_type_created, typeName))
                                     }
                                 } catch (e: Exception) {
-                                    runOnUiThread { toast("Creation failed: $e") }
+                                    runOnUiThread { toast(getString(R.string.toast_creation_failed, e)) }
                                 }
                             }.start()
                         }.show()
