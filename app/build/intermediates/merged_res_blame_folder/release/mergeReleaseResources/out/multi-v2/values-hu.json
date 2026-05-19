@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeReleaseResources-6:/values-hu/values-hu.xml",
+            "outputFile": "yhjmew.minecraft.nbteditor.app-mergeReleaseResources-21:/values-hu/values-hu.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\yinghuaji\\.gradle\\caches\\9.0.0\\transforms\\cff30f28e54c521916fa88b517e209fc\\transformed\\core-1.10.1\\res\\values-hu\\values-hu.xml",
+                    "source": "C:\\Users\\yinghuaji\\.gradle\\caches\\9.0.0\\transforms\\60300be9bc1803e0ec5396b35ca4d16e\\transformed\\core-1.18.0\\res\\values-hu\\values-hu.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

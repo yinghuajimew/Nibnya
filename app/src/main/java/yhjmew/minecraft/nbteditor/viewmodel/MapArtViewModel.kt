@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
+import yhjmew.minecraft.nbteditor.NbtTranslator.getString
 import yhjmew.minecraft.nbteditor.PlayerDbManager
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -56,7 +58,7 @@ class MapArtViewModel : ViewModel() {
     fun generateMapFromImage(context: Context, imageUri: Uri, targetArray: JsonArray?) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = "Processing image..."
+            _progressMessage.value = getString(R.string.msg_processing_ing)
             try {
                 val `is` = context.contentResolver.openInputStream(imageUri)
                 val original = BitmapFactory.decodeStream(`is`)
@@ -97,10 +99,10 @@ class MapArtViewModel : ViewModel() {
                 finalBitmap.recycle()
 
                 _isGenerating.value = false
-                _resultMessage.value = "Map generated"
+                _resultMessage.value = getString(R.string.toast_the_map_is_generated)
             } catch (e: Exception) {
                 _isGenerating.value = false
-                _resultMessage.value = "Generation failed: ${e.message}"
+                _resultMessage.value = getString(R.string.msg_generation_failed, e.message)
             }
         }
     }
@@ -111,10 +113,10 @@ class MapArtViewModel : ViewModel() {
     fun generatePuzzleMap(context: Context, imageUri: Uri, rows: Int, cols: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = "Analyzing inventory..."
+            _progressMessage.value = getString(R.string.msg_analyzing_backpack)
             try {
-                val wm = worldVM ?: throw Exception("WorldVM missing")
-                val dbPath = wm.currentWorkingDbPath ?: throw Exception("DB not loaded")
+                val wm = worldVM ?: throw Exception(getString(R.string.msg_worldvm_missing))
+                val dbPath = wm.currentWorkingDbPath ?: throw Exception(getString(R.string.msg_db_not_loaded))
 
                 val db = PlayerDbManager(dbPath)
                 val playerData = db.readLocalPlayer()
@@ -181,10 +183,11 @@ class MapArtViewModel : ViewModel() {
                 for (i in 0..35) if (!occupiedSlots[i]) { freeSlot = i.toByte(); break }
                 if (freeSlot.toInt() == -1) {
                     db.close()
-                    throw Exception("Backpack full, need at least 1 empty slot")
+                    throw Exception(getString(R.string.msg_backpack_is_full_least_1_empty_slot))
                 }
 
                 // 计算 ID
+                //会和地图里预设的地图ID撞上
                 var maxMapId: Long = -1
                 for (key in mapKeys) {
                     try { val id = key.replace("map_", "").toLong(); if (id > maxMapId) maxMapId = id }
@@ -207,7 +210,7 @@ class MapArtViewModel : ViewModel() {
                 val cellH = src.height / rows
                 val totalMaps = rows * cols
 
-                _progressMessage.value = "Generating $totalMaps maps..."
+                _progressMessage.value = getString(R.string.msg_generating_maps, totalMaps)
 
                 val itemsMap = ConcurrentHashMap<Int, JsonObject>()
                 val cores = Runtime.getRuntime().availableProcessors()
@@ -286,7 +289,7 @@ class MapArtViewModel : ViewModel() {
 
                 latch.await()
                 executor.shutdown()
-                if (errorRef.get() != null) throw Exception("Processing error: ${errorRef.get()!!.message}")
+                if (errorRef.get() != null) throw Exception(getString(R.string.msg_processing_error, errorRef.get()!!.message))
                 src.recycle()
 
                 // 装箱
@@ -308,7 +311,7 @@ class MapArtViewModel : ViewModel() {
                         val bc = JsonObject()
                         bc.add("name", wrapTag(8, "minecraft:undyed_shulker_box"))
                         bc.add("states", JsonObject().apply { addProperty("t", 10); add("v", JsonObject()) })
-                        bc.add("version", wrapTag(3, 18168865))
+                        bc.add("version", wrapTag(3, 18168865))//"18168865" 需要重新按照百科重新填写
                         add("v", bc)
                     }
                     boxItem.add("Block", blockTag)
@@ -324,7 +327,7 @@ class MapArtViewModel : ViewModel() {
                         }
                         for (i in 0..<mapsInThisLayer) {
                             val mapIdx = startIdx + i
-                            var mapItem = itemsMap[mapIdx] ?: throw Exception("Slice missing: $mapIdx")
+                            var mapItem = itemsMap[mapIdx] ?: throw Exception(getString(R.string.msg_slice_missing, mapIdx))
                             mapItem = mapItem.deepCopy()
                             mapItem.add("Slot", wrapTag(1, (i + 1).toByte()))
                             itemsArr.add(mapItem)
@@ -333,7 +336,7 @@ class MapArtViewModel : ViewModel() {
                         tc.add("Items", itemsListTag)
                         val dt = JsonObject().apply {
                             addProperty("t", 10)
-                            add("v", JsonObject().apply { add("Name", wrapTag(8, if (layer == 0) "Puzzle Set ($totalMaps maps)" else "Layer $layer →")) })
+                            add("v", JsonObject().apply { add("Name", wrapTag(8, if (layer == 0) getString(R.string.msg_puzzle_set_count, totalMaps) else getString(R.string.msg_layer_arrow, layer))) })
                         }
                         tc.add("display", dt)
                         add("v", tc)
@@ -342,7 +345,7 @@ class MapArtViewModel : ViewModel() {
                     currentContainer = boxItem
                 }
 
-                val finalBox = currentContainer ?: throw Exception("Packing failed")
+                val finalBox = currentContainer ?: throw Exception(getString(R.string.msg_packing_failed))
                 finalBox.add("Slot", wrapTag(1, freeSlot))
                 inventory?.add(finalBox)
 
@@ -351,10 +354,10 @@ class MapArtViewModel : ViewModel() {
                 db.close()
 
                 _isGenerating.value = false
-                _resultMessage.value = "Puzzle:SUCCESS:$totalMaps:$totalLayers:$startMapId:$freeSlot"
+                _resultMessage.value = getString(R.string.msg_puzzle_success_format, totalMaps, totalLayers, startMapId, freeSlot)
             } catch (e: Exception) {
                 _isGenerating.value = false
-                _resultMessage.value = "Puzzle:ERROR:${e.message}"
+                _resultMessage.value = getString(R.string.msg_puzzle_error, e.message)
             }
         }
     }

@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
 import yhjmew.minecraft.nbteditor.MainActivity
+import yhjmew.minecraft.nbteditor.NbtTranslator.getString
 import yhjmew.minecraft.nbteditor.PlayerDbManager
 import java.io.*
 import java.lang.reflect.Method
@@ -150,7 +152,7 @@ class WorldViewModel : ViewModel() {
     fun scanWorlds(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            _loadingMessage.value = "Scanning..."
+            _loadingMessage.value = getString(R.string.msg_scanning)
             try {
                 val dir = File(_currentPath.value)
                 val rawFolders = mutableListOf<String>()
@@ -240,7 +242,7 @@ class WorldViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            _loadingMessage.value = "Loading level.dat..."
+            _loadingMessage.value = getString(R.string.msg_loading_level_dat)
             try {
                 val src = "${_currentPath.value}$folder/level.dat"
                 val destFile = File(worksDir(context), MainActivity.LEVEL_DAT_NAME)
@@ -280,10 +282,10 @@ class WorldViewModel : ViewModel() {
 
                 _currentWorldFolder.value = folder
                 _isLoading.value = false
-                _toastMessage.value = "Loaded: level.dat"
+                _toastMessage.value = getString(R.string.msg_loaded_level_dat)
             } catch (e: Exception) {
                 _isLoading.value = false
-                _errorMessage.value = e.message ?: "Load failed"
+                _errorMessage.value = e.message ?: getString(R.string.msg_load_failed)
             }
         }
     }
@@ -299,7 +301,7 @@ class WorldViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            _loadingMessage.value = "Loading player..."
+            _loadingMessage.value = getString(R.string.msg_loading_player)
             try {
                 val worldDir = File(_currentPath.value, folder)
                 val srcPath = File(worldDir, "db").absolutePath
@@ -310,7 +312,7 @@ class WorldViewModel : ViewModel() {
                 if (srcDirFile.exists() && srcDirFile.canRead() && srcDirFile.listFiles() != null) {
                     useNative = true
                 } else if (!canUseShizuku) {
-                    throw Exception("Permission denied, need Shizuku")
+                    throw Exception(getString(R.string.toast_err_permission_denied_shizuku))
                 }
 
                 // 清理锁
@@ -341,12 +343,12 @@ class WorldViewModel : ViewModel() {
                     val exitCode = pCopy.waitFor()
                     if (exitCode != 0) {
                         val err = BufferedReader(InputStreamReader(pCopy.errorStream)).readText()
-                        throw Exception("Shizuku Copy Error ($exitCode): $err")
+                        throw Exception(getString(R.string.text_shizuku_copy_error, exitCode, err))
                     }
                     runShizukuCmd(arrayOf("sh", "-c", "chmod -R 777 \"$bridgePath\"")).waitFor()
                     val bridgeDir = File(bridgePath)
                     if (!bridgeDir.exists() || bridgeDir.list().isNullOrEmpty())
-                        throw Exception("Source directory appears empty: $srcPath")
+                        throw Exception(getString(R.string.text_source_dir_empty, srcPath))
                     if (!workDir.exists()) workDir.mkdirs()
                     smartCopy(bridgeDir, workDir)
                     runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgePath\"")).waitFor()
@@ -375,7 +377,7 @@ class WorldViewModel : ViewModel() {
 
                 _currentWorldFolder.value = folder
                 _isLoading.value = false
-                _toastMessage.value = "Player loaded successfully"
+                _toastMessage.value = getString(R.string.toast_player_loaded_success)
                 onSuccess?.run()
             } catch (e: Exception) {
                 _isLoading.value = false
@@ -412,7 +414,7 @@ class WorldViewModel : ViewModel() {
             _isLoading.value = true
             try {
                 currentWorkingDbPath?.let { File(it, "LOCK").delete() }
-                val dbPath = currentWorkingDbPath ?: throw Exception("DB path is null")
+                val dbPath = currentWorkingDbPath ?: throw Exception(getString(R.string.text_db_path_is_null))
                 val db = PlayerDbManager(dbPath)
                 val data = db.readSpecificKey(keyName)
                 db.close()
@@ -427,10 +429,10 @@ class WorldViewModel : ViewModel() {
                 evm.scrollPositionStack.clear()
                 evm.updatePathTitle()
                 _isLoading.value = false
-                _toastMessage.value = "Loaded: $keyName"
+                _toastMessage.value = getString(R.string.toast_loaded, keyName)
             } catch (e: Exception) {
                 _isLoading.value = false
-                _errorMessage.value = "Load failed: ${e.message}"
+                _errorMessage.value = getString(R.string.err_load_failed_with_msg, e.message)
             }
         }
     }
@@ -453,15 +455,15 @@ class WorldViewModel : ViewModel() {
     fun saveAndPushBack(context: Context, dataToSave: JsonObject?, folder: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
-            _loadingMessage.value = "Saving..."
+            _loadingMessage.value = getString(R.string.msg_saving)
             try {
                 createBackup(context, folder)
-                val evm = editorVM ?: throw Exception("EditorVM missing")
+                val evm = editorVM ?: throw Exception(getString(R.string.msg_editorvm_missing))
 
                 if (evm.isEditingPlayer.value) {
-                    val dbPath = currentWorkingDbPath ?: throw Exception("DbPath is NULL")
+                    val dbPath = currentWorkingDbPath ?: throw Exception(getString(R.string.text_db_path_is_null))
                     val oldWorkDir = File(dbPath)
-                    if (!oldWorkDir.exists()) throw Exception("WorkDir lost")
+                    if (!oldWorkDir.exists()) throw Exception(getString(R.string.msg_workdir_lost))
 
                     val uniqueId = System.currentTimeMillis().toString()
                     val newWorkDir = File(worksDir(context), "working_db_$uniqueId")
@@ -487,7 +489,7 @@ class WorldViewModel : ViewModel() {
 
                     deleteRecursive(oldWorkDir)
                     currentWorkingDbPath = newWorkDir.absolutePath
-                    _toastMessage.value = "Player saved"
+                    _toastMessage.value = getString(R.string.toast_player_saved)
                 } else {
                     if (currentWorkingFileOrDir == null) {
                         val f = File(worksDir(context), MainActivity.LEVEL_DAT_NAME)
@@ -506,8 +508,8 @@ class WorldViewModel : ViewModel() {
                         runShizukuCmd(arrayOf("sh", "-c", "cp \"$bridgeFile\" \"$targetPath\"")).waitFor()
                         success = true
                     }
-                    if (!success) throw Exception("Write to game dir failed")
-                    _toastMessage.value = "Level.dat saved"
+                    if (!success) throw Exception(getString(R.string.msg_write_to_game_dir_failed))
+                    _toastMessage.value = getString(R.string.toast_level_dat_saved)
                 }
                 _isLoading.value = false
             } catch (e: Exception) {
@@ -615,7 +617,7 @@ class WorldViewModel : ViewModel() {
                     evm.pathStack.clear()
                     evm.scrollPositionStack.clear()
                     evm.updatePathTitle()
-                    _toastMessage.value = "Player restored"
+                    _toastMessage.value = getString(R.string.toast_player_restored)
                 } else {
                     val target = File(worksDir(context), MainActivity.LEVEL_DAT_NAME)
                     copyFileNative(backupItem.file, target)
@@ -632,10 +634,10 @@ class WorldViewModel : ViewModel() {
                     evm.currentListData = json
                     evm.updatePathTitle()
                     updateWorldInfoFromNbt(json)
-                    _toastMessage.value = "Level.dat restored"
+                    _toastMessage.value = getString(R.string.toast_level_restored)
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "Restore failed: ${e.message}"
+                _errorMessage.value = getString(R.string.msg_restore_failed, e.message)
             }
         }
     }
@@ -713,7 +715,7 @@ class WorldViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             try {
-                val dbPath = currentWorkingDbPath ?: throw Exception("DB path is null")
+                val dbPath = currentWorkingDbPath ?: throw Exception(getString(R.string.text_db_path_is_null))
                 val db = PlayerDbManager(dbPath)
                 val keyBytes = if (isHex) hexStringToByteArray(inputStr)
                 else inputStr.toByteArray(Charsets.UTF_8)
@@ -731,21 +733,21 @@ class WorldViewModel : ViewModel() {
                 evm.updatePathTitle()
 
                 _isLoading.value = false
-                _toastMessage.value = "Loaded successfully"
+                _toastMessage.value = getString(R.string.toast_loading_successfully)
             } catch (e: Exception) {
                 _isLoading.value = false
-                _errorMessage.value = "Load failed: ${e.message}"
+                _errorMessage.value = getString(R.string.err_load_failed_with_msg, e.message)
             }
         }
     }
 
     private fun hexStringToByteArray(s: String): ByteArray {
         val hex = s.replace(" ", "")
-        require(hex.length % 2 == 0) { "Length must be even" }
+        require(hex.length % 2 == 0) { getString(R.string.msg_the_length_must_be_an_even_number) }
         val data = ByteArray(hex.length / 2)
         for (i in hex.indices step 2) {
-            val high = hex[i].digitToIntOrNull(16) ?: throw IllegalArgumentException("Invalid hex: ${hex[i]}")
-            val low = hex[i + 1].digitToIntOrNull(16) ?: throw IllegalArgumentException("Invalid hex: ${hex[i + 1]}")
+            val high = hex[i].digitToIntOrNull(16) ?: throw IllegalArgumentException(getString(R.string.msg_invalid_hex, hex[i]))
+            val low = hex[i + 1].digitToIntOrNull(16) ?: throw IllegalArgumentException(getString(R.string.msg_invalid_hex, hex[i + 1]))
             data[i / 2] = ((high shl 4) + low).toByte()
         }
         return data
@@ -790,7 +792,7 @@ class WorldViewModel : ViewModel() {
     }
 
     fun runShizukuCmd(cmd: Array<String?>): Process {
-        if (!checkShizukuAvailable()) throw Exception("Shizuku not running")
+        if (!checkShizukuAvailable()) throw Exception(getString(R.string.err_shizuku_not_running))
         val shizukuClass = Class.forName("rikka.shizuku.Shizuku")
         var m: Method? = null
         for (mm in shizukuClass.declaredMethods) {
@@ -799,12 +801,12 @@ class WorldViewModel : ViewModel() {
         if (m == null) for (mm in shizukuClass.methods) {
             if (mm.name == "newProcess" && mm.parameterTypes.size == 3) { m = mm; break }
         }
-        if (m == null) throw Exception("Shizuku API Error")
+        if (m == null) throw Exception(getString(R.string.msg_shizuku_api_error))
         m.isAccessible = true
         try { return m.invoke(null, cmd, null, null) as Process }
         catch (e: Exception) {
-            if (e.message?.contains("binder haven't been received") == true)
-                throw Exception("Shizuku binder not ready")
+            if (e.message?.contains(getString(R.string.msg_binder_haven_t_been_received)) == true)
+                throw Exception(getString(R.string.err_shizuku_binder_not_ready))
             throw e
         }
     }
@@ -871,7 +873,7 @@ class WorldViewModel : ViewModel() {
                 PlayerDbManager.tryRepair(dbPath)
                 onResult(true)
             } catch (e: Exception) {
-                _errorMessage.value = "Repair failed: ${e.message}"
+                _errorMessage.value = getString(R.string.toast_repair_failed, e.message)
                 onResult(false)
             }
         }

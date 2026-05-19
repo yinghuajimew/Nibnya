@@ -12,10 +12,10 @@ import yhjmew.minecraft.nbteditor.R
  */
 fun MainActivity.showPuzzleWarningDialog() {
     AlertDialog.Builder(this)
-        .setTitle("⚠️ Inventory Warning")
-        .setMessage("This will generate multiple map items and pack them into shulker boxes.\n\nMake sure your inventory has at least 1 empty slot.")
-        .setPositiveButton("I understand, continue") { _, _ -> showPuzzleConfigDialog() }
-        .setNegativeButton("Cancel", null)
+        .setTitle(getString(R.string.title_warning_inventory))
+        .setMessage(getString(R.string.msg_warning_puzzle))
+        .setPositiveButton(getString(R.string.btn_i_understand_continue)) { _, _ -> showPuzzleConfigDialog() }
+        .setNegativeButton(getString(R.string.btn_cancel), null)
         .show()
 }
 
@@ -27,7 +27,7 @@ fun MainActivity.showPuzzleConfigDialog() {
         getString(R.string.puzzle_opt_custom)      // custom
     )
     AlertDialog.Builder(this)
-        .setTitle("Choose Puzzle Size")
+        .setTitle(getString(R.string.title_choose_puzzle_size))
         .setItems(options) { _, w ->
             when (w) {
                 0 -> { puzzleRows = 1; puzzleCols = 1; pickPuzzleImage() }
@@ -44,32 +44,32 @@ private fun MainActivity.showPuzzleCustomSizeDialog() {
         setPadding(30, 20, 30, 0)
     }
     val etW = EditText(this).apply {
-        hint = "Width (cols)"
+        hint = getString(R.string.hint_width_col)
         inputType = InputType.TYPE_CLASS_NUMBER
         layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
     }
     val etH = EditText(this).apply {
-        hint = "Height (rows)"
+        hint = getString(R.string.hint_height_row)
         inputType = InputType.TYPE_CLASS_NUMBER
         layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
     }
     layout.addView(etW); layout.addView(etH)
 
     AlertDialog.Builder(this)
-        .setTitle("Input Dimensions")
+        .setTitle(getString(R.string.title_input_dimensions))
         .setView(layout)
-        .setPositiveButton("Confirm") { _, _ ->
+        .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
             try {
                 val strW = etW.text.toString(); val strH = etH.text.toString()
                 if (strW.isEmpty() || strH.isEmpty()) {
-                    toast("Please enter size"); return@setPositiveButton
+                    toast(getString(R.string.toast_please_enter_size)); return@setPositiveButton
                 }
                 puzzleCols = strW.toInt(); puzzleRows = strH.toInt()
                 if (puzzleCols * puzzleRows > 100) {
-                    toast("⚠️ Large size: ${puzzleCols * puzzleRows} maps will be generated")
+                    toast(getString((R.string.toast_huge_size_warning), puzzleCols * puzzleRows))
                 }
                 pickPuzzleImage()
-            } catch (e: Exception) { toast("Input error: ${e.message}") }
+            } catch (e: Exception) { toast(getString(R.string.toast_input_error, e.message)) }
         }.show()
 }
 

@@ -12,9 +12,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
 import yhjmew.minecraft.nbteditor.MainActivity
 import yhjmew.minecraft.nbteditor.NbtAdapter
+import yhjmew.minecraft.nbteditor.NbtTranslator.getString
 import yhjmew.minecraft.nbteditor.NbtTreeAdapter
 import java.io.File
 import java.util.Stack
@@ -101,12 +103,12 @@ class EditorViewModel : ViewModel() {
         if (_isTreeMode.value) {
             titleText = if (_isEditingPlayer.value) {
                 if (_currentTargetKey.value != null && _currentTargetKey.value != "~local_player") {
-                    "🌳 Tree / " + _currentTargetKey.value
+                    getString(R.string.emoji_tree) + _currentTargetKey.value
                 } else {
-                    "🌳 Tree / Player Data"
+                    getString(R.string.emoji_tree_player_data)
                 }
             } else {
-                "🌳 Tree / World Data"
+                getString(R.string.emoji_tree_world_data)
             }
         } else {
             if (pathStack.isEmpty()) {
@@ -114,10 +116,10 @@ class EditorViewModel : ViewModel() {
                     if (_currentTargetKey.value != null && _currentTargetKey.value != "~local_player") {
                         _currentTargetKey.value ?: ""
                     } else {
-                        "Current: Player Data"
+                        getString(R.string.path_current_player)
                     }
                 } else {
-                    "Current: Level.dat"
+                    getString(R.string.path_current_level)
                 }
             } else {
                 val sb = StringBuilder("Path: ")
@@ -134,7 +136,6 @@ class EditorViewModel : ViewModel() {
     fun saveSession(dbPath: String?) {
         val data = _nbtData.value ?: return
         val sessionKey = if (_isEditingPlayer.value) _currentTargetKey.value else "level.dat"
-            ?: return
         val session = EditorSession(
             data, navigationStack, pathStack, scrollPositionStack,
             _isEditingPlayer.value, dbPath, _currentTargetKey.value

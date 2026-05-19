@@ -8,7 +8,7 @@
 7-->D:\NBTeditor\app\src\main\AndroidManifest.xml:7:5-9:41
 8        android:minSdkVersion="23"
 8-->D:\NBTeditor\app\src\main\AndroidManifest.xml:8:9-35
-9        android:targetSdkVersion="33" />
+9        android:targetSdkVersion="28" />
 9-->D:\NBTeditor\app\src\main\AndroidManifest.xml:9:9-38
 10    <!-- Shizuku 权限 -->
 11    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -32,19 +32,19 @@
 18    </queries>
 19
 20    <permission
-20-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+20-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:22:5-24:47
 21        android:name="yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-21-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+21-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:23:9-81
 22        android:protectionLevel="signature" />
-22-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+22-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:24:9-44
 23
 24    <uses-permission android:name="yhjmew.minecraft.nbteditor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
-24-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
-24-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
+24-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:26:5-97
+24-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:26:22-94
 25    <application
 25-->D:\NBTeditor\app\src\main\AndroidManifest.xml:20:5-44:19
 26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-26-->[androidx.core:core:1.10.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\cff30f28e54c521916fa88b517e209fc\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
+26-->[androidx.core:core:1.18.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\60300be9bc1803e0ec5396b35ca4d16e\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
 27        android:extractNativeLibs="false"
 28        android:icon="@drawable/ic_launcher"
 28-->D:\NBTeditor\app\src\main\AndroidManifest.xml:22:9-45
@@ -87,6 +87,59 @@
 48-->D:\NBTeditor\app\src\main\AndroidManifest.xml:39:13-41
 49            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 49-->D:\NBTeditor\app\src\main\AndroidManifest.xml:42:13-79
-50    </application>
-51
-52</manifest>
+50        <provider
+50-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:24:9-32:20
+51            android:name="androidx.startup.InitializationProvider"
+51-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:25:13-67
+52            android:authorities="yhjmew.minecraft.nbteditor.androidx-startup"
+52-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:26:13-68
+53            android:exported="false" >
+53-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:27:13-37
+54            <meta-data
+54-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+55                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+55-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+56                android:value="androidx.startup" />
+56-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+57        </provider>
+58
+59        <receiver
+59-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+60            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+60-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+61            android:directBootAware="false"
+61-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+62            android:enabled="true"
+62-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+63            android:exported="true"
+63-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+64            android:permission="android.permission.DUMP" >
+64-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+65            <intent-filter>
+65-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+66                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+66-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+66-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+67            </intent-filter>
+68            <intent-filter>
+68-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+69                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+69-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+69-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+70            </intent-filter>
+71            <intent-filter>
+71-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+72                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+72-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+72-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+73            </intent-filter>
+74            <intent-filter>
+74-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+75                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+75-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+75-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+76            </intent-filter>
+77        </receiver>
+78    </application>
+79
+80</manifest>
