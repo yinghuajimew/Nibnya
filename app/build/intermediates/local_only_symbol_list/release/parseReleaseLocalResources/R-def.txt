@@ -532,6 +532,7 @@ string toast_repair_failed
 string toast_replaced
 string toast_retry_failed
 string toast_saved
+string toast_scanning_failed
 string toast_select_world
 string toast_shizuku_denied
 string toast_shizuku_disabled

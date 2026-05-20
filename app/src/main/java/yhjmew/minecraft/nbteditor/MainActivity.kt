@@ -16,6 +16,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.viewModels
 import com.google.gson.*
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -248,10 +249,18 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            worldVM.worldList.drop(1).collect { list ->
-                if (pendingWorldSelector && list.isNotEmpty()) { pendingWorldSelector = false; showWorldSelectorDialog(list) }
+            worldVM.scanResultChannel.receiveAsFlow().collect { result ->
+                if (pendingWorldSelector) {
+                    pendingWorldSelector = false
+                    if (result.error != null) {
+                        toast(getString(R.string.toast_scanning_failed, result.error))
+                    } else {
+                        showWorldSelectorDialog(result.worlds)
+                    }
+                }
             }
         }
+
         lifecycleScope.launch {
             worldVM.cacheList.drop(1).collect { showCacheDialog(it) }
         }

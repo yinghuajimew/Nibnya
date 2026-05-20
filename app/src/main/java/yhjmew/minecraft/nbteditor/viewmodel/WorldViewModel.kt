@@ -11,11 +11,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
 import yhjmew.minecraft.nbteditor.MainActivity
@@ -65,6 +67,11 @@ class WorldViewModel : ViewModel() {
     // ============================================
     // 状态
     // ============================================
+    data class ScanResult(val worlds: List<WorldItem>, val error: String? = null)
+
+    private val _scanResultChannel = Channel<ScanResult>(Channel.BUFFERED)
+    val scanResultChannel = _scanResultChannel
+
     private val _currentPath = MutableStateFlow(MainActivity.PATH_STANDARD)
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
 
@@ -196,8 +203,10 @@ class WorldViewModel : ViewModel() {
                 }
 
                 _worldList.value = result
+                _scanResultChannel.trySend(ScanResult(result))
             } catch (e: Exception) {
                 _errorMessage.value = e.toString()
+                _scanResultChannel.trySend(ScanResult(emptyList(), e.toString()))
             } finally {
                 _isLoading.value = false
             }
@@ -379,6 +388,11 @@ class WorldViewModel : ViewModel() {
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.toast_player_loaded_success)
                 onSuccess?.run()
+                if (onSuccess != null) {
+                    withContext(Dispatchers.Main) {
+                        onSuccess.run()
+                    }
+                }
             } catch (e: Exception) {
                 _isLoading.value = false
                 _errorMessage.value = e.message
@@ -871,10 +885,10 @@ class WorldViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 PlayerDbManager.tryRepair(dbPath)
-                onResult(true)
+                withContext(Dispatchers.Main) { onResult(true) }
             } catch (e: Exception) {
                 _errorMessage.value = getString(R.string.toast_repair_failed, e.message)
-                onResult(false)
+                withContext(Dispatchers.Main) { onResult(false) }
             }
         }
     }

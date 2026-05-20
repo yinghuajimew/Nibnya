@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "yhjmew.minecraft.nbteditor",
+  "applicationId": "yhjmew.minecraft.nbteditor.debug",
   "variantName": "debug",
   "elements": [
     {
@@ -12,10 +12,10 @@
       "filters": [],
       "attributes": [],
       "versionCode": 4,
-      "versionName": "1.0.4",
+      "versionName": "1.0.4-debug",
       "outputFile": "app-debug.apk"
     }
   ],
   "elementType": "File",
-  "minSdkVersionForDexing": 28
+  "minSdkVersionForDexing": 24
 }

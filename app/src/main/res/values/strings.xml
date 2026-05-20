@@ -482,4 +482,5 @@ Would you like to create a new empty data set?</string>
     <string name="emoji_tree_player_data">"🌳 Tree / Player Data</string>
     <string name="emoji_tree_world_data">🌳 Tree / World Data</string>
     <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
+    <string name="toast_scanning_failed">Scan failed: %s</string>
 </resources>

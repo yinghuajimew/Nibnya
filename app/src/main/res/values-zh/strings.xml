@@ -518,4 +518,5 @@
     <string name="emoji_tree_player_data">"🌳 树 / 玩家数据</string>
     <string name="emoji_tree_world_data">🌳 树 / 世界数据</string>
     <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
+    <string name="toast_scanning_failed">Scan failed: %s</string>
 </resources>

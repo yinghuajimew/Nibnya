@@ -76,9 +76,23 @@ dependencies {
     implementation 'androidx.activity:activity-ktx:1.13.0'
 }
 
+// 自定义任务：构建调试版
+tasks.register('构建调试版') {
+    group = '构建任务'
+    description = '仅构建 Debug 版本'
+    dependsOn 'assembleDebug'
+}
+
+// 自定义任务：构建发布版
+tasks.register('构建发布版') {
+    group = '构建任务'
+    description = '仅构建 Release 版本'
+    dependsOn 'assembleRelease'
+}
+
 // 自定义任务：同时构建 Debug 和 Release
-tasks.register('buildALL') {
-    group = 'build'
+tasks.register('构建全部') {
+    group = '构建任务'
     description = '同时构建 Debug 和 Release'
     dependsOn 'assembleDebug', 'assembleRelease'
 }

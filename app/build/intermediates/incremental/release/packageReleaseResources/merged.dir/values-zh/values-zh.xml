@@ -451,6 +451,7 @@
     <string name="toast_replaced">已更换</string>
     <string name="toast_retry_failed">重试失败: </string>
     <string name="toast_saved">已保存</string>
+    <string name="toast_scanning_failed">Scan failed: %s</string>
     <string name="toast_select_world">请先选择存档！</string>
     <string name="toast_shizuku_denied">Shizuku 授权被拒绝</string>
     <string name="toast_shizuku_disabled">已禁用 Shizuku</string>
