@@ -47,7 +47,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/path_prefix"
+                android:text="@string/path"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
                 android:gravity="center_vertical|start"

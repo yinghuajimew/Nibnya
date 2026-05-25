@@ -1,5 +1,6 @@
 package yhjmew.minecraft.nbteditor.viewmodel
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -72,8 +73,14 @@ class WorldViewModel : ViewModel() {
     private val _scanResultChannel = Channel<ScanResult>(Channel.BUFFERED)
     val scanResultChannel = _scanResultChannel
 
+    private val _offerCreateKey = MutableStateFlow<String?>(null)
+    val offerCreateKey: StateFlow<String?> = _offerCreateKey.asStateFlow()
+
+    fun clearOfferCreateKey() { _offerCreateKey.value = null }
+
     private val _currentPath = MutableStateFlow(MainActivity.PATH_STANDARD)
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
+    var pendingSidebarTask: Runnable? = null
 
     private val _worldList = MutableStateFlow<List<WorldItem>>(emptyList())
     val worldList: StateFlow<List<WorldItem>> = _worldList.asStateFlow()
@@ -302,11 +309,10 @@ class WorldViewModel : ViewModel() {
     // ============================================
     // 加载玩家数据
     // ============================================
-    fun loadPlayerData(context: Context, folder: String, onSuccess: Runnable? = null) {
+    fun loadPlayerData(context: Context, folder: String) {
         val evm = editorVM ?: return
         evm.saveSession(currentWorkingDbPath)
-
-        if (onSuccess == null && evm.tryRestoreSession("~local_player")) return
+        if (evm.tryRestoreSession("~local_player")) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
@@ -387,12 +393,6 @@ class WorldViewModel : ViewModel() {
                 _currentWorldFolder.value = folder
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.toast_player_loaded_success)
-                onSuccess?.run()
-                if (onSuccess != null) {
-                    withContext(Dispatchers.Main) {
-                        onSuccess.run()
-                    }
-                }
             } catch (e: Exception) {
                 _isLoading.value = false
                 _errorMessage.value = e.message
@@ -430,7 +430,15 @@ class WorldViewModel : ViewModel() {
                 currentWorkingDbPath?.let { File(it, "LOCK").delete() }
                 val dbPath = currentWorkingDbPath ?: throw Exception(getString(R.string.text_db_path_is_null))
                 val db = PlayerDbManager(dbPath)
-                val data = db.readSpecificKey(keyName)
+                val data: ByteArray
+                try {
+                    data = db.readSpecificKey(keyName)
+                } catch (e: Exception) {
+                    db.close()
+                    _isLoading.value = false
+                    _offerCreateKey.value = keyName
+                    return@launch
+                }
                 db.close()
                 val jsonData = BedrockParser.parseBytes(data)
 

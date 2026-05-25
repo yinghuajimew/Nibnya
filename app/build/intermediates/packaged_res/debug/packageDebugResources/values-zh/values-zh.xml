@@ -136,7 +136,7 @@
     <string name="msg_are_you_sure_you_want_to_delete_the_selected">确定要删除选中的 </string>
     <string name="msg_backpack_is_full_least_1_empty_slot">背包已满，至少需要 1 个空位</string>
     <string name="msg_backpack_only_1_slot">仅占背包: 1 格 (Slot 0)\n</string>
-    <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
+    <string name="msg_binder_haven_t_been_received">还没有收到连接</string>
     <string name="msg_cleaning_up">正在清理...</string>
     <string name="msg_clear_all_cache">确定删除所有缓存文件？</string>
     <string name="msg_comma_separated_format_click_save_after_modification">请保持英文逗号分隔格式，修改后点击保存</string>
@@ -221,6 +221,7 @@
     <string name="msg_packing_failed">包装失败</string>
     <string name="msg_parsing_archive_information">正在解析存档信息...</string>
     <string name="msg_paste_as_new">📋 粘贴为新 %s</string>
+    <string name="msg_player">玩家</string>
     <string name="msg_player_data">玩家数据 (%1$d)</string>
     <string name="msg_player_data_not_found">未找到玩家数据 (~local_player)</string>
     <string name="msg_potion">效果: </string>
@@ -256,22 +257,23 @@
     <string name="msg_the_repair_failed_and_the_data_was_completely_damaged">修复失败，数据彻底损坏: </string>
     <string name="msg_the_source_directory_appears_to_be_empty">源目录似乎是空的 (或 Shizuku 没权限读取): \n</string>
     <string name="msg_this_action_is_irreversible"> 的数据吗？此操作不可撤销！</string>
-    <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 [%1$s] 数据\n是否创建一个新的空数据？</string>
+    <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 [%s] 数据\n是否创建一个新的空数据？</string>
     <string name="msg_trying_to_rebuild_data_index">正在尝试重建数据索引...</string>
     <string name="msg_under_repair">修复中</string>
     <string name="msg_unknown_world">未知世界</string>
+    <string name="msg_village">村庄</string>
     <string name="msg_warning_puzzle">此功能将生成大量地图并尝试放入您的背包\n虽然程序会尝试寻找空位，但为了绝对安全\n请务必在游戏内【清空背包】后再使用此功能！\n\n否则可能会导致原有物品丢失或错乱！\n均由玩家您自行承担后果！\n会在1.0.4下个版本修复</string>
     <string name="msg_warning_repair_process_may_discard_unreadable_data_blocks">警告：修复过程可能会丢弃无法读取的数据块（可能导致部分物品/地图丢失）</string>
     <string name="msg_workdir_lost">工作目录丢失</string>
     <string name="msg_worldvm_missing">世界 VM 丢失</string>
     <string name="msg_write_to_game_dir_failed">写入游戏目录失败（权限？）</string>
     <string name="open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes">提示：游戏中打开盒子，Slot 0 是下一层盒子</string>
+    <string name="path">路径: </string>
     <string name="path_current_level">当前：世界数据 (level.dat)</string>
     <string name="path_current_player">当前：玩家数据 (~local_player)</string>
     <string name="path_custom">自定义路径</string>
     <string name="path_editing_player">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="path_legacy">旧版路径 (games/com.mojang...)</string>
-    <string name="path_prefix">路径: /</string>
     <string name="path_restored_player">已恢复备份 (玩家)</string>
     <string name="path_saf">SAF 路径选择</string>
     <string name="path_standard">标准路径 (Android/data...)</string>
@@ -321,7 +323,7 @@
     <string name="title_current">当前: %1$s</string>
     <string name="title_current_new">当前: %1$s (新创建)</string>
     <string name="title_data">数据</string>
-    <string name="title_data_does_not_exist">数据不存在</string>
+    <string name="title_data_not_exist">数据不存在</string>
     <string name="title_database_corruption">⚠️ 数据库损坏</string>
     <string name="title_debug_menu">🔧 开发者调试菜单</string>
     <string name="title_dendrogram">树状图: </string>
@@ -365,7 +367,6 @@
     <string name="title_view_mode">切换显示模式</string>
     <string name="title_warning_inventory">⚠️ 背包覆盖风险警告</string>
     <string name="title_with_count">%1$s (%2$d)</string>
-    <string name="title_you_can_click_more_pperations_to_create_a_new">，您可以点击[更多操作]新建</string>
     <string name="toast_Invalid_name">无效名称</string>
     <string name="toast_added_to_list">已添加到列表</string>
     <string name="toast_all_type_deleted">所有 %s 已删除</string>
@@ -387,7 +388,6 @@
     <string name="toast_created">创建成功: </string>
     <string name="toast_created_item">已创建: %s</string>
     <string name="toast_creation_failed">创建失败: %s</string>
-    <string name="toast_currently_none">当前没有</string>
     <string name="toast_data_covered">数据已覆盖！</string>
     <string name="toast_delete_failed">删除失败: %s</string>
     <string name="toast_delete_key_confirm">删除 %s</string>
@@ -426,7 +426,7 @@
     <string name="toast_no_backups">暂无备份</string>
     <string name="toast_no_data">没有数据！</string>
     <string name="toast_no_data_to_parse">没有要解析的数据</string>
-    <string name="toast_no_label_data">没有 %s 数据</string>
+    <string name="toast_no_label_data">当前没有%s数据，您可以点击[更多操作]新建</string>
     <string name="toast_no_saves_found">未找到保存内容</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">操作已取消，请检查存档完整性</string>
     <string name="toast_paste_failed">粘贴失败: %s</string>
@@ -451,7 +451,7 @@
     <string name="toast_replaced">已更换</string>
     <string name="toast_retry_failed">重试失败: </string>
     <string name="toast_saved">已保存</string>
-    <string name="toast_scanning_failed">Scan failed: %s</string>
+    <string name="toast_scanning_failed">扫描失败: %s</string>
     <string name="toast_select_world">请先选择存档！</string>
     <string name="toast_shizuku_denied">Shizuku 授权被拒绝</string>
     <string name="toast_shizuku_disabled">已禁用 Shizuku</string>

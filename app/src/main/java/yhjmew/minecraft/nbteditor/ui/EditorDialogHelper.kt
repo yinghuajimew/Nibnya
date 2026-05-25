@@ -225,7 +225,7 @@ fun MainActivity.showEditValueDialog(key: String, item: JsonObject) {
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         layout.addView(input)
         layout.addView(Button(this).apply {
-            text = getString(R.string.title_choose_type)
+            text = getString(R.string.title_choose)
             setTextColor("#2196F3".toColorInt())
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { showAutocompleteDialog(input, detectedType) }

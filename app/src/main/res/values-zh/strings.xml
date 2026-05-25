@@ -34,7 +34,7 @@
     <!-- 常用 Toast 提示 -->
     <string name="path_current_player">当前：玩家数据 (~local_player)</string>
     <string name="path_current_level">当前：世界数据 (level.dat)</string>
-    <string name="path_prefix">路径: /</string>
+    <string name="path">路径: </string>
 
     <!-- 根菜单 (Root Menu) -->
     <string name="menu_root_title">根节点操作</string>
@@ -205,8 +205,8 @@
     <string name="msg_load">加载: </string>
     <string name="toast_loaded">已加载: %s</string>
     <string name="msg_data_is_empty">数据为空</string>
-    <string name="title_data_does_not_exist">数据不存在</string>
-  <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 [%1$s] 数据\n是否创建一个新的空数据？</string>
+    <string name="title_data_not_exist">数据不存在</string>
+  <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 [%s] 数据\n是否创建一个新的空数据？</string>
     <string name="btn_create_and_open">创建并打开</string>
     <string name="toast_player_data_copied_to_clipboard">玩家数据已复制到剪贴板</string>
     <string name="toast_copy_failed">复制失败: </string>
@@ -219,7 +219,6 @@
     <string name="title_remove_warning">⚠️ 删除警告</string>
     <string name="toast_delete_failed">删除失败: %s</string>
     <string name="msg_create_new_blank">➕ 新建空白 %s</string>
-    <string name="msg_map">地图</string>
     <string name="msg_paste_as_new">📋 粘贴为新 %s</string>
     <string name="msg_delete_all_data_in_the_list">🗑️ [危险] 删除列表中的所有数据</string>
     <string name="msg_map_data">地图数据 (%1$d)</string>
@@ -289,8 +288,7 @@
     <string name="title_operation_failed">操作失败</string>
     <string name="toast_please_click_the_blue_button_to_select_an_archive_first">请先点击蓝色按钮选择一个存档！</string>
     <string name="text_loading_new_save">正在加载新存档...</string>
-    <string name="toast_currently_none">当前没有</string>
-    <string name="title_you_can_click_more_pperations_to_create_a_new">，您可以点击[更多操作]新建</string>
+    <string name="toast_no_label_data">当前没有%s数据，您可以点击[更多操作]新建</string>
     <string name="text_no_data_or_no_search_results_found">暂无数据 (或未找到搜索结果)</string>
     <string name="toast_please_check_the_items_you_want_to_delete">已开启批量管理：请勾选要删除的项目，再次点击垃圾桶确认</string>
     <string name="toast_exited_from_batch_management">已退出批量管理</string>
@@ -479,7 +477,6 @@
     <string name="title_logs">日志</string>
     <string name="text_debug_logs">调试日志</string>
     <string name="title_label_data">%s 数据</string>
-    <string name="toast_no_label_data">没有 %s 数据</string>
     <string name="msg_delete_items_confirm">删除 %d 项？无法撤销</string>
     <string name="toast_deleted_count">已删除 %d</string>
     <string name="msg_full_overwrite_confirm">完全覆盖 %s？这是不可逆转的</string>
@@ -517,6 +514,10 @@
     <string name="emoji_tree">🌳 树 /</string>
     <string name="emoji_tree_player_data">"🌳 树 / 玩家数据</string>
     <string name="emoji_tree_world_data">🌳 树 / 世界数据</string>
-    <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
-    <string name="toast_scanning_failed">Scan failed: %s</string>
+    <string name="msg_binder_haven_t_been_received">还没有收到连接</string>
+    <string name="toast_scanning_failed">扫描失败: %s</string>
+    
+    <string name="msg_player">玩家</string>
+    <string name="msg_map">地图</string>
+    <string name="msg_village">村庄</string>
 </resources>

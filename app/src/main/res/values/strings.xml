@@ -160,7 +160,6 @@
     <string name="msg_load">load:</string>
     <string name="msg_load_failed_advice">Unable to read data\n\n💡 Possible solutions:\n1 Make sure that the archive has been entered into the game (data is generated)\n2 The archive has been modified by Blocktopograph or naroX, and the NBT editor cannot load it\n3 There is a possibility that it cannot be loaded, but we are not sure why\n\nDetailed error:</string>
     <string name="msg_loading">loading</string>
-    <string name="msg_map">map</string>
     <string name="msg_map_data">map data (%1$d)</string>
     <string name="msg_map_write_to_database">Map -> Write to database</string>
     <string name="msg_move_data_to_new_key_and_delete_old_key">This will move the data to the new key and delete the old key</string>
@@ -199,7 +198,7 @@ This action is irreversible!</string>
     <string name="msg_the_repair_failed_and_the_data_was_completely_damaged">Repair failed, data completely corrupted:</string>
     <string name="msg_the_source_directory_appears_to_be_empty">The source directory appears to be empty (or Shizuku does not have permission to read it):</string>
     <string name="msg_this_action_is_irreversible">data? This action is irreversible!</string>
-    <string name="msg_this_archive_has_not_generated_data_yet">This save file has not yet generated [%1$s] data.
+    <string name="msg_this_archive_has_not_generated_data_yet">This save file has not yet generated [%s] data.
 Would you like to create a new empty data set?</string>
     <string name="msg_trying_to_rebuild_data_index">Trying to rebuild data index...</string>
     <string name="msg_under_repair">Under repair</string>
@@ -211,7 +210,7 @@ Would you like to create a new empty data set?</string>
     <string name="path_custom">Custom path</string>
     <string name="path_editing_player">Editing: Player Data (~local_player) (%1$s)</string>
     <string name="path_legacy">Old version path (games/com.mojang...)</string>
-    <string name="path_prefix">Path: /</string>
+    <string name="path">Path: </string>
     <string name="path_restored_player">Backup restored (player)</string>
     <string name="path_standard">Standard path (Android/data...)</string>
     <string name="puzzle_opt_2x2">2x2 (requires 4 cells)</string>
@@ -235,7 +234,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_choose_puzzle_size">Choose puzzle size</string>
     <string name="title_clear_confirm">Confirm clearing</string>
     <string name="title_current">Current: %1$s</string>
-    <string name="title_data_does_not_exist">Data does not exist</string>
+    <string name="title_data_not_exist">Data does not exist</string>
     <string name="title_database_corruption">⚠️ Database corruption</string>
     <string name="title_dendrogram">Tree diagram:</string>
     <string name="title_edit">edit</string>
@@ -260,7 +259,6 @@ Would you like to create a new empty data set?</string>
     <string name="title_treemap_player_data">Treemap: Player Data (~local_player)</string>
     <string name="title_treemap_world_data">Treemap: world data (level.dat)</string>
     <string name="title_view_mode">Switch display mode</string>
-    <string name="title_you_can_click_more_pperations_to_create_a_new">, you can click [More Actions] to create a new</string>
     <string name="toast_build_failed">Build failed:</string>
     <string name="toast_cache_empty">The cache directory is empty</string>
     <string name="toast_cleared">All data cleared</string>
@@ -276,7 +274,6 @@ Would you like to create a new empty data set?</string>
     <string name="toast_crash_collapse">nya? Exploded?\nThe log has been saved to the Download/NbtEditor_Data/Crash_Logs folder\nOr the application\'s private directory Crash_Logs folder</string>
     <string name="toast_created">Created successfully:</string>
     <string name="toast_creation_failed">Creation failed: %s</string>
-    <string name="toast_currently_none">Currently none</string>
     <string name="toast_data_covered">Data covered!</string>
     <string name="toast_delete_failed">Delete failed: %s</string>
     <string name="toast_deleted">Deleted</string>
@@ -443,7 +440,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_logs">Logs</string>
     <string name="text_debug_logs">Debug logs</string>
     <string name="title_label_data">%s Data</string>
-    <string name="toast_no_label_data">No %s data</string>
+    <string name="toast_no_label_data">Currently there is no %s data, you can click [More Actions] to create a new one.</string>
     <string name="msg_delete_items_confirm">Delete %d item(s)? This cannot be undone.</string>
     <string name="toast_deleted_count">Deleted %d</string>
     <string name="msg_full_overwrite_confirm">Full overwrite %s? This is irreversible.</string>
@@ -483,4 +480,8 @@ Would you like to create a new empty data set?</string>
     <string name="emoji_tree_world_data">🌳 Tree / World Data</string>
     <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
     <string name="toast_scanning_failed">Scan failed: %s</string>
+    
+    <string name="msg_player">Player</string>
+    <string name="msg_map">Map</string>
+    <string name="msg_village">Village</string>
 </resources>

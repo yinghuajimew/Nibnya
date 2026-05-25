@@ -467,6 +467,7 @@ string msg_no_logs_to_export
 string msg_packing_failed
 string msg_parsing_archive_information
 string msg_paste_as_new
+string msg_player
 string msg_player_data
 string msg_player_data_not_found
 string msg_potion
@@ -506,18 +507,19 @@ string msg_this_archive_has_not_generated_data_yet
 string msg_trying_to_rebuild_data_index
 string msg_under_repair
 string msg_unknown_world
+string msg_village
 string msg_warning_puzzle
 string msg_warning_repair_process_may_discard_unreadable_data_blocks
 string msg_workdir_lost
 string msg_worldvm_missing
 string msg_write_to_game_dir_failed
 string open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes
+string path
 string path_current_level
 string path_current_player
 string path_custom
 string path_editing_player
 string path_legacy
-string path_prefix
 string path_restored_player
 string path_saf
 string path_standard
@@ -568,7 +570,7 @@ string title_clear_confirm
 string title_current
 string title_current_new
 string title_data
-string title_data_does_not_exist
+string title_data_not_exist
 string title_database_corruption
 string title_debug_menu
 string title_dendrogram
@@ -612,7 +614,6 @@ string title_treemap_world_data
 string title_view_mode
 string title_warning_inventory
 string title_with_count
-string title_you_can_click_more_pperations_to_create_a_new
 string toast_Invalid_name
 string toast_added_to_list
 string toast_all_type_deleted
@@ -634,7 +635,6 @@ string toast_crash_collapse
 string toast_created
 string toast_created_item
 string toast_creation_failed
-string toast_currently_none
 string toast_data_covered
 string toast_delete_failed
 string toast_delete_key_confirm

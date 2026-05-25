@@ -26,9 +26,9 @@ import java.util.Locale
 // ============================================
 // 玩家 / 地图 / 村庄 / 全局 数据列表入口
 // ============================================
-fun MainActivity.showMultiPlayerDialog() = showDataListDialog(MainActivity.TYPE_PLAYER, "Player")
-fun MainActivity.showMapListDialog()     = showDataListDialog(MainActivity.TYPE_MAP, "Map")
-fun MainActivity.showVillageListDialog() = showDataListDialog(MainActivity.TYPE_VILLAGE, "Village")
+fun MainActivity.showMultiPlayerDialog() = showDataListDialog(MainActivity.TYPE_PLAYER, getString(R.string.msg_player))
+fun MainActivity.showMapListDialog()     = showDataListDialog(MainActivity.TYPE_MAP, getString(R.string.msg_map))
+fun MainActivity.showVillageListDialog() = showDataListDialog(MainActivity.TYPE_VILLAGE, getString(R.string.msg_village))
 fun MainActivity.showGlobalDataDialog()  = showGlobalDataListDialog()
 
 private fun MainActivity.showDataListDialog(type: Int, label: String) {
@@ -110,7 +110,7 @@ private fun MainActivity.showGlobalDataListDialog() {
     }
     val lv = ListView(this).apply { this.adapter = adapter }
     val dialog = AlertDialog.Builder(this)
-        .setTitle(getString(R.string.title_global_system_data_count))
+        .setTitle(getString(R.string.title_global_system_data_count, displayList.size))
         .setView(lv)
         .setNegativeButton(getString(R.string.btn_close), null)
         .create()
@@ -132,7 +132,8 @@ private fun MainActivity.showListDialogUI(
     dataList: MutableList<String>, type: Int, label: String
 ) {
     val baseTitle = getString(R.string.title_label_data, label)
-    if (dataList.isEmpty()) { toast(getString(R.string.toast_no_label_data, label)); return }
+    // 列表为空时只弹 Toast 提示，但对话框仍然继续显示（保留"更多操作"按钮供用户新建）
+    if (dataList.isEmpty()) { toast(getString(R.string.toast_no_label_data, label)) }
 
     val adapter = FuzzyListAdapter(this, dataList)
     val listView = ListView(this).apply { this.adapter = adapter }

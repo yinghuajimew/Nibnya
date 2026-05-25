@@ -209,7 +209,7 @@
     <string name="msg_loading_player">Loading player...</string>
     <string name="msg_logs_copied">Logs copied to clipboard</string>
     <string name="msg_logs_exported_to">Logs exported to: %1$s</string>
-    <string name="msg_map">map</string>
+    <string name="msg_map">Map</string>
     <string name="msg_map_data">map data (%1$d)</string>
     <string name="msg_map_write_to_database">Map -> Write to database</string>
     <string name="msg_maps_have_been_packed"> Maps have been put into the backpack\n</string>
@@ -221,6 +221,7 @@
     <string name="msg_packing_failed">Packing failed</string>
     <string name="msg_parsing_archive_information">Parsing archive information...</string>
     <string name="msg_paste_as_new">📋 Paste as New %s</string>
+    <string name="msg_player">Player</string>
     <string name="msg_player_data">Player data (%1$d)</string>
     <string name="msg_player_data_not_found">Player data not found (~local_player)</string>
     <string name="msg_potion">Effect:</string>
@@ -257,23 +258,24 @@ This action is irreversible!</string>
     <string name="msg_the_repair_failed_and_the_data_was_completely_damaged">Repair failed, data completely corrupted:</string>
     <string name="msg_the_source_directory_appears_to_be_empty">The source directory appears to be empty (or Shizuku does not have permission to read it):</string>
     <string name="msg_this_action_is_irreversible">data? This action is irreversible!</string>
-    <string name="msg_this_archive_has_not_generated_data_yet">This save file has not yet generated [%1$s] data.
+    <string name="msg_this_archive_has_not_generated_data_yet">This save file has not yet generated [%s] data.
 Would you like to create a new empty data set?</string>
     <string name="msg_trying_to_rebuild_data_index">Trying to rebuild data index...</string>
     <string name="msg_under_repair">Under repair</string>
     <string name="msg_unknown_world">unknown world</string>
+    <string name="msg_village">Village</string>
     <string name="msg_warning_puzzle">This feature will generate maps and put them into your inventory\nPlease EMPTY YOUR INVENTORY in-game before proceeding!\n\nFailure to do so may result in item loss\nYou, the player, are responsible for the consequences!\nWill be fixed in the next version 1.0.4</string>
     <string name="msg_warning_repair_process_may_discard_unreadable_data_blocks">WARNING: The repair process may discard unreadable data blocks (possibly resulting in the loss of some items/maps)</string>
     <string name="msg_workdir_lost">WorkDir lost</string>
     <string name="msg_worldvm_missing">WorldVM missing</string>
     <string name="msg_write_to_game_dir_failed">Failed to write to game directory (permissions?)</string>
     <string name="open_the_box_in_the_game_slot_0_is_the_next_layer_of_boxes">Tip: Open the box in the game, Slot 0 is the next layer of boxes</string>
+    <string name="path">Path: </string>
     <string name="path_current_level">Current: world data (level.dat)</string>
     <string name="path_current_player">Current: Player data (~local_player)</string>
     <string name="path_custom">Custom path</string>
     <string name="path_editing_player">Editing: Player Data (~local_player) (%1$s)</string>
     <string name="path_legacy">Old version path (games/com.mojang...)</string>
-    <string name="path_prefix">Path: /</string>
     <string name="path_restored_player">Backup restored (player)</string>
     <string name="path_saf">SAF Path</string>
     <string name="path_standard">Standard path (Android/data...)</string>
@@ -323,7 +325,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_current">Current: %1$s</string>
     <string name="title_current_new">Current: %1$s (newly created)</string>
     <string name="title_data">data</string>
-    <string name="title_data_does_not_exist">Data does not exist</string>
+    <string name="title_data_not_exist">Data does not exist</string>
     <string name="title_database_corruption">⚠️ Database corruption</string>
     <string name="title_debug_menu">🔧 Developer Debug Menu</string>
     <string name="title_dendrogram">Tree diagram:</string>
@@ -367,7 +369,6 @@ Would you like to create a new empty data set?</string>
     <string name="title_view_mode">Switch display mode</string>
     <string name="title_warning_inventory">⚠️ Inventory Warning</string>
     <string name="title_with_count">%1$s (%2$d)</string>
-    <string name="title_you_can_click_more_pperations_to_create_a_new">, you can click [More Actions] to create a new</string>
     <string name="toast_Invalid_name">Invalid name</string>
     <string name="toast_added_to_list">Added to list</string>
     <string name="toast_all_type_deleted">All %s deleted</string>
@@ -389,7 +390,6 @@ Would you like to create a new empty data set?</string>
     <string name="toast_created">Created successfully:</string>
     <string name="toast_created_item">Created: %s</string>
     <string name="toast_creation_failed">Creation failed: %s</string>
-    <string name="toast_currently_none">Currently none</string>
     <string name="toast_data_covered">Data covered!</string>
     <string name="toast_delete_failed">Delete failed: %s</string>
     <string name="toast_delete_key_confirm">Delete %s</string>
@@ -428,7 +428,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_no_backups">No backup yet</string>
     <string name="toast_no_data">No data!</string>
     <string name="toast_no_data_to_parse">No data to parse</string>
-    <string name="toast_no_label_data">No %s data</string>
+    <string name="toast_no_label_data">Currently there is no %s data, you can click [More Actions] to create a new one.</string>
     <string name="toast_no_saves_found">No saves found</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">Operation canceled, please check archive integrity</string>
     <string name="toast_paste_failed">Paste failed: %s</string>

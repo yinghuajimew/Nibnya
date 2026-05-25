@@ -122,7 +122,7 @@ class EditorViewModel : ViewModel() {
                     getString(R.string.path_current_level)
                 }
             } else {
-                val sb = StringBuilder("Path: ")
+                val sb = StringBuilder(getString(R.string.path))
                 for (p in pathStack) sb.append(p).append("/")
                 titleText = sb.toString()
             }
@@ -181,6 +181,13 @@ class EditorViewModel : ViewModel() {
     fun setTargetKey(key: String?) { _currentTargetKey.value = key }
     internal fun setRawNbtData(json: JsonObject?) {
         _nbtData.value = json
+    }
+    fun getRootData(): JsonObject? {
+        return if (navigationStack.isEmpty()) {
+            _nbtData.value
+        } else {
+            navigationStack.firstElement()
+        }
     }
 
     // ============================================

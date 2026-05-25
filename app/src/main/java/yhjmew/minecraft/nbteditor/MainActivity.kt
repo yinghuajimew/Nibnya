@@ -172,7 +172,8 @@ class MainActivity : ComponentActivity() {
         initViews()
         applyTheme()
 
-        worldVM.editorVM = editorVM; mapVM.worldVM = worldVM
+        worldVM.editorVM = editorVM
+        mapVM.worldVM = worldVM
         setupObservers(); setupButtons()
 
         try { Class.forName("rikka.shizuku.Shizuku") }
@@ -272,6 +273,32 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             worldVM.errorMessage.collect { err -> err?.let { showErrorDialog(it); worldVM.clearError() } }
         }
+        lifecycleScope.launch {
+            worldVM.isLoading.drop(1).collect { loading ->
+                if (!loading) {
+                    worldVM.pendingSidebarTask?.let { task ->
+                        worldVM.pendingSidebarTask = null
+                        task.run()
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            worldVM.offerCreateKey.collect { keyName ->
+                keyName?.let {
+                    worldVM.clearOfferCreateKey()
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(getString(R.string.title_data_not_exist))
+                        .setMessage(getString(R.string.msg_this_archive_has_not_generated_data_yet, it))
+                        .setPositiveButton(getString(R.string.btn_create_and_open)) { _, _ ->
+                            worldVM.createNewGlobalData(it)
+                        }
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
+                        .show()
+                }
+            }
+        }
     }
 
     // ============================================
@@ -315,7 +342,7 @@ class MainActivity : ComponentActivity() {
         }
         findViewById<Button?>(R.id.btn_save)?.setOnClickListener {
             if (editorVM.isTreeMode.value) { toast(getString(R.string.toast_tree_switch_mode)); return@setOnClickListener }
-            val d = editorVM.nbtData.value ?: run { toast(getString(R.string.toast_no_data)); return@setOnClickListener }
+            val d = editorVM.getRootData() ?: run { toast(getString(R.string.toast_no_data)); return@setOnClickListener }
             val f = etWorldName!!.text.toString().trim()
             if (f.isEmpty() || f == getString(R.string.hint_select_world))
             { toast(getString(R.string.toast_select_world)); return@setOnClickListener }
@@ -642,12 +669,17 @@ class MainActivity : ComponentActivity() {
         return true
     }
     private fun ensureDbLoaded(task: Runnable) {
-        if (worldVM.currentWorkingDbPath != null && File(worldVM.currentWorkingDbPath!!).exists())
-        { task.run(); return }
+        if (worldVM.currentWorkingDbPath != null && File(worldVM.currentWorkingDbPath!!).exists()) {
+            task.run()
+            return
+        }
         val f = etWorldName?.text.toString()
-        if (f.isEmpty() || f == getString(R.string.hint_select_world))
-        { toast(getString(R.string.toast_please_click_the_blue_button_to_select_an_archive_first)); return }
-        worldVM.loadPlayerData(this, f, task)
+        if (f.isEmpty() || f == getString(R.string.hint_select_world)) {
+            toast(getString(R.string.toast_please_click_the_blue_button_to_select_an_archive_first))
+            return
+        }
+        worldVM.pendingSidebarTask = task
+        worldVM.loadPlayerData(this, f)
     }
     private val worksDir: File
         get() { val d = File("${externalCacheDir?.parent}/Works"); if (!d.exists()) d.mkdirs(); return d }
