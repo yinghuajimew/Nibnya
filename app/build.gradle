@@ -1,39 +1,98 @@
-apply plugin: 'com.android.application'
+import android.annotation.SuppressLint
 
-// 1. android 配置块
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
+    namespace 'yhjmew.minecraft.nbteditor'
+    compileSdk 36
 
     defaultConfig {
         applicationId "yhjmew.minecraft.nbteditor"
-        minSdkVersion 28
-        targetSdkVersion 33
+        minSdk 23
+        targetSdk 28
         versionCode 4
-        versionName "1.0.3"
+        versionName "1.0.4"
     }
 
-    // 这一步非常重要！强制使用 Java 8
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    // 【修正】签名配置块必须在 buildTypes 之前，且要有 signingConfigs { }
+    signingConfigs {
+        // Debug 签名（AS自动生成）
+        debug {
+            storeFile file('debugmt.keystore')
+            storePassword 'android'
+            keyAlias 'mt'
+            keyPassword 'android'
+        }
+
+        // Release 签名
+        release {
+            storeFile file('')
+            storePassword ''
+            keyAlias ''
+            keyPassword ''
+        }
     }
 
-    // 这里就是你刚才改的混淆配置 (放在 android 里面是对的)
+    // 构建类型配置
     buildTypes {
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            debuggable true
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            signingConfig signingConfigs.debug  // 使用 debug 签名
+        }
+
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release  // 使用 release 签名
         }
-        debug {
-            minifyEnabled false // 关闭混淆，解决 Shizuku 找不到方法的问题
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
     }
 }
 
-// 2. dependencies 依赖块 (必须在 android 外面！！)
 dependencies {
-    // 同时支持 jar 和 aar，防止漏加载
-    implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.annotation:annotation-jvm:1.9.1'
+    implementation 'androidx.core:core-ktx:1.10.1'
+    // MVVM 架构（已有 Kotlin，补充 ViewModel + 协程）
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'androidx.activity:activity-ktx:1.13.0'
+}
+
+// 自定义任务：构建调试版
+tasks.register('构建调试版') {
+    group = '构建任务'
+    description = '仅构建 Debug 版本'
+    dependsOn 'assembleDebug'
+}
+
+// 自定义任务：构建发布版
+tasks.register('构建发布版') {
+    group = '构建任务'
+    description = '仅构建 Release 版本'
+    dependsOn 'assembleRelease'
+}
+
+// 自定义任务：同时构建 Debug 和 Release
+tasks.register('构建全部') {
+    group = '构建任务'
+    description = '同时构建 Debug 和 Release'
+    dependsOn 'assembleDebug', 'assembleRelease'
 }

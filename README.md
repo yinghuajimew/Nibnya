@@ -1,6 +1,6 @@
 <div align="center">
 
-<img height="120" src="./Screenshots/yhjmew.png">
+<img height="120" src="./Screenshots/Nibnya.png">
 
 <h1 align="center">Nibnya</h1>
 
@@ -25,17 +25,15 @@ English · [Chinese](./README.zh-CN.md) · [Change log](./CHANGELOG.md)
 <br/>
 
 > [!TIP]
-> A new version of Kotlin is in the works, coming **this month (2026.5)**!
+> It's finally halfway stabilized, and there's still some stuff that will be added later on
 
 > [!WARNING]
 > I know there will be problems, but I still have to apologize<br/>
-> This application is only available in[AIDE+](https://github.com/AndroidIDE-CN/AIDE-Plus)Runthrough can be built on<br/>
-> **This application code is written by Gemini 3 Pro preview and Kimi-K2.5**<br/>
-> **You may see a large number of comments (even historical comments) and incorrect formatting in Java xml, etc.**<br/>
+> **This application code is written by deepseek v4**<br/>
 
 > [!TIP]
 > Do you want to participate in this, add application functions, modify functions, etc.<br/>
-> Please fork and submit a PR, or patch and tidy it up yourself after forking. If there are major changes to the existing code, **PR is not recommended.**
+> Please fork and submit a PR, or patch and tidy it up yourself after forking.
 
 <details>
 <summary><kbd>Table of contents</kbd></summary>
@@ -109,7 +107,6 @@ Introduction and usage tutorial：
 
 [![Watch the video](./Screenshots/Minecraft_Android_NBT_Editor.png)](https://www.bilibili.com/video/BV16dfnBrEzT)
 
-The pictures and text will be out before the 24th
 
 > [!TIP]
 > Make sure you **have the basics[Shizuku](https://github.com/RikkaApps/Shizuku)use**, the app will ask for<br/>
@@ -121,13 +118,11 @@ The pictures and text will be out before the 24th
 <details open>
 <summary><kbd>Update catalog</kbd></summary>
 
-- [x] based on existing Blocktopograph 1.9.4 rbq2012.blocktopograph
-- [ ] The map is not implemented yet
-- [ ] ~~old No Shizuku version~~ Unified and merged into one version
+- [ ] I need to take some time.
 
 </details>
 
-Other ideas and modifications are still being implemented
+_Other ideas and modifications are still being implemented_
 
 ## 👥 Thank you list
  [@Yejdhi](https://github.com/Yejdhi) Provided me with many methods and modification ideas<br/>

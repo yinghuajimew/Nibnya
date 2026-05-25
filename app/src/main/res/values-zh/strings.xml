@@ -34,7 +34,7 @@
     <!-- 常用 Toast 提示 -->
     <string name="path_current_player">当前：玩家数据 (~local_player)</string>
     <string name="path_current_level">当前：世界数据 (level.dat)</string>
-    <string name="path_prefix">路径: /</string>
+    <string name="path">路径: </string>
 
     <!-- 根菜单 (Root Menu) -->
     <string name="menu_root_title">根节点操作</string>
@@ -68,7 +68,7 @@
     <string name="toast_hold_delete">请长按以删除</string>
     <string name="toast_deleted">已删除</string>
     <string name="toast_renamed">已重命名</string>
-    <string name="toast_rename_failed">重命名失败</string>
+    <string name="toast_rename_failed">重命名失败: %s</string>
     <string name="toast_no_backups">暂无备份</string>
 
     <!-- 进度条 / 加载中 -->
@@ -78,12 +78,12 @@
     <string name="msg_init_player">正在初始化...</string>
     <string name="msg_saving">保存中</string>
     <string name="msg_scanning">扫描中</string>
-    <string name="msg_reading_details">正在重读数据...</string>
+    <string name="searching_label_data">正在搜索 %s 数据...</string>
 
     <!-- 错误提示 -->
     <string name="err_load_failed">读取失败: </string>
-    <string name="err_save_failed">保存失败: </string>
-    <string name="err_format">格式错误: </string>
+    <string name="err_save_failed">保存失败: %s</string>
+    <string name="err_format">格式错误: %s</string>
 
     <!-- 编辑器逻辑 -->
     <string name="toast_enter_list">进入列表: </string>
@@ -123,8 +123,8 @@
     <string name="btn_confirm">确定</string>
     <string name="toast_cleared_short">已清空</string>
     <string name="path_restored_player">已恢复备份 (玩家)</string>
-    <string name="toast_player_restored">玩家备份已恢复，请保存！</string>
-    <string name="toast_level_restored">世界备份已恢复，请保存！</string>
+    <string name="toast_player_restored">玩家备份已恢复</string>
+    <string name="toast_level_restored">世界备份已恢复</string>
     <string name="err_restore_failed_prefix">恢复失败: </string>
     <string name="err_read_file_not_generated">读取失败，文件未生成</string>
     <string name="err_internal_player_path">内部错误: 玩家数据路径未记录</string>
@@ -135,14 +135,14 @@
     <string name="btn_copy_error">复制报错</string>
     <string name="toast_copied">已复制到剪贴板</string>
     <string name="title_read_player">读取玩家</string>
-    <string name="toast_player_loaded_success">玩家数据加载成功！</string>
-    <string name="path_editing_player">正在编辑：玩家数据 (</string>
+    <string name="toast_player_loaded_success">玩家数据加载成功</string>
+    <string name="path_editing_player">当前: 玩家数据 (~local_player) (%1$s)</string>
     <string name="btn_understood">知道了</string>
     <string name="title_load_failed">加载失败</string>
     <string name="msg_load_failed_advice">无法读取数据\n\n💡 可能的解决方案：\n1. 确保该存档曾经进入过游戏（生成了数据）\n2. 存档曾被 Blocktopograph 或 澜诺(naroX) 修改过，NBT编辑器无法加载\n3. 有概率可能无法加载，不确定原因\n\n详细错误:\n</string>
     <string name="msg_processing">处理...</string>
-    <string name="toast_player_saved">✅ 玩家数据已保存！</string>
-    <string name="toast_level_dat_saved">✅ level.dat 已保存</string>
+    <string name="toast_player_saved">玩家数据已保存</string>
+    <string name="toast_level_dat_saved">level.dat 已保存</string>
     <string name="err_no_saves_detail">当前路径下没有找到有效的 Minecraft 存档\n(必须同时包含 level.dat 和 db 文件夹)</string>
     <string name="toast_switched_std">已切标准路径</string>
     <string name="toast_switched_legacy">已切旧版路径</string>
@@ -152,7 +152,7 @@
     <string name="title_paste_as">粘贴为...</string>
     <string name="hint_new_tag_name">新标签名字</string>
     <string name="toast_name_empty_or_exists">名字为空或已存在</string>
-    <string name="title_manage_prefix">管理: </string>
+    <string name="title_manage">管理: [%s]</string>
     <!-- 全屏模式 -->
     <string name="btn_fullscreen">⛶ 全屏编辑</string>
     <!-- 根菜单新增 -->
@@ -178,7 +178,7 @@
     <string name="toast_crash_collapse">喵？炸了？\n日志已保存到 Download/NbtEditor_Data/Crash_Logs 文件夹\n或该应用私有目录Crash_Logs 文件夹</string>
     <string name="toast_err_permission_denied_shizuku">原生读取失败，Shizuku 未准备</string>
     
-    <string name="toast_loading">正在加载: </string>
+    <string name="toast_loading">正在加载: %s</string>
     <string name="toast_multi_thread_acceleration_enabled">已启用多线程加速</string>
     <string name="toast_switched_to_single_threaded_stable_mode">已切换为单线程稳定模式</string>
     <string name="toast_the_search_function_currently_only_supports_list_mode">搜索功能暂仅支持列表模式 (默认视图)</string>
@@ -187,7 +187,7 @@
     <string name="toast_error_sidebar_layout_not_found">错误：找不到侧边栏布局</string>
     <string name="toast_error_menu_button_not_found">错误：找不到菜单按钮</string>
     <string name="toast_generate_bedrock_edition_map">生成基岩版地图 (RGBA)...</string>
-    <string name="toast_the_map_is_generated">✅ 地图画(RGBA) 生成完毕！</string>
+    <string name="toast_the_map_is_generated">地图画(RGBA) 生成完毕！</string>
     <string name="toast_build_failed">生成失败: </string>
     <string name="toast_error_archive_name_is_empty">错误：存档名为空！请先点击[加载存档]选择一个世界</string>
     <string name="msg_failed_to_create_staging_directory">中转目录创建失败 (Unknown Error): </string>
@@ -198,37 +198,35 @@
     <string name="title_dendrogram">树状图: </string>
     <string name="title_treemap_player_data">树状图: 玩家数据 (~local_player)</string>
     <string name="title_treemap_world_data">树状图: 世界数据 (level.dat)</string>
-    <string name="title_current">当前: </string>
+    <string name="title_current">当前: %1$s</string>
     <string name="msg_copy_process_interrupted">复制过程中断</string>
     <string name="msg_search_for_players">搜索玩家...</string>
     <string name="msg_read">读取中</string>
     <string name="msg_load">加载: </string>
-    <string name="toast_loaded">已加载: </string>
+    <string name="toast_loaded">已加载: %s</string>
     <string name="msg_data_is_empty">数据为空</string>
-    <string name="title_data_does_not_exist">数据不存在</string>
-    <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 </string>
+    <string name="title_data_not_exist">数据不存在</string>
+  <string name="msg_this_archive_has_not_generated_data_yet">该存档尚未生成 [%s] 数据\n是否创建一个新的空数据？</string>
     <string name="btn_create_and_open">创建并打开</string>
     <string name="toast_player_data_copied_to_clipboard">玩家数据已复制到剪贴板</string>
     <string name="toast_copy_failed">复制失败: </string>
-    <string name="title_override_warning">覆盖警告</string>
+    <string name="title_overwride_warning">⚠️ 覆盖警告</string>
     <string name="msg_full_coverage">确定要用剪贴板的内容【完全覆盖】 </string>
     <string name="msg_this_action_is_irreversible"> 的数据吗？此操作不可撤销！</string>
     <string name="btn_cover">覆盖</string>
     <string name="toast_data_covered">数据已覆盖！</string>
-    <string name="toast_paste_failed">粘贴失败: </string>
-    <string name="title_remove_warning">删除警告</string>
-    <string name="msg_confirm_deletion">确定删除 </string>
-    <string name="toast_delete_failed">删除失败: </string>
-    <string name="msg_create_new_blank">➕ 新建空白</string>
-    <string name="msg_map">地图</string>
-    <string name="msg_paste_as_new">📋 粘贴为新</string>
+    <string name="toast_paste_failed">粘贴失败: %s</string>
+    <string name="title_remove_warning">⚠️ 删除警告</string>
+    <string name="toast_delete_failed">删除失败: %s</string>
+    <string name="msg_create_new_blank">➕ 新建空白 %s</string>
+    <string name="msg_paste_as_new">📋 粘贴为新 %s</string>
     <string name="msg_delete_all_data_in_the_list">🗑️ [危险] 删除列表中的所有数据</string>
-    <string name="msg_map_data">地图数据</string>
+    <string name="msg_map_data">地图数据 (%1$d)</string>
     <string name="msg_for_example_map">例如: map_123</string>
     <string name="msg_create_a_giant_jigsaw_puzzle">🧩 创建巨型拼图画 (自动导入背包)</string>
-    <string name="mag_village_data">村庄数据</string>
+    <string name="mag_village_data">村庄数据 (%1$d)</string>
     <string name="msg_for_example_village">例如: VILLAGE_Overworld_xxx</string>
-    <string name="msg_player_data">玩家数据</string>
+    <string name="msg_player_data">玩家数据 (%1$d)</string>
     <string name="msg_for_example_player">例如: player_uuid</string>
     <string name="title_high_energy_early_warning">⚠️ 高能预警</string>
     <string name="msg_delete_existing_ones_in_the_list">你确定要删除列表里现有的 </string>
@@ -240,23 +238,20 @@
     <string name="toast_cleared_all">已清空所有</string>
     <string name="title_new">新建 </string>
     <string name="toast_key_cannot_be_empty">Key不能为空</string>
-    <string name="toast_yes_created">已创建</string>
-    <string name="toast_creation_failed">创建失败: </string>
+    <string name="toast_type_created">%s 已创建</string>
+    <string name="toast_creation_failed">创建失败: %s</string>
     <string name="title_rename_key">重命名 Key</string>
     <string name="msg_move_data_to_new_key_and_delete_old_key">这将移动数据到新 Key，并删除旧 Key</string>
-    <string name="toast_rename_failed_colon">重命名失败: </string>
     <string name="msg_search_map_data">搜索地图数据...</string>
-    <string name="text_huge_array_detected">检测到巨型数组，共有 </string>
-    <string name="text_direct_editing_will_cause_freezing_please_select_an_operation">个元素\n直接编辑会导致卡死，请选择操作：</string>
+    <string name="text_huge_array_detected">检测到巨型数组，共有 %1$d 个元素\n直接编辑会导致卡死，请选择操作：</string>
     <string name="text_starting_position_eg_0">起始位置 (例如: 0)</string>
     <string name="text_number_of_views_recommended_200">查看数量 (建议: 200)</string>
     <string name="text_import_images_to_generate_map_images">🖼️ 导入图片生成地图画</string>
-    <string name="title_manage_array">管理数组: </string>
+    <string name="title_manage_array">管理数组: %1$s</string>
     <string name="btn_view_and_edit_clips">查看/编辑片段</string>
     <string name="toast_please_enter_valid_numbers">请输入有效数字</string>
     <string name="btn_full_export">全量导出</string>
-    <string name="toast_exported">已导出 </string>
-    <string name="toast_characters_to_clipboard"> 字符到剪贴板</string>
+    <string name="toast_exported">已导出 %1$d 字符到剪贴板</string>
     <string name="title_edit_left_bracket">编辑 (</string>
     <string name="msg_comma_separated_format_click_save_after_modification">请保持英文逗号分隔格式，修改后点击保存</string>
     <string name="btn_save_clip">保存片段</string>
@@ -274,10 +269,10 @@
     <string name="title_input_dimensions">输入尺寸 (行 x 列)</string>
     <string name="toast_please_enter_size">请输入尺寸</string>
     <string name="toast_huge_size_warning">尺寸巨大 (%d 张)，处理可能耗时较长，请稍候...</string>
-    <string name="toast_input_error">输入错误: </string>
+    <string name="toast_input_error">输入错误: %s</string>
     <string name="msg_in_preparation">准备中</string>
     <string name="msg_analyzing_backpack">正在分析背包...</string>
-    <string name="msg_backpack_is_full_requires_at_least_1_open_space">背包已满！至少需要 1 个空位</string>
+    <string name="msg_backpack_is_full_least_1_empty_slot">背包已满，至少需要 1 个空位</string>
     <string name="msg_high_performance_mode_starts">高性能模式启动...\n生成 </string>
     <string name="msg_map_write_to_database"> 张地图 -> 写入数据库</string>
     <string name="msg_processing_error_maybe_the_image_is_too_large">处理出错 (可能是图片太大导致内存不足 OOM)</string>
@@ -293,18 +288,17 @@
     <string name="title_operation_failed">操作失败</string>
     <string name="toast_please_click_the_blue_button_to_select_an_archive_first">请先点击蓝色按钮选择一个存档！</string>
     <string name="text_loading_new_save">正在加载新存档...</string>
-    <string name="toast_currently_none">当前没有</string>
-    <string name="title_you_can_click_more_pperations_to_create_a_new">，您可以点击[更多操作]新建</string>
+    <string name="toast_no_label_data">当前没有%s数据，您可以点击[更多操作]新建</string>
     <string name="text_no_data_or_no_search_results_found">暂无数据 (或未找到搜索结果)</string>
     <string name="toast_please_check_the_items_you_want_to_delete">已开启批量管理：请勾选要删除的项目，再次点击垃圾桶确认</string>
     <string name="toast_exited_from_batch_management">已退出批量管理</string>
     <string name="title_batch_delete">⚠️ 批量删除</string>
     <string name="msg_are_you_sure_you_want_to_delete_the_selected">确定要删除选中的 </string>
     <string name="msg_item_this_action_is_irreversible"> 项吗？\n此操作不可撤销！</string>
-    <string name="msg_processing_ing">处理中</string>
+    <string name="msg_processing_ing">处理图片中...</string>
     <string name="msg_are_deleting">正在删除...</string>
     <string name="toast_successfully_deleted">成功删除 </string>
-    <string name="toast_deleted_item"> 项</string>
+    <string name="toast_delete_key_confirm">删除 %s</string>
     <string name="btn_more_actions">更多操作</string>
     <string name="msg_list_long_press_copy_data_json">📄 复制数据 (JSON)</string>
     <string name="msg_list_long_press_paste_overlay">📝 粘贴覆盖</string>
@@ -332,7 +326,7 @@
     <string name="msg_under_repair">修复中</string>
     <string name="msg_trying_to_rebuild_data_index">正在尝试重建数据索引...</string>
     <string name="toast_repair_completed_trying_to_load_again">修复完成，正在重新尝试加载...</string>
-    <string name="toast_repair_failed">修复失败: </string>
+    <string name="toast_repair_failed">修复失败: %s</string>
     <string name="msg_retrying">重试中</string>
     <string name="msg_reading_repaired_data">正在读取修复后的数据...</string>
     <string name="toast_retry_failed">重试失败: </string>
@@ -352,8 +346,8 @@
 <string name="msg_global_system_data_list_main_world_0">主世界 (Dimension 0)</string>
 <string name="msg_global_system_data_list_nether_1">下界 (Dimension 1)</string>
     <string name="msg_global_system_data_list_end_2">末地 (Dimension 2)</string>
-    <string name="msg_global_system_data">全局系统数据 (</string>
-    <string name="toast_key_copied">已复制 Key: </string>
+    <string name="title_global_system_data_count">全局系统数据 (%d)</string>
+    <string name="toast_key_copied">已复制 Key: %1$s</string>
     <string name="text_newly_created"> (新创建)</string>
     <string name="toast_empty_data_has_been_created_please_edit_and_save">已创建空数据，请编辑后保存</string>
     <string name="msg_enchant">附魔: </string>
@@ -403,7 +397,7 @@
     <string name="toast_unsaved_changes_restored">已恢复未保存的修改</string>
     <string name="toast_unsaved_editing_session_restored">已恢复未保存的编辑会话</string>
     <string name="title_warning_inventory">⚠️ 背包覆盖风险警告</string>
-    <string name="msg_warning_puzzle">此功能将生成大量地图并尝试放入您的背包\n虽然程序会尝试寻找空位，但为了绝对安全\n请务必在游戏内【清空背包】后再使用此功能！\n\n否则可能会导致原有物品丢失或错乱！\n均由玩家您自行承担后果！\n会在1.0.4下个版本修复</string>
+    <string name="msg_warning_puzzle">此功能将生成大量地图并尝试放入您的背包\n虽然程序会尝试寻找空位，但为了绝对安全\n请务必在游戏内【清空背包】后再使用此功能！\n\n否则可能会导致原有物品丢失或错乱！\n均由玩家您自行承担后果！\n会在1.0.4下个版本修复</string><!-- 需要更改表达方式 -->
     <string name="btn_i_understand_continue">我已清空，继续</string>
 <string name="err_shizuku_not_running">❌ Shizuku 服务未运行\n\n请先打开 Shizuku 应用，点击「启动」按钮\n并确保 Shizuku 在后台运行</string>
 <string name="err_shizuku_binder_not_ready">Shizuku 连接已断开\n\n可能原因：\n1. Shizuku 被系统杀后台\n2. 刚刚重启过手机\n3. Shizuku 权限被撤销\n\n请重新打开 Shizuku 应用启动服务</string>
@@ -411,7 +405,7 @@
 <string name="toast_shizuku_disabled">已禁用 Shizuku</string>
 <string name="toast_shizuku_enabled">已启用 Shizuku</string>
 <string name="path_saf">SAF 路径选择</string>
-<string name="msg_saf_selected">已选择: %s</string>
+<string name="msg_saf_selected">已选择 SAF 路径</string>
 <string name="err_direct_access_failed">直接访问文件失败，请检查「所有文件访问权限」是否已授予</string>
 <string name="btn_open_settings">打开设置</string>
 <string name="title_shizuku_error">Shizuku 服务异常</string>
@@ -421,7 +415,7 @@
 <string name="about_header">关于</string>
 <string name="settings_header">设置</string>
 <string name="long_press_here_to_open_the_root_menu">长按此处打开根菜单</string>
-<string name="btn_choose">🔍 选择</string>
+<string name="btn_choose">🔍 选择%1$s</string>
 <string name="title_item">物品</string>
 <string name="title_block">方块</string>
 <string name="title_effect">药水效果</string>
@@ -435,4 +429,95 @@
 <string name="title_effect_label">[效果] </string>
 <string name="title_enchant_label">[附魔] </string>
 <string name="title_choose">选择</string>
+    <string name="key_seed_display">🌱 %1$s</string>
+    <string name="title_with_count">%1$s (%2$d)</string>
+    <string name="text_hex_pre">[Hex] %1$s</string>
+    <string name="err_load_failed_with_msg">读取失败: %s</string>
+    <string name="title_current_new">当前: %1$s (新创建)</string>
+    <string name="text_expand_up">▲</string>
+    <string name="text_expand_down">▼</string>
+    <string name="toast_dev_mode_hint">再点击5次开启开发者选项...</string>
+    <string name="msg_saf_unavailable">SAF 不可用: %1$s</string>
+    <string name="title_search_type">搜索%1$s...</string>
+    <string name="title_choose_type">选择%1$s</string>
+    <string name="title_edit_type_key">编辑 (%1$s): %2$s</string>
+    <string name="title_debug_menu">🔧 开发者调试菜单</string>
+    <string name="debug_crash_test">💥 崩溃测试（模拟应用崩溃）</string>
+    <string name="debug_show_logs">📋 显示日志</string>
+    <string name="debug_copy_logs">📄 复制日志到剪贴板</string>
+    <string name="debug_export_logs">💾 导出日志到文件</string>
+    <string name="text_autocomplete_label_name">%1$s%2$s</string>
+    <string name="msg_no_logs_to_copy">没有日志可复制</string>
+    <string name="msg_logs_copied">日志已复制到剪贴板</string>
+    <string name="msg_no_logs_to_export">没有日志可导出</string>
+    <string name="msg_logs_exported_to">日志已导出到: %1$s</string>
+    <string name="msg_copy_failed">复制失败: %s</string>
+    <string name="msg_export_failed">导出失败: %1$s</string>
+    <string name="toast_added_to_list">已添加到列表</string>
+    <string name="toast_compound_or_list_only">只能在 Compound 或 List 中添加</string>
+    
+    
+    <string name="toast_shizuku_init">shizuku 初始化: %s</string>
+    <string name="log_please_wait">请稍等</string>
+    <string name="toast_no_saves_found">未找到保存内容</string>
+    <string name="select_world_count">选择世界 (%d)</string>
+    <string name="toast_no_data_to_parse">没有要解析的数据</string>
+    <string name="msg_replace_all_data">替换所有数据？</string>
+    <string name="toast_replaced">已更换</string>
+    
+    <string name="search_type_hint">搜索 %s...</string>
+    <string name="toast_Invalid_name">无效名称</string>
+    <string name="text_name">名称</string>
+    <string name="btn_save_n">保存</string>
+    <string name="hint_start_0">起始 (0)</string>
+    <string name="hint_count_200">结束 (~200)</string>
+    <string name="title_edit_range">编辑 [%1$d ~ %2$d]</string>
+    <string name="toast_count_mismatch">计数不匹配</string>
+    <string name="toast_saved">已保存</string>
+    <string name="title_logs">日志</string>
+    <string name="text_debug_logs">调试日志</string>
+    <string name="title_label_data">%s 数据</string>
+    <string name="msg_delete_items_confirm">删除 %d 项？无法撤销</string>
+    <string name="toast_deleted_count">已删除 %d</string>
+    <string name="msg_full_overwrite_confirm">完全覆盖 %s？这是不可逆转的</string>
+    <string name="btn_delete_all_in_list">删除列表中的所有内容</string>
+    <string name="title_more_operations">更多功能</string>
+    <string name="msg_delete_all_type_data">删除所有 %1$d %2$s 数据？无法撤销！</string>
+    <string name="toast_all_type_deleted">所有 %s 已删除</string>
+    <string name="toast_failed">失败: %s</string>
+    <string name="title_new_type_key">新 %s key</string>
+    <string name="toast_created_item">已创建: %s</string>
+    
+    <string name="msg_loading_level_dat">正在加载 level.dat...</string>
+    <string name="msg_loaded_level_dat">加载： level.dat</string>
+    <string name="msg_load_failed">加载失败</string>
+    <string name="msg_loading_player">加载玩家...</string>
+    <string name="text_shizuku_copy_error">Shizuku 复制错误 (%d): %s</string>
+    <string name="text_source_dir_empty">目录显示为空: %s</string>
+    <string name="text_db_path_is_null">数据库路径为空</string>
+    <string name="msg_editorvm_missing">编辑器 VM 丢失</string>
+    <string name="msg_workdir_lost">工作目录丢失</string>
+    <string name="msg_restore_failed">恢复失败: %s</string>
+    <string name="msg_invalid_hex">无效十六进制: %s</string>
+    <string name="msg_shizuku_api_error">Shizuku API 错误</string>
+    <string name="msg_generation_failed">生成失败: %s</string>
+    <string name="msg_worldvm_missing">世界 VM 丢失</string>
+    <string name="msg_db_not_loaded">数据库未加载</string>
+    <string name="msg_generating_maps">生成 %d 地图...</string>
+    <string name="msg_processing_error">处理错误: %s</string>
+    <string name="msg_slice_missing">切片丢失: %d</string>
+    <string name="msg_puzzle_set_count">拼图设置 (%d 地图)</string>
+    <string name="msg_layer_arrow">层数 %d →</string>
+    <string name="msg_packing_failed">包装失败</string>
+    <string name="msg_puzzle_success_format">拼图：成功:%1$d:%2$d:%3$d:%4$d</string>
+    <string name="msg_puzzle_error">拼图：错误:%s</string>
+    <string name="emoji_tree">🌳 树 /</string>
+    <string name="emoji_tree_player_data">"🌳 树 / 玩家数据</string>
+    <string name="emoji_tree_world_data">🌳 树 / 世界数据</string>
+    <string name="msg_binder_haven_t_been_received">还没有收到连接</string>
+    <string name="toast_scanning_failed">扫描失败: %s</string>
+    
+    <string name="msg_player">玩家</string>
+    <string name="msg_map">地图</string>
+    <string name="msg_village">村庄</string>
 </resources>

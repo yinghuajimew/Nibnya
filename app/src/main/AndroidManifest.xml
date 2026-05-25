@@ -5,7 +5,7 @@
     android:versionName="1.0.3">
 
     <uses-sdk
-        android:minSdkVersion="28"
+        android:minSdkVersion="23"
         android:targetSdkVersion="33" />
     <!-- Shizuku 权限 -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />

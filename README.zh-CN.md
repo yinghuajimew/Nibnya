@@ -1,6 +1,6 @@
 <div align="center">
 
-<img height="120" src="./Screenshots/yhjmew.png">
+<img height="120" src="./Screenshots/Nibnya.png">
 
 <h1 align="center">樱喵编辑器</h1>
 
@@ -25,17 +25,15 @@
 <br/>
 
 > [!TIP]
-> 新版本Kotlin正在准备中，即将**在本月(2026.5)**到来！
+> 目前总算稳定一半了，还有一些东西后续会补下去
 
 > [!WARNING]
 > 我知道会有问题，但是我还得道歉<br/>
-> 这个应用只有在[AIDE+](https://github.com/AndroidIDE-CN/AIDE-Plus)上可构建跑通<br/>
-> **此应用代码由Gemini 3 Pro preview 与 Kimi-K2.5 编写**<br/>
-> **您在 Java xml 等当中，可能会看见大量注释(甚至是历史遗留注释)和未进行正确格式化**<br/>
+> **此应用代码由 deepseek v4 编写**<br/>
 
 > [!TIP]
 > 您想要参与到此，应用功能添加，功能修改等<br/>
-> 请fork并提交pr，或者fork后自己修补并整理，如与现有代码发生很大变动，**不建议pr**
+> 请fork并提交pr，或者fork后自己修补并整理
 
 <details>
 <summary><kbd>目录</kbd></summary>
@@ -108,21 +106,17 @@
 
 [![Watch the video](./Screenshots/Minecraft_安卓_NBT编辑器.png)](https://www.bilibili.com/video/BV1mkfnBnEKC)
 
-图文会在24号之前赶出来
-
 > [!TIP]
 > 确保您**具有基础[Shizuku](https://github.com/RikkaApps/Shizuku)使用**，此应用会在启动时索要<br/>
 > 否则会**无法访问Android/data** Minecraft 文件<br/>
-> **目前仅支持Android 9 ~ 13**<br/>
+> **目前支持Android 6 ~ 13**<br/>
 > 获取所有文件权限是为了，下载目录与旧目录读写和私有目录往返
 
 ## 📄 更新日志
 <details open>
 <summary><kbd>更新目录</kbd></summary>
 
-- [x] 根据现有的Blocktopograph 1.9.4 rbq2012.blocktopograph
-- [ ] 地图暂时未实现
-- [ ] ~~old 无Shizuku版本~~ 统一合并为一个版本
+- [ ] 我需要花些时间
 
 </details>
 
