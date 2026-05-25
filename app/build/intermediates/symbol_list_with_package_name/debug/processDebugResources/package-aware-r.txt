@@ -261,6 +261,7 @@ string btn_clear_filter
 string btn_close
 string btn_confirm
 string btn_confirm_clear
+string btn_continue_without
 string btn_copy_error
 string btn_cover
 string btn_create
@@ -268,6 +269,7 @@ string btn_create_and_open
 string btn_delete
 string btn_delete_all
 string btn_delete_all_in_list
+string btn_download
 string btn_edit_map_data
 string btn_edit_online_players
 string btn_edit_player
@@ -299,6 +301,7 @@ string call_notification_hang_up_action
 string call_notification_incoming_text
 string call_notification_ongoing_text
 string call_notification_screening_text
+string copying_progress
 string debug_copy_logs
 string debug_crash_test
 string debug_export_logs
@@ -322,6 +325,7 @@ string err_load_failed_with_msg
 string err_no_saves_detail
 string err_read_file_not_generated
 string err_restore_failed_prefix
+string err_saf_scan_failed
 string err_save_failed
 string err_shizuku_binder_not_ready
 string err_shizuku_not_running
@@ -494,6 +498,7 @@ string msg_search_for_players
 string msg_search_map_data
 string msg_search_village_data
 string msg_shizuku_api_error
+string msg_shizuku_recommend_install
 string msg_slice_missing
 string msg_start_id
 string msg_success
@@ -609,6 +614,7 @@ string title_search
 string title_search_nbt_data
 string title_search_type
 string title_shizuku_error
+string title_shizuku_not_found
 string title_treemap_player_data
 string title_treemap_world_data
 string title_view_mode
@@ -675,6 +681,7 @@ string toast_no_data
 string toast_no_data_to_parse
 string toast_no_label_data
 string toast_no_saves_found
+string toast_open_browser_failed
 string toast_operation_canceled_please_check_archive_integrity
 string toast_paste_failed
 string toast_pasted
@@ -708,6 +715,8 @@ string toast_shizuku_init
 string toast_shizuku_needed
 string toast_shizuku_normal
 string toast_shizuku_not_installed
+string toast_shizuku_not_running
+string toast_shizuku_permission_failed
 string toast_storage_perm
 string toast_successfully_deleted
 string toast_switched_legacy

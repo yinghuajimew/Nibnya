@@ -3,6 +3,7 @@ package yhjmew.minecraft.nbteditor.viewmodel
 import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
@@ -34,6 +35,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
 import kotlin.math.min
+import android.provider.DocumentsContract
+import androidx.documentfile.provider.DocumentFile
+import yhjmew.minecraft.nbteditor.NbtTranslator
+import yhjmew.minecraft.nbteditor.SafPathResolver
 
 /**
  * 世界/存档/路径/文件 I/O 的 ViewModel
@@ -81,6 +86,12 @@ class WorldViewModel : ViewModel() {
     private val _currentPath = MutableStateFlow(MainActivity.PATH_STANDARD)
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
     var pendingSidebarTask: Runnable? = null
+
+    private var useMultiThread = true
+
+    fun setUseMultiThread(use: Boolean) {
+        useMultiThread = use
+    }
 
     private val _worldList = MutableStateFlow<List<WorldItem>>(emptyList())
     val worldList: StateFlow<List<WorldItem>> = _worldList.asStateFlow()
@@ -171,6 +182,18 @@ class WorldViewModel : ViewModel() {
                 val dir = File(_currentPath.value)
                 val rawFolders = mutableListOf<String>()
 
+                // === 新增：检查当前路径本身是否就是一个世界文件夹 ===
+                val checkLevel = File(dir, "level.dat")
+                val checkDb = File(dir, "db")
+                if (checkLevel.exists() && checkDb.exists()) {
+                    // 当前路径本身就是世界文件夹，直接加载
+                    val realName = getWorldRealNameByDir(dir) ?: "Unknown"
+                    _worldList.value = listOf(WorldItem(folderName = dir.name, displayName = realName))
+                    _scanResultChannel.trySend(ScanResult(listOf(WorldItem(folderName = dir.name, displayName = realName))))
+                    _isLoading.value = false
+                    return@launch
+                }
+
                 if (dir.exists() && dir.canRead()) {
                     dir.listFiles()?.forEach { if (it.isDirectory) rawFolders.add(it.name) }
                 }
@@ -220,6 +243,106 @@ class WorldViewModel : ViewModel() {
         }
     }
 
+    fun scanWorldsViaSaf(context: Context, treeUri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _loadingMessage.value = NbtTranslator.getString(R.string.msg_scanning)
+
+            try {
+                val resolvedPath = SafPathResolver.resolveTreeUriToPath(context, treeUri)
+
+                if (resolvedPath != null && SafPathResolver.isProbablyUsablePath(resolvedPath)) {
+                    _currentPath.value = if (resolvedPath.endsWith("/")) resolvedPath else "$resolvedPath/"
+                    scanWorlds(context)
+                } else {
+                    scanWorldsWithDocumentFile(context, treeUri)
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = NbtTranslator.getString(R.string.err_saf_scan_failed, e.message ?: "")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private suspend fun scanWorldsWithDocumentFile(context: Context, treeUri: Uri) {
+        val treeDoc = DocumentFile.fromTreeUri(context, treeUri) ?: return
+
+        val worldFolders = treeDoc.listFiles()
+            .filter { it.isDirectory }
+            .mapNotNull { folder ->
+                val hasLevelDat = folder.findFile("level.dat") != null
+                val hasDb = folder.findFile("db") != null
+                if (hasLevelDat && hasDb) {
+                    val displayName = readWorldNameFromSaf(context, folder) ?: folder.name ?: "Unknown"
+                    WorldItem(folderName = folder.name ?: "", displayName = displayName)
+                } else null
+            }
+
+        _worldList.value = worldFolders
+        _scanResultChannel.trySend(ScanResult(worldFolders))
+    }
+
+    private fun readWorldNameFromSaf(context: Context, worldFolder: DocumentFile): String? {
+        try {
+            val levelnameFile = worldFolder.findFile("levelname.txt") ?: return null
+            context.contentResolver.openInputStream(levelnameFile.uri)?.use { input ->
+                return java.io.BufferedReader(java.io.InputStreamReader(input)).readLine()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("WorldVM", "Failed to read levelname.txt via SAF", e)
+        }
+        return null
+    }
+
+    fun loadLevelDatViaSaf(context: Context, folderName: String) {
+        val treeUri = safTreeUri ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _loadingMessage.value = NbtTranslator.getString(R.string.msg_loading_level_dat)
+
+            try {
+                val treeDoc = DocumentFile.fromTreeUri(context, treeUri)
+                    ?: throw Exception("Invalid tree URI")
+                val worldFolder = treeDoc.findFile(folderName)
+                    ?: throw Exception("World folder not found")
+                val levelDatDoc = worldFolder.findFile("level.dat")
+                    ?: throw Exception("level.dat not found")
+
+                val destFile = File(worksDir(context), MainActivity.LEVEL_DAT_NAME)
+                if (destFile.exists()) destFile.delete()
+
+                context.contentResolver.openInputStream(levelDatDoc.uri)?.use { input ->
+                    java.io.FileOutputStream(destFile).use { output -> input.copyTo(output) }
+                }
+
+                currentWorkingFileOrDir = destFile.absolutePath
+                val json = BedrockParser.parse(destFile.absolutePath)
+
+                val evm = editorVM ?: return@launch
+                evm.setEditingPlayer(false)
+                evm.setTargetKey(null)
+                evm.setRawNbtData(json)
+                evm.nbtDataCache["level.dat"] = json
+                evm.navigationStack.clear()
+                evm.pathStack.clear()
+                evm.scrollPositionStack.clear()
+                evm.currentListData = json
+                evm.updatePathTitle()
+
+                updateWorldInfoFromNbt(json)
+                _currentWorldFolder.value = folderName
+                _isLoading.value = false
+                _toastMessage.value = NbtTranslator.getString(R.string.msg_loaded_level_dat)
+
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorMessage.value = e.message ?: NbtTranslator.getString(R.string.msg_load_failed)
+            }
+        }
+    }
+
     // ============================================
     // 读取真实世界名
     // ============================================
@@ -236,6 +359,24 @@ class WorldViewModel : ViewModel() {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "cat \"$fullPath\""))
                 val name = BufferedReader(InputStreamReader(p.inputStream)).readLine()
+                p.waitFor()
+                if (!name.isNullOrBlank()) return name
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private fun getWorldRealNameByDir(worldDir: File): String? {
+        val file = File(worldDir, "levelname.txt")
+        if (file.exists() && file.canRead()) {
+            try {
+                return java.io.BufferedReader(java.io.InputStreamReader(java.io.FileInputStream(file))).readLine()
+            } catch (_: Exception) {}
+        }
+        if (checkShizukuAvailable()) {
+            try {
+                val p = runShizukuCmd(arrayOf("sh", "-c", "cat \"${file.absolutePath}\""))
+                val name = java.io.BufferedReader(java.io.InputStreamReader(p.inputStream)).readLine()
                 p.waitFor()
                 if (!name.isNullOrBlank()) return name
             } catch (_: Exception) {}
@@ -260,7 +401,8 @@ class WorldViewModel : ViewModel() {
             _isLoading.value = true
             _loadingMessage.value = getString(R.string.msg_loading_level_dat)
             try {
-                val src = "${_currentPath.value}$folder/level.dat"
+                val worldPath = resolveWorldPath(folder)
+                val src = "${worldPath}level.dat"
                 val destFile = File(worksDir(context), MainActivity.LEVEL_DAT_NAME)
                 if (destFile.exists()) destFile.delete()
 
@@ -309,6 +451,67 @@ class WorldViewModel : ViewModel() {
     // ============================================
     // 加载玩家数据
     // ============================================
+
+    fun loadPlayerDataViaSaf(context: Context, folderName: String, onSuccess: Runnable? = null) {
+        val evm = editorVM ?: return
+        evm.saveSession(currentWorkingDbPath)
+        if (onSuccess == null && evm.tryRestoreSession("~local_player")) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _loadingMessage.value = NbtTranslator.getString(R.string.msg_loading_player)
+            try {
+                val treeUri = safTreeUri ?: throw Exception("SAF URI is null")
+                val treeDoc = DocumentFile.fromTreeUri(context, treeUri)
+                    ?: throw Exception("Invalid tree URI")
+                val worldFolder = treeDoc.findFile(folderName)
+                    ?: throw Exception("World folder not found: $folderName")
+                val dbFolder = worldFolder.findFile("db")
+                    ?: throw Exception("db folder not found")
+
+                val uniqueId = System.currentTimeMillis().toString()
+                val workDir = File(worksDir(context), "working_db_$uniqueId")
+                if (!workDir.exists()) workDir.mkdirs()
+
+                // 递归从 SAF 复制 db 文件夹
+                safCopyDirectory(context, dbFolder, workDir)
+
+                File(workDir, "LOCK").delete()
+                File(workDir, "LOG").delete()
+                File(workDir, "LOG.old").delete()
+                currentWorkingDbPath = workDir.absolutePath
+
+                val dbManager = PlayerDbManager(workDir.absolutePath)
+                val data = dbManager.readLocalPlayer()
+                dbManager.close()
+
+                val playerDataObj = BedrockParser.parseBytes(data)
+                evm.setEditingPlayer(true)
+                evm.setTargetKey("~local_player")
+                evm.setRawNbtData(playerDataObj)
+                evm.nbtDataCache["~local_player"] = playerDataObj
+                evm.navigationStack.clear()
+                evm.pathStack.clear()
+                evm.scrollPositionStack.clear()
+                evm.updatePathTitle()
+
+                _currentWorldFolder.value = folderName
+                _isLoading.value = false
+                _toastMessage.value = NbtTranslator.getString(R.string.toast_player_loaded_success)
+                onSuccess?.let { pendingSidebarTask = it }
+
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorMessage.value = e.message
+                if (e.message?.contains("DB_CORRUPT") == true) {
+                    currentWorkingDbPath?.let { dbPath ->
+                        _errorMessage.value = "DB_CORRUPT:$dbPath:$folderName"
+                    }
+                }
+            }
+        }
+    }
+
     fun loadPlayerData(context: Context, folder: String) {
         val evm = editorVM ?: return
         evm.saveSession(currentWorkingDbPath)
@@ -318,7 +521,7 @@ class WorldViewModel : ViewModel() {
             _isLoading.value = true
             _loadingMessage.value = getString(R.string.msg_loading_player)
             try {
-                val worldDir = File(_currentPath.value, folder)
+                val worldDir = File(resolveWorldPath(folder))
                 val srcPath = File(worldDir, "db").absolutePath
                 val srcDirFile = File(srcPath)
 
@@ -494,9 +697,41 @@ class WorldViewModel : ViewModel() {
                     File(newWorkDir, "LOG").delete()
                     File(newWorkDir, "LOG.old").delete()
 
-                    val bytes = BedrockParser.writeToBytes(dataToSave)
+                    // 先把当前正在编辑的数据写入缓存，确保不遗漏
+                    val currentKey = evm.currentTargetKey.value
+                    if (currentKey != null && dataToSave != null) {
+                        evm.nbtDataCache[currentKey] = dataToSave
+                    }
+
+                    // 遍历缓存，写入全部修改过的数据
                     val db = PlayerDbManager(newWorkDir.absolutePath)
-                    db.writeSpecificKey(evm.currentTargetKey.value ?: "~local_player", bytes)
+
+                    // 确保把 DB 中所有已修改的数据都写回（包括拼图生成的地图）
+                    val allKeys = mutableSetOf<String>()
+                    allKeys.addAll(evm.nbtDataCache.keys.filterNotNull())
+// 从 DB 中扫描所有已知 key
+                    try {
+                        allKeys.addAll(db.listMapKeys())
+                        allKeys.addAll(db.listVillageKeys())
+                        allKeys.addAll(db.listPlayerKeys())
+                    } catch (_: Exception) {}
+
+// 遍历写入
+                    for (key in allKeys) {
+                        val data = evm.nbtDataCache[key]
+                        if (data != null) {
+                            val bytes = BedrockParser.writeToBytes(data)
+                            db.writeSpecificKey(key, bytes)
+                        }
+                    }
+
+                    for ((key, data) in evm.nbtDataCache) {
+                        if (key != null && data != null) {
+                            val bytes = BedrockParser.writeToBytes(data)
+                            db.writeSpecificKey(key, bytes)
+                        }
+                    }
+
                     db.close()
 
                     val bridgeSave = MainActivity.BRIDGE_ROOT + "save_db_$uniqueId"
@@ -505,7 +740,7 @@ class WorldViewModel : ViewModel() {
                     runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
                     smartCopy(newWorkDir, File(bridgeSave))
 
-                    val mcDbPath = "${_currentPath.value}$folder/db/"
+                    val mcDbPath = "${resolveWorldPath(folder)}db/"
                     runShizukuCmd(arrayOf("sh", "-c", "cp -rf \"$bridgeSave/.\" \"$mcDbPath\"")).waitFor()
                     runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
 
@@ -524,7 +759,7 @@ class WorldViewModel : ViewModel() {
                     File(MainActivity.BRIDGE_ROOT).mkdirs()
                     copyFile(workingFile, File(bridgeFile))
 
-                    val targetPath = "${_currentPath.value}$folder/level.dat"
+                    val targetPath = "${resolveWorldPath(folder)}level.dat"
                     var success = copyFileNative(workingFile, File(targetPath))
                     if (!success && checkShizukuAvailable()) {
                         runShizukuCmd(arrayOf("sh", "-c", "cp \"$bridgeFile\" \"$targetPath\"")).waitFor()
@@ -782,15 +1017,53 @@ class WorldViewModel : ViewModel() {
 
     fun setUseShizuku(use: Boolean) { useShizuku = use }
 
-    fun checkShizukuAvailable(): Boolean {
-        if (!useShizuku) return false
+    fun requestShizukuPermission() {
+        try {
+            Class.forName("rikka.shizuku.Shizuku")
+                .getMethod("requestPermission", Int::class.javaPrimitiveType)
+                .invoke(null, 0)
+        } catch (_: Exception) {
+            // 忽略，调用方自行处理
+        }
+    }
+
+    sealed class ShizukuStatus {
+        object Available : ShizukuStatus()
+        object NotInstalled : ShizukuStatus()
+        object NotRunning : ShizukuStatus()
+        object PermissionDenied : ShizukuStatus()
+    }
+
+    fun checkShizukuStatus(context: Context? = null): ShizukuStatus {
+        if (!useShizuku) return ShizukuStatus.Available
         try {
             val c = Class.forName("rikka.shizuku.Shizuku")
-            val ping = c.getMethod("pingBinder").invoke(null) as? Boolean ?: return false
-            if (!ping) return false
+            val ping = c.getMethod("pingBinder").invoke(null) as? Boolean ?: return ShizukuStatus.NotRunning
+            if (!ping) {
+                // ping 失败，检查 Shizuku App 是否安装
+                val isInstalled = context?.let { ctx ->
+                    try {
+                        ctx.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+                        true
+                    } catch (_: Exception) {
+                        false
+                    }
+                } ?: true // 没传 context 时默认 NotRunning
+                return if (isInstalled) ShizukuStatus.NotRunning else ShizukuStatus.NotInstalled
+            }
             val perm = c.getMethod("checkSelfPermission").invoke(null) as? Int
-            return perm == PackageManager.PERMISSION_GRANTED
-        } catch (_: Exception) { return false }
+            if (perm != PackageManager.PERMISSION_GRANTED) return ShizukuStatus.PermissionDenied
+            return ShizukuStatus.Available
+        } catch (_: ClassNotFoundException) {
+            return ShizukuStatus.NotInstalled
+        } catch (_: Exception) {
+            return ShizukuStatus.NotRunning
+        }
+    }
+
+    // 保留旧的 checkShizukuAvailable() 但改为调用新方法保持兼容
+    fun checkShizukuAvailable(): Boolean {
+        return checkShizukuStatus() is ShizukuStatus.Available
     }
 
     fun checkShizukuReady(): Boolean {
@@ -858,15 +1131,89 @@ class WorldViewModel : ViewModel() {
         } else copyFile(source, target)
     }
 
+    private fun safCopyDirectory(context: Context, srcDoc: DocumentFile, dstDir: File) {
+        if (!dstDir.exists()) dstDir.mkdirs()
+        for (child in srcDoc.listFiles()) {
+            val dstFile = File(dstDir, child.name ?: continue)
+            if (child.isDirectory) {
+                safCopyDirectory(context, child, dstFile)
+            } else {
+                context.contentResolver.openInputStream(child.uri)?.use { input ->
+                    java.io.FileOutputStream(dstFile).use { output -> input.copyTo(output) }
+                }
+            }
+        }
+    }
+
     private fun deleteRecursive(f: File?) {
         if (f == null || !f.exists()) return
         if (f.isDirectory) f.listFiles()?.forEach { deleteRecursive(it) }
         f.delete()
     }
 
+    // 删掉旧的简化版 smartCopy，替换为：
     private fun smartCopy(src: File, dst: File) {
-        // 直接用单线程递归（简化版，如需多线程可加开关）
-        copyDirectory(src, dst)
+        if (useMultiThread && src.isDirectory) {
+            copyDirectoryParallel(src, dst)
+        } else {
+            copyDirectory(src, dst)
+        }
+    }
+
+    private fun copyDirectoryParallel(source: File, target: File) {
+        if (!target.exists()) target.mkdirs()
+
+        val files = source.listFiles() ?: return
+        val totalFiles = files.size
+        if (totalFiles == 0) return
+
+        // 小文件用单线程
+        if (totalFiles < 10) {
+            files.forEach { copyDirectory(File(source, it.name), File(target, it.name)) }
+            return
+        }
+
+        val cores = Runtime.getRuntime().availableProcessors()
+        val threadCount = min(cores + 1, 8)
+        val executor = Executors.newFixedThreadPool(threadCount)
+        val latch = CountDownLatch(totalFiles)
+        val errorRef = AtomicReference<Throwable?>()
+
+        var completed = 0
+        val totalSize = files.sumOf { it.length() }
+        var copiedSize = 0L
+
+        files.forEach { file ->
+            executor.submit {
+                try {
+                    if (errorRef.get() != null) return@submit
+
+                    val srcFile = File(source, file.name)
+                    val dstFile = File(target, file.name)
+
+                    if (srcFile.isDirectory) {
+                        copyDirectoryParallel(srcFile, dstFile)
+                    } else {
+                        copyFile(srcFile, dstFile)
+                    }
+
+                    synchronized(this) {
+                        completed++
+                        copiedSize += file.length()
+                        val progress = (copiedSize * 100 / maxOf(totalSize, 1)).toInt()
+                        _progressMessage.value = getString(R.string.copying_progress, completed, totalFiles, progress)
+                    }
+                } catch (e: Throwable) {
+                    errorRef.set(e)
+                } finally {
+                    latch.countDown()
+                }
+            }
+        }
+
+        latch.await()
+        executor.shutdown()
+        errorRef.get()?.let { throw it }
     }
 
     fun createNoMedia() {
@@ -897,6 +1244,46 @@ class WorldViewModel : ViewModel() {
             } catch (e: Exception) {
                 _errorMessage.value = getString(R.string.toast_repair_failed, e.message)
                 withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    private fun resolveWorldPath(folder: String): String {
+        val base = _currentPath.value
+        val baseFile = File(base)
+        // 如果当前路径的最后一段文件夹名 == folder，说明路径已经指向世界本身
+        if (baseFile.name == folder) {
+            return if (base.endsWith("/")) base else "$base/"
+        }
+        return if (base.endsWith("/")) "$base$folder/" else "$base/$folder/"
+    }
+
+    fun reloadPlayerFromCurrentDb() {
+        val dbPath = currentWorkingDbPath ?: return
+        val evm = editorVM ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _loadingMessage.value = "Reloading player..."
+            try {
+                val db = PlayerDbManager(dbPath)
+                val data = db.readLocalPlayer()
+                db.close()
+
+                val playerDataObj = BedrockParser.parseBytes(data)
+                evm.setEditingPlayer(true)
+                evm.setTargetKey("~local_player")
+                evm.setRawNbtData(playerDataObj)
+                evm.nbtDataCache["~local_player"] = playerDataObj
+                evm.navigationStack.clear()
+                evm.pathStack.clear()
+                evm.scrollPositionStack.clear()
+                evm.updatePathTitle()
+                _isLoading.value = false
+                _toastMessage.value = "Player reloaded"
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorMessage.value = e.message
             }
         }
     }

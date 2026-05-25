@@ -484,4 +484,15 @@ Would you like to create a new empty data set?</string>
     <string name="msg_player">Player</string>
     <string name="msg_map">Map</string>
     <string name="msg_village">Village</string>
+
+    <string name="copying_progress">Copying %1$d/%2$d (%3$d%%)</string>
+    <string name="err_saf_scan_failed">SAF 扫描失败: %s</string>
+
+    <string name="title_shizuku_not_found">Shizuku 未安装</string>
+    <string name="msg_shizuku_recommend_install">建议安装 Shizuku 以获得完整功能。是否前往下载？</string>
+    <string name="btn_download">下载</string>
+    <string name="btn_continue_without">不使用 Shizuku</string>
+    <string name="toast_open_browser_failed">打开浏览器失败</string>
+    <string name="toast_shizuku_not_running">Shizuku 未运行</string>
+    <string name="toast_shizuku_permission_failed">获取 Shizuku 权限失败</string>
 </resources>

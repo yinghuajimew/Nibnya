@@ -31,6 +31,7 @@ MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] C:\Users\yinghuaji\.gra
 MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\3382b0b376ae5f80d5406d84ef50f385\transformed\lifecycle-viewmodel-2.6.2\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\5e1f1664aa81a51ce3753d32d5e3f042\transformed\jetified-lifecycle-viewmodel-ktx-2.6.2\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6b9f8f8f500e39ada3c2204669252b7b\transformed\jetified-lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.documentfile:documentfile:1.0.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\abf45091344b1a0d9a4f37b9b7b6d199\transformed\documentfile-1.0.1\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\921cddfaa2249fc8e13a678b9fd6a87e\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:17:1-55:12
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\78b759c40c038da6fb714c256241295b\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
@@ -80,6 +81,8 @@ MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\yinghuaj
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\5e1f1664aa81a51ce3753d32d5e3f042\transformed\jetified-lifecycle-viewmodel-ktx-2.6.2\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6b9f8f8f500e39ada3c2204669252b7b\transformed\jetified-lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\6b9f8f8f500e39ada3c2204669252b7b\transformed\jetified-lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\abf45091344b1a0d9a4f37b9b7b6d199\transformed\documentfile-1.0.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.1] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\abf45091344b1a0d9a4f37b9b7b6d199\transformed\documentfile-1.0.1\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\921cddfaa2249fc8e13a678b9fd6a87e\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\921cddfaa2249fc8e13a678b9fd6a87e\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\yinghuaji\.gradle\caches\9.0.0\transforms\7d9942d9cac5b8be1a4a00fb188fb803\transformed\jetified-profileinstaller-1.4.0\AndroidManifest.xml:21:5-44

@@ -74,6 +74,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.activity:activity-ktx:1.13.0'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
 }
 
 // 自定义任务：构建调试版

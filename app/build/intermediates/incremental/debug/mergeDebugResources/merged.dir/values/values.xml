@@ -117,6 +117,7 @@
     <string name="btn_close">Close</string>
     <string name="btn_confirm">Sure</string>
     <string name="btn_confirm_clear">OK to clear</string>
+    <string name="btn_continue_without">不使用 Shizuku</string>
     <string name="btn_copy_error">Copy error</string>
     <string name="btn_cover">cover</string>
     <string name="btn_create">Create</string>
@@ -124,6 +125,7 @@
     <string name="btn_delete">delete</string>
     <string name="btn_delete_all">Delete all</string>
     <string name="btn_delete_all_in_list">Delete ALL in list</string>
+    <string name="btn_download">下载</string>
     <string name="btn_edit_map_data">Edit map data (map_...)</string>
     <string name="btn_edit_online_players">Edit online players (player_...)</string>
     <string name="btn_edit_player">👤 Edit player</string>
@@ -155,6 +157,7 @@
     <string name="call_notification_incoming_text">Incoming call</string>
     <string name="call_notification_ongoing_text">Ongoing call</string>
     <string name="call_notification_screening_text">Screening an incoming call</string>
+    <string name="copying_progress">Copying %1$d/%2$d (%3$d%%)</string>
     <string name="debug_copy_logs">📄 Copy logs to clipboard</string>
     <string name="debug_crash_test">💥 Crash test (simulate crash)</string>
     <string name="debug_export_logs">💾 Export logs to file</string>
@@ -178,6 +181,7 @@
     <string name="err_no_saves_detail">No valid Minecraft save found in the current path\n(Must contain both level.dat and db folders)</string>
     <string name="err_read_file_not_generated">Read failed, file not generated</string>
     <string name="err_restore_failed_prefix">Recovery failed:</string>
+    <string name="err_saf_scan_failed">SAF 扫描失败: %s</string>
     <string name="err_save_failed">Save failed: %s</string>
     <string name="err_shizuku_binder_not_ready">Shizuku connection lost\n\nPossible causes:\n1. Shizuku was killed by system\n2. Phone just rebooted\n3. Shizuku permission revoked\n\nPlease restart Shizuku service</string>
     <string name="err_shizuku_not_running">❌ Shizuku service not running\n\nPlease open Shizuku app and tap \"Start\"\nEnsure Shizuku is running in background</string>
@@ -350,6 +354,7 @@
     <string name="msg_search_map_data">Search map data...</string>
     <string name="msg_search_village_data">Search village data...</string>
     <string name="msg_shizuku_api_error">Shizuku API Error</string>
+    <string name="msg_shizuku_recommend_install">建议安装 Shizuku 以获得完整功能。是否前往下载？</string>
     <string name="msg_slice_missing">Slice missing: %d</string>
     <string name="msg_start_id">Start ID: </string>
     <string name="msg_success">🎉 Success!\n</string>
@@ -467,6 +472,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_search_nbt_data">Search NBT data</string>
     <string name="title_search_type">Search %1$s...</string>
     <string name="title_shizuku_error">Shizuku service abnormality</string>
+    <string name="title_shizuku_not_found">Shizuku 未安装</string>
     <string name="title_treemap_player_data">Treemap: Player Data (~local_player)</string>
     <string name="title_treemap_world_data">Treemap: world data (level.dat)</string>
     <string name="title_view_mode">Switch display mode</string>
@@ -533,6 +539,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_no_data_to_parse">No data to parse</string>
     <string name="toast_no_label_data">Currently there is no %s data, you can click [More Actions] to create a new one.</string>
     <string name="toast_no_saves_found">No saves found</string>
+    <string name="toast_open_browser_failed">打开浏览器失败</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">Operation canceled, please check archive integrity</string>
     <string name="toast_paste_failed">Paste failed: %s</string>
     <string name="toast_pasted">Pasted</string>
@@ -566,6 +573,8 @@ Would you like to create a new empty data set?</string>
     <string name="toast_shizuku_needed">Reading and writing Minecraft Data archives requires Shizuku permissions</string>
     <string name="toast_shizuku_normal">Shizuku normal</string>
     <string name="toast_shizuku_not_installed">Shizuku is not installed</string>
+    <string name="toast_shizuku_not_running">Shizuku 未运行</string>
+    <string name="toast_shizuku_permission_failed">获取 Shizuku 权限失败</string>
     <string name="toast_storage_perm">All file access needs to be granted to read and write Minecraft save files</string>
     <string name="toast_successfully_deleted">successfully deleted</string>
     <string name="toast_switched_legacy">The old version path has been cut</string>

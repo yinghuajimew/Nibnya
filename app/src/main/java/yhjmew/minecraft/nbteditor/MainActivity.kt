@@ -7,6 +7,7 @@ import android.app.AlertDialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import android.view.*
 import android.widget.*
@@ -158,14 +159,14 @@ class MainActivity : ComponentActivity() {
         editorVM.setViewMode(prefs!!.getInt("view_mode", if (isChinese) 2 else 0))
         worldVM.setUseShizuku(prefs!!.getBoolean("use_shizuku", true))
 
-        prefs!!.getString("saf_tree_uri", null)?.let { uriStr ->
-            try {
-                val uri = uriStr.toUri()
-                contentResolver.takePersistableUriPermission(uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                worldVM.safTreeUri = uri; worldVM.switchPath("$uri/")
-            } catch (_: Exception) { prefs!!.edit { remove("saf_tree_uri") } }
-        }
+//        prefs!!.getString("saf_tree_uri", null)?.let { uriStr ->
+//            try {
+//                val uri = uriStr.toUri()
+//                contentResolver.takePersistableUriPermission(uri,
+//                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+//                worldVM.safTreeUri = uri; worldVM.switchPath("$uri/")
+//            } catch (_: Exception) { prefs!!.edit { remove("saf_tree_uri") } }
+//        }
 
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.main)
@@ -185,11 +186,10 @@ class MainActivity : ComponentActivity() {
         }
         worldVM.checkStoragePermission(this)
 
-        if (!worldVM.checkShizukuAvailable()) {
-            toast(getString(R.string.toast_shizuku_needed))
-            try { Class.forName("rikka.shizuku.Shizuku")
-                .getMethod("requestPermission", Int::class.javaPrimitiveType).invoke(null, 0) }
-            catch (_: Exception) { toast(getString(R.string.toast_install_shizuku)) }
+        Shizuku.addRequestPermissionResultListener { _, grant ->
+            toast(if (grant == PackageManager.PERMISSION_GRANTED)
+                getString(R.string.toast_shizuku_granted)
+            else getString(R.string.toast_shizuku_denied))
         }
 
         if (savedInstanceState == null) worldVM.cleanUpOldSessions(this)
@@ -530,7 +530,59 @@ class MainActivity : ComponentActivity() {
     // 世界选择 / 路径（轻量包装）
     // ============================================
     private fun showWorldSelector() {
-        pendingWorldSelector = true; worldVM.scanWorlds(this)
+        // 检查是否需要 Shizuku 但不可用
+        if (worldVM.currentPath.value == PATH_STANDARD ||
+            worldVM.currentPath.value == PATH_LEGACY) {
+            when (val status = worldVM.checkShizukuStatus()) {
+                is WorldViewModel.ShizukuStatus.NotInstalled -> {
+                    showShizukuNotInstalledDialog()
+                    return
+                }
+                is WorldViewModel.ShizukuStatus.NotRunning -> {
+                    toast(getString(R.string.toast_shizuku_not_running))
+                    return
+                }
+                is WorldViewModel.ShizukuStatus.PermissionDenied -> {
+                    worldVM.requestShizukuPermission()
+                    toast(getString(R.string.toast_shizuku_permission_failed))
+                    return
+                }
+                is WorldViewModel.ShizukuStatus.Available -> {
+                    // 继续
+                }
+            }
+        }
+
+        pendingWorldSelector = true
+        if (worldVM.safTreeUri != null) {
+            worldVM.scanWorldsViaSaf(this, worldVM.safTreeUri!!)
+        } else {
+            worldVM.scanWorlds(this)
+        }
+    }
+
+    private fun showShizukuNotInstalledDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.title_shizuku_not_found))
+            .setMessage(getString(R.string.msg_shizuku_recommend_install))
+            .setPositiveButton(getString(R.string.btn_download)) { _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://github.com/RikkaApps/Shizuku/releases")
+                    })
+                } catch (_: Exception) {
+                    toast(getString(R.string.toast_open_browser_failed))
+                }
+            }
+            .setNegativeButton(getString(R.string.btn_continue_without)) { _, _ ->
+                worldVM.setUseShizuku(false)
+                prefs?.edit()?.putBoolean("use_shizuku", false)?.apply()
+                // 允许继续扫描（走 File API）
+                pendingWorldSelector = true
+                worldVM.scanWorlds(this)
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun showPathSelector() {
@@ -538,8 +590,18 @@ class MainActivity : ComponentActivity() {
             .setItems(arrayOf(getString(R.string.path_standard), getString(R.string.path_legacy),
                 getString(R.string.path_custom), getString(R.string.path_saf))) { _, w ->
                 when (w) {
-                    0 -> { worldVM.switchPath(PATH_STANDARD); showWorldSelector() }
-                    1 -> { worldVM.switchPath(PATH_LEGACY); showWorldSelector() }
+                    0 -> {
+                    worldVM.safTreeUri = null
+                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                    worldVM.switchPath(PATH_STANDARD)
+                    showWorldSelector()
+                }
+                    1 -> {
+                    worldVM.safTreeUri = null
+                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                    worldVM.switchPath(PATH_LEGACY)
+                    showWorldSelector()
+                }
                     2 -> showCustomPathDialog()
                     3 -> safPathLauncher.launch(null)
                 }
@@ -551,7 +613,12 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this).setTitle(getString(R.string.path_custom)).setView(input)
             .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
                 var p = input.text.toString().trim()
-                if (p.isNotEmpty()) { worldVM.switchPath(if (p.endsWith("/")) p else "$p/"); showWorldSelector() }
+                if (p.isNotEmpty()) {
+                    worldVM.safTreeUri = null
+                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                    worldVM.switchPath(if (p.endsWith("/")) p else "$p/")
+                    showWorldSelector()
+                }
             }.show()
     }
 
@@ -622,11 +689,24 @@ class MainActivity : ComponentActivity() {
     private fun handleResult(msg: String) {
         when {
             msg.startsWith("Puzzle:SUCCESS:") -> {
-                val p = msg.removePrefix("Puzzle:SUCCESS:").split(":")
-                toast("Success! ${p.getOrElse(0){"?"}} maps, ${p.getOrElse(1){"?"}} layers")
-                worldVM.loadPlayerData(this, worldVM.currentWorldFolder.value ?: return)
+                val parts = msg.removePrefix("Puzzle:SUCCESS:").split(":")
+                val totalMaps = parts.getOrElse(0) { "0" }
+                val totalLayers = parts.getOrElse(1) { "0" }
+                val startMapId = parts.getOrElse(2) { "0" }
+                val freeSlot = parts.getOrElse(3) { "0" }
+                toast(getString(R.string.msg_puzzle_success_format,
+                    totalMaps.toIntOrNull() ?: 0,
+                    totalLayers.toIntOrNull() ?: 0,
+                    startMapId.toIntOrNull() ?: 0,
+                    freeSlot.toIntOrNull() ?: 0))
+                worldVM.currentWorldFolder.value?.let { folder ->
+                    worldVM.reloadPlayerFromCurrentDb()
+                }
             }
-            msg.startsWith("Puzzle:ERROR:") -> toast("Puzzle failed: ${msg.removePrefix("Puzzle:ERROR:")}")
+            msg.startsWith("Puzzle:ERROR:") -> {
+                val error = msg.removePrefix("Puzzle:ERROR:")
+                toast(getString(R.string.msg_puzzle_error, error))
+            }
             else -> toast(msg)
         }
     }

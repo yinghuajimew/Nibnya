@@ -409,7 +409,10 @@ fun MainActivity.showAppInfoDialog() {
 
     dialogView.findViewById<CheckBox?>(R.id.cb_dialog_multithread)?.let {
         it.isChecked = prefs?.getBoolean("use_multithread", true) ?: true
-        it.setOnCheckedChangeListener { _, c -> prefs?.edit { putBoolean("use_multithread", c) } }
+        it.setOnCheckedChangeListener { _, c ->
+            worldVM.setUseMultiThread(c)
+            prefs?.edit()?.putBoolean("use_multithread", c)?.apply()
+        }
     }
     dialogView.findViewById<CheckBox?>(R.id.cb_dialog_shizuku)?.let {
         it.isChecked = prefs?.getBoolean("use_shizuku", true) ?: true

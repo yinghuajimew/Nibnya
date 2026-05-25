@@ -22,6 +22,7 @@
     <string name="btn_close">关闭</string>
     <string name="btn_confirm">确定</string>
     <string name="btn_confirm_clear">确定清空</string>
+    <string name="btn_continue_without">不使用 Shizuku</string>
     <string name="btn_copy_error">复制报错</string>
     <string name="btn_cover">覆盖</string>
     <string name="btn_create">创建</string>
@@ -29,6 +30,7 @@
     <string name="btn_delete">删除</string>
     <string name="btn_delete_all">全部删除</string>
     <string name="btn_delete_all_in_list">删除列表中的所有内容</string>
+    <string name="btn_download">下载</string>
     <string name="btn_edit_map_data">编辑地图数据 (map_...)</string>
     <string name="btn_edit_online_players">编辑联机玩家 (player_...)</string>
     <string name="btn_edit_player">👤 编辑玩家</string>
@@ -53,6 +55,7 @@
     <string name="btn_try_to_fix">尝试修复</string>
     <string name="btn_understood">知道了</string>
     <string name="btn_view_and_edit_clips">查看/编辑片段</string>
+    <string name="copying_progress">复制 %1$d/%2$d (%3$d%%)</string>
     <string name="debug_copy_logs">📄 复制日志到剪贴板</string>
     <string name="debug_crash_test">💥 崩溃测试（模拟应用崩溃）</string>
     <string name="debug_export_logs">💾 导出日志到文件</string>
@@ -76,6 +79,7 @@
     <string name="err_no_saves_detail">当前路径下没有找到有效的 Minecraft 存档\n(必须同时包含 level.dat 和 db 文件夹)</string>
     <string name="err_read_file_not_generated">读取失败，文件未生成</string>
     <string name="err_restore_failed_prefix">恢复失败: </string>
+    <string name="err_saf_scan_failed">SAF 扫描失败: %s</string>
     <string name="err_save_failed">保存失败: %s</string>
     <string name="err_shizuku_binder_not_ready">Shizuku 连接已断开\n\n可能原因：\n1. Shizuku 被系统杀后台\n2. 刚刚重启过手机\n3. Shizuku 权限被撤销\n\n请重新打开 Shizuku 应用启动服务</string>
     <string name="err_shizuku_not_running">❌ Shizuku 服务未运行\n\n请先打开 Shizuku 应用，点击「启动」按钮\n并确保 Shizuku 在后台运行</string>
@@ -231,7 +235,7 @@
     <string name="msg_processing_ing">处理图片中...</string>
     <string name="msg_puzzle_error">拼图：错误:%s</string>
     <string name="msg_puzzle_set_count">拼图设置 (%d 地图)</string>
-    <string name="msg_puzzle_success_format">拼图：成功:%1$d:%2$d:%3$d:%4$d</string>
+    <string name="msg_puzzle_success_format">成功生成 %1$d 张地图，共 %2$d 层，起始ID: %3$d，放入背包格子: %4$d</string>
     <string name="msg_querying">正在查询...</string>
     <string name="msg_read">读取中</string>
     <string name="msg_reading">刷新中...</string>
@@ -248,6 +252,7 @@
     <string name="msg_search_map_data">搜索地图数据...</string>
     <string name="msg_search_village_data">搜索村庄数据...</string>
     <string name="msg_shizuku_api_error">Shizuku API 错误</string>
+    <string name="msg_shizuku_recommend_install">建议安装 Shizuku 以获得完整功能。是否前往下载？</string>
     <string name="msg_slice_missing">切片丢失: %d</string>
     <string name="msg_start_id">起始ID: </string>
     <string name="msg_success">🎉 成功！\n</string>
@@ -362,6 +367,7 @@
     <string name="title_search_nbt_data">搜索 NBT 数据</string>
     <string name="title_search_type">搜索%1$s...</string>
     <string name="title_shizuku_error">Shizuku 服务异常</string>
+    <string name="title_shizuku_not_found">Shizuku 未安装</string>
     <string name="title_treemap_player_data">树状图: 玩家数据 (~local_player)</string>
     <string name="title_treemap_world_data">树状图: 世界数据 (level.dat)</string>
     <string name="title_view_mode">切换显示模式</string>
@@ -428,6 +434,7 @@
     <string name="toast_no_data_to_parse">没有要解析的数据</string>
     <string name="toast_no_label_data">当前没有%s数据，您可以点击[更多操作]新建</string>
     <string name="toast_no_saves_found">未找到保存内容</string>
+    <string name="toast_open_browser_failed">打开浏览器失败</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">操作已取消，请检查存档完整性</string>
     <string name="toast_paste_failed">粘贴失败: %s</string>
     <string name="toast_pasted">粘贴成功</string>
@@ -461,6 +468,8 @@
     <string name="toast_shizuku_needed">读写 Minecraft Data 存档需 Shizuku 权限</string>
     <string name="toast_shizuku_normal">Shizuku 正常</string>
     <string name="toast_shizuku_not_installed">未安装 Shizuku</string>
+    <string name="toast_shizuku_not_running">Shizuku 未运行</string>
+    <string name="toast_shizuku_permission_failed">获取 Shizuku 权限失败</string>
     <string name="toast_storage_perm">需要授予「所有文件访问权限」才能读写 Minecraft 存档文件</string>
     <string name="toast_successfully_deleted">成功删除 </string>
     <string name="toast_switched_legacy">已切旧版路径</string>

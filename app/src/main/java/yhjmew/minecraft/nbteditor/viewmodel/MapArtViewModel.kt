@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
+import yhjmew.minecraft.nbteditor.NbtTranslator
 import yhjmew.minecraft.nbteditor.NbtTranslator.getString
 import yhjmew.minecraft.nbteditor.PlayerDbManager
 import java.io.File
@@ -58,7 +59,7 @@ class MapArtViewModel : ViewModel() {
     fun generateMapFromImage(context: Context, imageUri: Uri, targetArray: JsonArray?) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = getString(R.string.msg_processing_ing)
+            _progressMessage.value = NbtTranslator.getString(R.string.msg_processing_ing)
             try {
                 val `is` = context.contentResolver.openInputStream(imageUri)
                 val original = BitmapFactory.decodeStream(`is`)
@@ -113,7 +114,7 @@ class MapArtViewModel : ViewModel() {
     fun generatePuzzleMap(context: Context, imageUri: Uri, rows: Int, cols: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = getString(R.string.msg_analyzing_backpack)
+            _progressMessage.value = NbtTranslator.getString(R.string.msg_analyzing_backpack)
             try {
                 val wm = worldVM ?: throw Exception(getString(R.string.msg_worldvm_missing))
                 val dbPath = wm.currentWorkingDbPath ?: throw Exception(getString(R.string.msg_db_not_loaded))
@@ -210,7 +211,7 @@ class MapArtViewModel : ViewModel() {
                 val cellH = src.height / rows
                 val totalMaps = rows * cols
 
-                _progressMessage.value = getString(R.string.msg_generating_maps, totalMaps)
+                _progressMessage.value = NbtTranslator.getString(R.string.msg_generating_maps, totalMaps)
 
                 val itemsMap = ConcurrentHashMap<Int, JsonObject>()
                 val cores = Runtime.getRuntime().availableProcessors()
@@ -351,6 +352,12 @@ class MapArtViewModel : ViewModel() {
 
                 val newPlayerData = BedrockParser.writeToBytes(playerRoot)
                 db.writeLocalPlayer(newPlayerData)
+
+// 【核心修复】回填缓存：把地图和玩家数据写入 EditorViewModel
+                val evm = worldVM?.editorVM ?: return@launch
+                evm.nbtDataCache["~local_player"] = playerRoot
+                evm.setRawNbtData(playerRoot)
+
                 db.close()
 
                 _isGenerating.value = false
