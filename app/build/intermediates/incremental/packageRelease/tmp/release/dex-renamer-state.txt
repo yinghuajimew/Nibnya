@@ -1,7 +1,0 @@
-#Thu May 21 02:33:02 CST 2026
-base.0=D\:\\NBTeditor\\app\\build\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
-base.1=D\:\\NBTeditor\\app\\build\\intermediates\\global_synthetics_dex\\release\\mergeReleaseGlobalSynthetics\\classes.dex
-path.0=classes.dex
-path.1=classes.dex
-renamed.0=classes.dex
-renamed.1=classes2.dex

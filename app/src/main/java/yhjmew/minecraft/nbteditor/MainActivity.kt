@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     var puzzleRows = 1
     var puzzleCols = 1
     var currentTargetMapArray: JsonArray? = null
+    private var puzzleImageUri: Uri? = null
 
 
 
@@ -102,8 +103,9 @@ class MainActivity : ComponentActivity() {
 
     internal val puzzleImageLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { mapVM.generatePuzzleMap(this, it, puzzleRows, puzzleCols) }
+    ) {uri ->
+        puzzleImageUri = uri  // 先暂存
+        mapVM.scanInventory(this)  // 扫描背包→弹出格子选择
     }
 
     internal val mapImageLauncher = registerForActivityResult(
@@ -297,6 +299,12 @@ class MainActivity : ComponentActivity() {
                         .setNegativeButton(getString(R.string.btn_cancel), null)
                         .show()
                 }
+            }
+        }
+
+        lifecycleScope.launch {
+            mapVM.inventorySlotInfo.collect { info ->
+                info?.let { showSlotPickerDialog(it) }
             }
         }
     }
@@ -786,6 +794,71 @@ class MainActivity : ComponentActivity() {
     private fun ensureNoMedia(dir: File) {
         try { if (!dir.exists()) dir.mkdirs(); File(dir, ".nomedia").let { if (!it.exists()) it.createNewFile() } }
         catch (_: Exception) {}
+    }
+
+    private fun showSlotPickerDialog(info: MapArtViewModel.InventorySlotInfo) {
+        val uri = puzzleImageUri ?: run {
+            mapVM.clearInventorySlotInfo()
+            return
+        }
+
+        val emptyCount = info.mainSlots.count { !it.isOccupied }
+        val lines = mutableListOf<String>()
+
+        for (i in 0..35) {
+            val s = info.mainSlots[i]
+            if (s.isOccupied) {
+                lines.add("⚠ [$i] ${s.name} x${s.count}")
+            } else {
+                lines.add("  [$i] --空--")
+            }
+        }
+
+        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, lines)
+        val lv = ListView(this).apply { this.adapter = adapter }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("选择存放位置")
+            .setMessage("$emptyCount 个空位可用，点击格子选择")
+            .setView(lv)
+            .setNegativeButton(getString(R.string.btn_cancel)) { _, _ ->
+                mapVM.clearInventorySlotInfo()
+                puzzleImageUri = null
+            }
+            .create()
+
+        lv.onItemClickListener = AdapterView.OnItemClickListener { _, _, pos, _ ->
+            dialog.dismiss()
+            mapVM.clearInventorySlotInfo()
+
+            val targetSlot = if (pos in 0..35) pos else {
+                puzzleImageUri = null
+                return@OnItemClickListener
+            }
+
+            // 如果选了有东西的格子，二次确认
+            val slotInfo = info.mainSlots[targetSlot]
+
+            if (slotInfo.isOccupied) {
+                val label = "格子 $targetSlot"
+                AlertDialog.Builder(this)
+                    .setTitle("⚠ 格子已被占用")
+                    .setMessage("$label 上有:\n${slotInfo.name} x${slotInfo.count}\n\n确认覆盖？")
+                    .setPositiveButton("确认覆盖") { _, _ ->
+                        mapVM.generatePuzzleMap(this, uri, puzzleRows, puzzleCols, targetSlot)
+                        puzzleImageUri = null
+                    }
+                    .setNegativeButton(getString(R.string.btn_cancel)) { _, _ ->
+                        puzzleImageUri = null
+                    }
+                    .show()
+            } else {
+                mapVM.generatePuzzleMap(this, uri, puzzleRows, puzzleCols, targetSlot)
+                puzzleImageUri = null
+            }
+        }
+
+        dialog.show()
     }
 
     // ============================================
