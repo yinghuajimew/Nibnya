@@ -24,6 +24,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
+import yhjmew.minecraft.nbteditor.AppLogger
 import yhjmew.minecraft.nbteditor.MainActivity
 import yhjmew.minecraft.nbteditor.NbtTranslator
 import yhjmew.minecraft.nbteditor.R
@@ -300,7 +301,7 @@ private fun MainActivity.showSubArrayEditDialog(original: JsonArray, start: Int,
     for (i in 0..<count) { sb.append(original[start + i]); if (i < count - 1) sb.append(",") }
     sb.append("]")
     val input = EditText(this).apply { setText(sb.toString()) }
-    AlertDialog.Builder(this).setTitle(getString(R.string.title_edit_range)).setView(input)
+    AlertDialog.Builder(this).setTitle(getString(R.string.title_edit_range, start, start + count - 1)).setView(input)
         .setPositiveButton(getString(R.string.btn_save)) { _, _ ->
             try {
                 val parsed = JsonParser.parseString(input.text.toString())
@@ -414,10 +415,11 @@ fun MainActivity.showAppInfoDialog() {
             prefs?.edit()?.putBoolean("use_multithread", c)?.apply()
         }
     }
-    dialogView.findViewById<CheckBox?>(R.id.cb_dialog_shizuku)?.let {
-        it.isChecked = prefs?.getBoolean("use_shizuku", true) ?: true
+    dialogView.findViewById<CheckBox?>(R.id.cb_skip_shizuku)?.let {
+        it.isChecked = prefs?.getBoolean("skip_shizuku", false) ?: false
         it.setOnCheckedChangeListener { _, c ->
-            worldVM.setUseShizuku(c); prefs?.edit { putBoolean("use_shizuku", c) }
+            worldVM.setUseShizuku(!c)
+            prefs?.edit()?.putBoolean("skip_shizuku", c)?.apply()
         }
     }
     dialogView.findViewById<Button?>(R.id.btn_dialog_theme)?.let {
@@ -450,25 +452,62 @@ fun MainActivity.showAppInfoDialog() {
 // ============================================
 fun MainActivity.showDebugMenu() {
     AlertDialog.Builder(this).setTitle(getString(R.string.title_debug_menu))
-        .setItems(arrayOf(getString(R.string.debug_crash_test), getString(R.string.debug_show_logs), getString(R.string.debug_copy_logs))) { _, w ->
+        .setItems(arrayOf(getString(R.string.debug_crash_test), getString(R.string.debug_show_logs), getString(R.string.debug_export_logs), getString(R.string.debug_copy_logs))) { _, w ->
             when (w) {
                 0 -> Handler(Looper.getMainLooper()).postDelayed(
                     { throw RuntimeException("Manual crash test") }, 1000
                 )
                 1 -> {
-                    val sv = ScrollView(this)
-                    val tv = TextView(this).apply {
-                        text = getString(R.string.msg_no_logs_to_export); typeface = Typeface.MONOSPACE
-                        textSize = 12f; setPadding(20, 20, 20, 20)
+                    val logs = AppLogger.getLogs()
+                    val scrollView = ScrollView(this)
+                    val logTv = TextView(this).apply {
+                        text = logs.ifEmpty { getString(R.string.msg_no_logs) }
+                        typeface = Typeface.MONOSPACE
+                        textSize = 12f
+                        setPadding(20, 20, 20, 20)
+                        setTextIsSelectable(true)
                     }
-                    sv.addView(tv)
-                    AlertDialog.Builder(this).setTitle(getString(R.string.title_logs)).setView(sv)
-                        .setPositiveButton(getString(R.string.btn_close), null).show()
+                    scrollView.addView(logTv)
+                    AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.title_logs))
+                        .setView(scrollView)
+                        .setPositiveButton(getString(R.string.btn_close), null)
+                        .setNeutralButton(getString(R.string.menu_copy)) { _, _ ->
+                            if (logs.isEmpty()) {
+                                toast(getString(R.string.msg_no_logs_to_copy))
+                            } else {
+                                (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                                    .setPrimaryClip(ClipData.newPlainText(getString(R.string.title_logs), logs))
+                                toast(getString(R.string.toast_logs_copied))
+                            }
+                        }
+                        .setNegativeButton(getString(R.string.btn_export)) { _, _ ->
+                            val file = AppLogger.exportToFile()
+                            if (file != null) {
+                                toast(getString(R.string.toast_logs_exported, file.absolutePath))
+                            } else {
+                                toast(getString(R.string.msg_no_logs_to_export))
+                            }
+                        }
+                        .show()
                 }
                 2 -> {
-                    (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                        .setPrimaryClip(ClipData.newPlainText(getString(R.string.title_logs), getString(R.string.text_debug_logs)))
-                    toast(getString(R.string.msg_logs_copied))
+                    val logs = AppLogger.getLogs()
+                    if (logs.isEmpty()) {
+                        toast(getString(R.string.msg_no_logs_to_copy))
+                    } else {
+                        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("Logs", logs))
+                        toast(getString(R.string.toast_logs_copied))
+                    }
+                }
+                3 -> {
+                    val file = AppLogger.exportToFile()
+                    if (file != null) {
+                        toast(getString(R.string.toast_logs_exported, file.absolutePath))
+                    } else {
+                        toast(getString(R.string.msg_no_logs_to_export))
+                    }
                 }
             }
         }.show()

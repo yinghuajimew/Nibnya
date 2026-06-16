@@ -51,14 +51,14 @@ class PlayerDbManager(dbFolderPath: String) {
 
     @Throws(Exception::class)
     fun readSpecificKey(keyString: String): ByteArray {
-        val d = db ?: throw Exception(getString(R.string.msg_dn_is_not_open))
+        val d = db ?: throw Exception(getString(R.string.msg_db_not_open))
         val keyBytes = keyString.toByteArray(StandardCharsets.UTF_8)
         return d.get(keyBytes) ?: throw Exception(getString(R.string.msg_data_is_empty_colon) + keyString)
     }
 
     @Throws(Exception::class)
     fun readRawKey(keyBytes: ByteArray?): ByteArray {
-        val d = db ?: throw Exception(getString(R.string.msg_dn_is_not_open))
+        val d = db ?: throw Exception(getString(R.string.msg_db_not_open))
         return d.get(keyBytes) ?: throw Exception(getString(R.string.msg_the_data_corresponding_to_this_key_was_not_found))
     }
 

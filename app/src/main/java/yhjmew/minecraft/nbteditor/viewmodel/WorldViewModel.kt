@@ -37,6 +37,7 @@ import kotlin.math.max
 import kotlin.math.min
 import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
+import yhjmew.minecraft.nbteditor.AppLogger
 import yhjmew.minecraft.nbteditor.NbtTranslator
 import yhjmew.minecraft.nbteditor.SafPathResolver
 
@@ -235,6 +236,7 @@ class WorldViewModel : ViewModel() {
                 _worldList.value = result
                 _scanResultChannel.trySend(ScanResult(result))
             } catch (e: Exception) {
+                AppLogger.error("ScanWorlds", "Scan failed", e)
                 _errorMessage.value = e.toString()
                 _scanResultChannel.trySend(ScanResult(emptyList(), e.toString()))
             } finally {
@@ -442,6 +444,7 @@ class WorldViewModel : ViewModel() {
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.msg_loaded_level_dat)
             } catch (e: Exception) {
+                AppLogger.error("LoadLevelDat", "Load level.dat failed", e)
                 _isLoading.value = false
                 _errorMessage.value = e.message ?: getString(R.string.msg_load_failed)
             }
@@ -597,6 +600,7 @@ class WorldViewModel : ViewModel() {
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.toast_player_loaded_success)
             } catch (e: Exception) {
+                AppLogger.error("LoadPlayer", "Load player failed", e)
                 _isLoading.value = false
                 _errorMessage.value = e.message
                 // 数据库损坏
@@ -656,6 +660,7 @@ class WorldViewModel : ViewModel() {
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.toast_loaded, keyName)
             } catch (e: Exception) {
+                AppLogger.error("LoadKey", "Load key $keyName failed", e)
                 _isLoading.value = false
                 _errorMessage.value = getString(R.string.err_load_failed_with_msg, e.message)
             }
@@ -734,15 +739,22 @@ class WorldViewModel : ViewModel() {
 
                     db.close()
 
-                    val bridgeSave = MainActivity.BRIDGE_ROOT + "save_db_$uniqueId"
-                    runShizukuCmd(arrayOf("sh", "-c", "mkdir -p \"${MainActivity.BRIDGE_ROOT}\"")).waitFor()
-                    createNoMedia()
-                    runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
-                    smartCopy(newWorkDir, File(bridgeSave))
-
                     val mcDbPath = "${resolveWorldPath(folder)}db/"
-                    runShizukuCmd(arrayOf("sh", "-c", "cp -rf \"$bridgeSave/.\" \"$mcDbPath\"")).waitFor()
-                    runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
+                    if (checkShizukuAvailable()) {
+                        // Shizuku 模式：通过桥接目录
+                        val bridgeSave = MainActivity.BRIDGE_ROOT + "save_db_$uniqueId"
+                        runShizukuCmd(arrayOf("sh", "-c", "mkdir -p \"${MainActivity.BRIDGE_ROOT}\"")).waitFor()
+                        createNoMedia()
+                        runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
+                        smartCopy(newWorkDir, File(bridgeSave))
+                        runShizukuCmd(arrayOf("sh", "-c", "cp -rf \"$bridgeSave/.\" \"$mcDbPath\"")).waitFor()
+                        runShizukuCmd(arrayOf("sh", "-c", "rm -rf \"$bridgeSave\"")).waitFor()
+                    } else {
+                        // 直接文件访问
+                        val mcDbDir = File(mcDbPath)
+                        if (!mcDbDir.exists()) mcDbDir.mkdirs()
+                        smartCopy(newWorkDir, mcDbDir)
+                    }
 
                     deleteRecursive(oldWorkDir)
                     currentWorkingDbPath = newWorkDir.absolutePath
@@ -755,23 +767,26 @@ class WorldViewModel : ViewModel() {
                     BedrockParser.write(dataToSave, currentWorkingFileOrDir)
 
                     val workingFile = File(currentWorkingFileOrDir!!)
-                    val bridgeFile = MainActivity.BRIDGE_ROOT + "level.dat"
-                    File(MainActivity.BRIDGE_ROOT).mkdirs()
-                    copyFile(workingFile, File(bridgeFile))
-
                     val targetPath = "${resolveWorldPath(folder)}level.dat"
                     var success = copyFileNative(workingFile, File(targetPath))
+
                     if (!success && checkShizukuAvailable()) {
+                        // Shizuku 降级
+                        val bridgeFile = MainActivity.BRIDGE_ROOT + "level.dat"
+                        File(MainActivity.BRIDGE_ROOT).mkdirs()
+                        copyFile(workingFile, File(bridgeFile))
                         runShizukuCmd(arrayOf("sh", "-c", "cp \"$bridgeFile\" \"$targetPath\"")).waitFor()
                         success = true
                     }
+
                     if (!success) throw Exception(getString(R.string.msg_write_to_game_dir_failed))
                     _toastMessage.value = getString(R.string.toast_level_dat_saved)
                 }
                 _isLoading.value = false
             } catch (e: Exception) {
+                AppLogger.error("Save", "Save failed", e)
                 _isLoading.value = false
-                _errorMessage.value = e.message
+                _errorMessage.value = getString(R.string.msg_save_failed_with_details, "${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}")
             }
         }
     }
@@ -992,6 +1007,7 @@ class WorldViewModel : ViewModel() {
                 _isLoading.value = false
                 _toastMessage.value = getString(R.string.toast_loading_successfully)
             } catch (e: Exception) {
+                AppLogger.error("LoadCustomKey", "Custom key load failed", e)
                 _isLoading.value = false
                 _errorMessage.value = getString(R.string.err_load_failed_with_msg, e.message)
             }
@@ -1035,7 +1051,7 @@ class WorldViewModel : ViewModel() {
     }
 
     fun checkShizukuStatus(context: Context? = null): ShizukuStatus {
-        if (!useShizuku) return ShizukuStatus.Available
+        if (!useShizuku) return ShizukuStatus.NotInstalled
         try {
             val c = Class.forName("rikka.shizuku.Shizuku")
             val ping = c.getMethod("pingBinder").invoke(null) as? Boolean ?: return ShizukuStatus.NotRunning
@@ -1242,6 +1258,7 @@ class WorldViewModel : ViewModel() {
                 PlayerDbManager.tryRepair(dbPath)
                 withContext(Dispatchers.Main) { onResult(true) }
             } catch (e: Exception) {
+                AppLogger.error("RepairDB", "DB repair failed", e)
                 _errorMessage.value = getString(R.string.toast_repair_failed, e.message)
                 withContext(Dispatchers.Main) { onResult(false) }
             }

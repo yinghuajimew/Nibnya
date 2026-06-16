@@ -11,7 +11,7 @@
     <string name="app_name">NBT Editor</string>
     <string name="author_name">yhjmew</string>
     <string name="box_enable_multi_thread_acceleration">🚀 Enable multi-thread acceleration</string>
-    <string name="box_use_shizuku">🔐 Use Shizuku for file access (disable for direct access on supported systems)</string>
+    <string name="box_skip_shizuku">Skip Shizuku (for Android 10 and below)</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_check_perm">Check permissions</string>
     <string name="btn_choose">Select %1$s</string>
@@ -22,7 +22,7 @@
     <string name="btn_close">Close</string>
     <string name="btn_confirm">Sure</string>
     <string name="btn_confirm_clear">OK to clear</string>
-    <string name="btn_continue_without">不使用 Shizuku</string>
+    <string name="btn_continue_without">Continue without Shizuku</string>
     <string name="btn_copy_error">Copy error</string>
     <string name="btn_cover">cover</string>
     <string name="btn_create">Create</string>
@@ -30,20 +30,26 @@
     <string name="btn_delete">delete</string>
     <string name="btn_delete_all">Delete all</string>
     <string name="btn_delete_all_in_list">Delete ALL in list</string>
-    <string name="btn_download">下载</string>
+    <string name="btn_discard">丢弃</string>
+    <string name="btn_download">Download</string>
     <string name="btn_edit_map_data">Edit map data (map_...)</string>
     <string name="btn_edit_online_players">Edit online players (player_...)</string>
     <string name="btn_edit_player">👤 Edit player</string>
     <string name="btn_edit_village_data">Edit village data (VILLAGE_...)</string>
+    <string name="btn_export">export</string>
     <string name="btn_full_export">Full export</string>
     <string name="btn_fullscreen">⛶ Full screen editing</string>
     <string name="btn_global_system_data">Global/system data NBT</string>
+    <string name="btn_go_grant">Go to grant</string>
+    <string name="btn_go_settings">Go to settings</string>
     <string name="btn_i_understand_continue">I Understand, Continue</string>
     <string name="btn_load">📂 Load archive</string>
     <string name="btn_more_actions">More actions</string>
     <string name="btn_open_nbt_by_name_dvanced">Open NBT by name (Advanced)</string>
     <string name="btn_open_settings">Open settings</string>
     <string name="btn_open_shizuku">Open Shizuku</string>
+    <string name="btn_puzzle_confirm_overwrite">Confirm overwrite</string>
+    <string name="btn_recover">恢复</string>
     <string name="btn_reparse">⟳ Re-parse</string>
     <string name="btn_replace">Replace</string>
     <string name="btn_restore">🕒 Restore backup</string>
@@ -79,7 +85,7 @@
     <string name="err_no_saves_detail">No valid Minecraft save found in the current path\n(Must contain both level.dat and db folders)</string>
     <string name="err_read_file_not_generated">Read failed, file not generated</string>
     <string name="err_restore_failed_prefix">Recovery failed:</string>
-    <string name="err_saf_scan_failed">SAF 扫描失败: %s</string>
+    <string name="err_saf_scan_failed">SAF scan failed: %s</string>
     <string name="err_save_failed">Save failed: %s</string>
     <string name="err_shizuku_binder_not_ready">Shizuku connection lost\n\nPossible causes:\n1. Shizuku was killed by system\n2. Phone just rebooted\n3. Shizuku permission revoked\n\nPlease restart Shizuku service</string>
     <string name="err_shizuku_not_running">❌ Shizuku service not running\n\nPlease open Shizuku app and tap \"Start\"\nEnsure Shizuku is running in background</string>
@@ -91,6 +97,7 @@
     <string name="hint_select_world">Click here to select/load archive...</string>
     <string name="hint_start_0">Start (0)</string>
     <string name="hint_width_col">Width (column)</string>
+    <string name="item_slot_empty">  [%d] --empty--</string>
     <string name="key_boolean_logic_closure">0 (Off / False)</string>
     <string name="key_boolean_logic_turn_on">1 (On/True)</string>
     <string name="key_coordinate">coordinate</string>
@@ -119,9 +126,9 @@
     <string name="key_world_generator_type_void">5: Void</string>
     <string name="label_editor">JSON data editing:</string>
     <string name="label_player_data">Player data</string>
+    <string name="label_puzzle_slot">Slot %d</string>
     <string name="log_please_wait">Please wait</string>
     <string name="long_press_here_to_open_the_root_menu">long press here to open the root menu</string>
-    <string name="mag_village_data">Village data (%1$d)</string>
     <string name="menu_add_child">Add child</string>
     <string name="menu_copy">copy</string>
     <string name="menu_del_backup">Delete backup</string>
@@ -134,13 +141,14 @@
     <string name="mode_simple">Minimalist mode (only translation + parsing)</string>
     <string name="mode_smart">Smart annotation (Key + translation + parsing)</string>
     <string name="msg_about_content_full"><![CDATA[NBT Editor (AIDE+ version)<br>Current status: Continuously updated<br><br>Feedback questions/Submit new features? :<br><a href=https://github.com/yinghuajimew/yhjmew.minecraft.nbteditor>Click to visit the GitHub warehouse to submit Issues</a><br>QQ communication group: <a href=https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&group_code=1077349003>Click to join the NBT editor exchange</a><br>Thank you! ! <br><a href=https://space.bilibili.com/628906424>Yejdhi</a> and <a href=https://github.com/LiteLDev>LeviMC members</a><br>Thanks to them, we have the current ideas and better modification methods]]>.</string>
+    <string name="msg_all_files_permission_required">Android 11+ requires "All Files Access" permission to read/write legacy paths (/games/...), please grant on the next page</string>
     <string name="msg_analyzing_backpack">Analyzing backpack...</string>
     <string name="msg_archive_damaged">Key files are missing from the path:\nlevel.dat: %1$s\ndb folder: %2$s</string>
     <string name="msg_are_deleting">Deleting...</string>
     <string name="msg_are_you_sure_you_want_to_delete_the_selected">Are you sure you want to delete the selected</string>
     <string name="msg_backpack_is_full_least_1_empty_slot">Backpack full, need at least 1 empty slot</string>
     <string name="msg_backpack_only_1_slot">Backpack only: 1 slot (Slot 0)\n</string>
-    <string name="msg_binder_haven_t_been_received">binder haven\‘t been received</string>
+    <string name="msg_binder_haven_t_been_received">binder haven\'t been received</string>
     <string name="msg_cleaning_up">Cleaning up...</string>
     <string name="msg_clear_all_cache">Are you sure you want to delete all cached files?</string>
     <string name="msg_comma_separated_format_click_save_after_modification">Please keep the comma separated format and click Save after modification</string>
@@ -156,13 +164,13 @@
     <string name="msg_database_is_not_open">Database is not open</string>
     <string name="msg_database_shutdown">Database shutdown</string>
     <string name="msg_db_not_loaded">DB not loaded</string>
+    <string name="msg_db_not_open">DB is not open</string>
     <string name="msg_delete_all_data_in_the_list">🗑️ [DANGER] Delete all data in the list</string>
     <string name="msg_delete_all_type_data">Delete all %1$d %2$s data? Cannot undo!</string>
     <string name="msg_delete_confirm">Delete: %s ?</string>
     <string name="msg_delete_existing_ones_in_the_list">Are you sure you want to delete the existing ones in the list?</string>
     <string name="msg_delete_items_confirm">Delete %d item(s)? This cannot be undone.</string>
     <string name="msg_deleting">Deleting</string>
-    <string name="msg_dn_is_not_open">DB is not open</string>
     <string name="msg_editorvm_missing">EditorVM missing</string>
     <string name="msg_enchant">Enchantment:</string>
     <string name="msg_export_failed">Export failed: %1$s</string>
@@ -193,7 +201,7 @@
     <string name="msg_hex_format_error">Hex format error, please check the input (must be even length, 0-9, A-F)</string>
     <string name="msg_high_performance_mode_starts">High performance mode starts...\ngenerate</string>
     <string name="msg_in_preparation">In preparation</string>
-    <string name="msg_indivual">indivual</string>
+    <string name="msg_individual">indivual</string>
     <string name="msg_init_player">Initializing...</string>
     <string name="msg_interrupted">interrupted</string>
     <string name="msg_invalid_hex">Invalid hex: %s</string>
@@ -220,6 +228,7 @@
     <string name="msg_move_data_to_new_key_and_delete_old_key">This will move the data to the new key and delete the old key</string>
     <string name="msg_moving">Shizuku in transit...</string>
     <string name="msg_nesting_depth">Nesting depth: </string>
+    <string name="msg_no_logs">No operation logs yet</string>
     <string name="msg_no_logs_to_copy">No logs to copy</string>
     <string name="msg_no_logs_to_export">No logs to export</string>
     <string name="msg_packing_failed">Packing failed</string>
@@ -231,10 +240,11 @@
     <string name="msg_potion">Effect:</string>
     <string name="msg_processing">deal with...</string>
     <string name="msg_processing_error">Processing error: %s</string>
-    <string name="msg_processing_error_maybe_the_image_is_too_large">Processing error (maybe the image is too large and causes insufficient memory OOM)</string>
     <string name="msg_processing_ing">Processing image...</string>
+    <string name="msg_puzzle_empty_slots_available">%d empty slots available, click to select</string>
     <string name="msg_puzzle_error">Puzzle:ERROR:%s</string>
     <string name="msg_puzzle_set_count">Puzzle Set (%d maps)</string>
+    <string formatted="false" name="msg_puzzle_slot_has_items">%s has:\n%s x%d\n\nConfirm overwrite?</string>
     <string name="msg_puzzle_success_format">Puzzle:SUCCESS:%1$d:%2$d:%3$d:%4$d</string>
     <string name="msg_querying">Inquiring...</string>
     <string name="msg_read">Reading</string>
@@ -246,15 +256,18 @@
     <string name="msg_retrying">Retrying</string>
     <string name="msg_saf_selected">SAF path selected</string>
     <string name="msg_saf_unavailable">SAF unavailable: %1$s</string>
+    <string name="msg_save_failed_with_details">Save failed: %s</string>
     <string name="msg_saving">Saving</string>
     <string name="msg_scanning">Scanning</string>
     <string name="msg_search_for_players">Search for players...</string>
     <string name="msg_search_map_data">Search map data...</string>
     <string name="msg_search_village_data">Search village data...</string>
+    <string name="msg_session_found">上次编辑 [%s] 时意外退出，是否恢复？</string>
     <string name="msg_shizuku_api_error">Shizuku API Error</string>
-    <string name="msg_shizuku_recommend_install">建议安装 Shizuku 以获得完整功能。是否前往下载？</string>
+    <string name="msg_shizuku_recommend_install">It is recommended to install Shizuku for full functionality. Go to download?</string>
     <string name="msg_slice_missing">Slice missing: %d</string>
     <string name="msg_start_id">Start ID: </string>
+    <string name="msg_storage_permission_required">NBT Editor requires storage permission to read/write saves, please go to settings to grant manually</string>
     <string name="msg_success">🎉 Success!\n</string>
     <string name="msg_the_data_corresponding_to_this_key_was_not_found">The data corresponding to the key was not found</string>
     <string name="msg_the_length_must_be_an_even_number">The length must be an even number</string>
@@ -269,6 +282,7 @@ Would you like to create a new empty data set?</string>
     <string name="msg_under_repair">Under repair</string>
     <string name="msg_unknown_world">unknown world</string>
     <string name="msg_village">Village</string>
+    <string name="msg_village_data">Village data (%1$d)</string>
     <string name="msg_warning_puzzle">This feature will generate maps and put them into your inventory\nPlease EMPTY YOUR INVENTORY in-game before proceeding!\n\nFailure to do so may result in item loss\nYou, the player, are responsible for the consequences!\nWill be fixed in the next version 1.0.4</string>
     <string name="msg_warning_repair_process_may_discard_unreadable_data_blocks">WARNING: The repair process may discard unreadable data blocks (possibly resulting in the loss of some items/maps)</string>
     <string name="msg_workdir_lost">WorkDir lost</string>
@@ -292,7 +306,7 @@ Would you like to create a new empty data set?</string>
     <string name="searching_label_data">Searching %s data...</string>
     <string name="select_world_count">Select World (%d)</string>
     <string name="settings_header">settings</string>
-    <string name="switch_to_chinese">切换中文</string>
+    <string name="switch_to_chinese">Switch to Chinese</string>
     <string name="switch_to_english">Switch to English</string>
     <string name="text_autocomplete_label_name">%1$s%2$s</string>
     <string name="text_data_name">Data name</string>
@@ -313,7 +327,8 @@ Would you like to create a new empty data set?</string>
     <string name="text_open_nbt_by_name_hint">Tips:\n1 Enter the key name in the input box to open the specified data\n2 If the key name is binary data, please turn on the Hex option and enter the hexadecimal encoding\n3 This function only supports opening NBT data type</string>
     <string name="text_player_data_has_been_modified">Current: Player Data (~local_player) [Modified]</string>
     <string name="text_search_key_or_translate">Search Key or Translate...</string>
-    <string name="text_shizuku_copy_error">Shizuku Copy Error (%d): %s</string>
+    <string formatted="false" name="text_shizuku_copy_error">Shizuku Copy Error (%d): %s</string>
+    <string name="text_slot_empty">--empty--</string>
     <string name="text_source_dir_empty">Source directory appears empty: %s</string>
     <string name="text_starting_position_eg_0">Starting position (eg: 0)</string>
     <string name="text_title">title</string>
@@ -327,6 +342,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_choose_puzzle_size">Choose puzzle size</string>
     <string name="title_choose_type">Choose %1$s</string>
     <string name="title_clear_confirm">Confirm clearing</string>
+    <string name="title_crash_found">发现未保存的编辑</string>
     <string name="title_current">Current: %1$s</string>
     <string name="title_current_new">Current: %1$s (newly created)</string>
     <string name="title_data">data</string>
@@ -355,12 +371,16 @@ Would you like to create a new empty data set?</string>
     <string name="title_manage_array">Manage array: %1$s</string>
     <string name="title_manage_cache">Manage Cache (Works)</string>
     <string name="title_more_operations">More Operations</string>
+    <string name="title_need_all_files_permission">All Files Access Required</string>
     <string name="title_new">New</string>
     <string name="title_new_type_key">New %s Key</string>
     <string name="title_open_nbt_by_name">Open NBT by name</string>
     <string name="title_operation_failed">Operation failed</string>
-    <string name="title_overwride_warning">⚠️ override warning</string>
+    <string name="title_overwrite_warning">⚠️ override warning</string>
     <string name="title_paste_as">Paste as...</string>
+    <string name="title_permission_denied">Permission Denied</string>
+    <string name="title_puzzle_slot_occupied">⚠ Slot occupied</string>
+    <string name="title_puzzle_slot_select">Select slot</string>
     <string name="title_read_player">Read player</string>
     <string name="title_remove_warning">Remove warning</string>
     <string name="title_rename">Rename</string>
@@ -369,7 +389,7 @@ Would you like to create a new empty data set?</string>
     <string name="title_search_nbt_data">Search NBT data</string>
     <string name="title_search_type">Search %1$s...</string>
     <string name="title_shizuku_error">Shizuku service abnormality</string>
-    <string name="title_shizuku_not_found">Shizuku 未安装</string>
+    <string name="title_shizuku_not_found">Shizuku Not Installed</string>
     <string name="title_treemap_player_data">Treemap: Player Data (~local_player)</string>
     <string name="title_treemap_world_data">Treemap: world data (level.dat)</string>
     <string name="title_view_mode">Switch display mode</string>
@@ -384,7 +404,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_cleared_all">Cleared all</string>
     <string name="toast_cleared_short">Cleared</string>
     <string name="toast_click_detail">Please click to enter the list to view details</string>
-    <string name="toast_clip_saved">Clip saved! (Please don’t forget to click the save button on the main interface to write to disk)</string>
+    <string name="toast_clip_saved">Clip saved! (Please don\'t forget to click the save button on the main interface to write to disk)</string>
     <string name="toast_clipboard_empty">Clipboard empty</string>
     <string name="toast_compound_only">Can only be added in Compound</string>
     <string name="toast_compound_or_list_only">Can only add in Compound or List</string>
@@ -427,6 +447,8 @@ Would you like to create a new empty data set?</string>
     <string name="toast_loading">Loading: %s</string>
     <string name="toast_loading_successfully">Loading successfully</string>
     <string name="toast_lock_delete">Abnormal LOCK file detected, forced cleanup using Shizuku</string>
+    <string name="toast_logs_copied">Logs copied</string>
+    <string name="toast_logs_exported">Exported to: %s</string>
     <string name="toast_mode_changed">display mode updated</string>
     <string name="toast_multi_thread_acceleration_enabled">Multi-thread acceleration enabled</string>
     <string name="toast_name_empty_or_exists">Name is empty or exists</string>
@@ -436,7 +458,8 @@ Would you like to create a new empty data set?</string>
     <string name="toast_no_data_to_parse">No data to parse</string>
     <string name="toast_no_label_data">Currently there is no %s data, you can click [More Actions] to create a new one.</string>
     <string name="toast_no_saves_found">No saves found</string>
-    <string name="toast_open_browser_failed">打开浏览器失败</string>
+    <string name="toast_open_browser_failed">Failed to open browser</string>
+    <string name="toast_open_settings_failed">Failed to open settings</string>
     <string name="toast_operation_canceled_please_check_archive_integrity">Operation canceled, please check archive integrity</string>
     <string name="toast_paste_failed">Paste failed: %s</string>
     <string name="toast_pasted">Pasted</string>
@@ -450,6 +473,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_please_enter_size">Please enter size</string>
     <string name="toast_please_enter_valid_numbers">Please enter valid numbers</string>
     <string name="toast_please_initialize_the_database_first">Please [Load Archive] -> [Edit Player] to initialize the database first!</string>
+    <string name="toast_processing_error_maybe_the_image_is_too_large">Processing error (maybe the image is too large and causes insufficient memory OOM)</string>
     <string name="toast_quantities_are_inconsistent_must_be_retained">Quantities are inconsistent! must be retained</string>
     <string name="toast_refreshed_prefix">Refreshed:</string>
     <string name="toast_rename_failed">Rename failed: %s</string>
@@ -462,6 +486,7 @@ Would you like to create a new empty data set?</string>
     <string name="toast_saved">Saved</string>
     <string name="toast_scanning_failed">Scan failed: %s</string>
     <string name="toast_select_world">Please select the archive first!</string>
+    <string name="toast_session_restored">已恢复上次编辑</string>
     <string name="toast_shizuku_denied">Shizuku authorization denied</string>
     <string name="toast_shizuku_disabled">Shizuku disabled</string>
     <string name="toast_shizuku_enabled">Shizuku enabled</string>
@@ -470,9 +495,10 @@ Would you like to create a new empty data set?</string>
     <string name="toast_shizuku_needed">Reading and writing Minecraft Data archives requires Shizuku permissions</string>
     <string name="toast_shizuku_normal">Shizuku normal</string>
     <string name="toast_shizuku_not_installed">Shizuku is not installed</string>
-    <string name="toast_shizuku_not_running">Shizuku 未运行</string>
-    <string name="toast_shizuku_permission_failed">获取 Shizuku 权限失败</string>
+    <string name="toast_shizuku_not_running">Shizuku is not running</string>
+    <string name="toast_shizuku_permission_failed">Failed to obtain Shizuku permission</string>
     <string name="toast_storage_perm">All file access needs to be granted to read and write Minecraft save files</string>
+    <string name="toast_storage_permission_granted">Storage permission granted</string>
     <string name="toast_successfully_deleted">successfully deleted</string>
     <string name="toast_switched_legacy">The old version path has been cut</string>
     <string name="toast_switched_std">Cut standard path</string>

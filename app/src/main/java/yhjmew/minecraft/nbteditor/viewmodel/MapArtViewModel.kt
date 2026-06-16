@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import yhjmew.minecraft.nbteditor.AppLogger
 import yhjmew.minecraft.nbteditor.R
 import yhjmew.minecraft.nbteditor.BedrockParser
 import yhjmew.minecraft.nbteditor.NbtTranslator
@@ -76,7 +77,7 @@ class MapArtViewModel : ViewModel() {
     fun generateMapFromImage(context: Context, imageUri: Uri, targetArray: JsonArray?) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = NbtTranslator.getString(R.string.msg_processing_ing)
+            _progressMessage.value = getString(R.string.msg_processing_ing)
             try {
                 val `is` = context.contentResolver.openInputStream(imageUri)
                 val original = BitmapFactory.decodeStream(`is`)
@@ -119,6 +120,7 @@ class MapArtViewModel : ViewModel() {
                 _isGenerating.value = false
                 _resultMessage.value = getString(R.string.toast_the_map_is_generated)
             } catch (e: Exception) {
+                AppLogger.error("MapArt", "Map generation failed", e)
                 _isGenerating.value = false
                 _resultMessage.value = getString(R.string.msg_generation_failed, e.message)
             }
@@ -181,11 +183,12 @@ class MapArtViewModel : ViewModel() {
 
                 for (i in 0..35) {
                     val info = slotMap[i]
-                    mainSlots.add(SlotInfo(i, info?.first ?: "--空--", info?.second ?: 0, info != null))
+                    mainSlots.add(SlotInfo(i, info?.first ?: getString(R.string.text_slot_empty), info?.second ?: 0, info != null))
                 }
 
                 _inventorySlotInfo.value = InventorySlotInfo(mainSlots, null)
             } catch (e: Exception) {
+                AppLogger.error("MapArt", "Map generation failed", e)
                 _resultMessage.value = "Puzzle:SCAN_ERROR:${e.message}"
             }
         }
@@ -197,7 +200,7 @@ class MapArtViewModel : ViewModel() {
     fun generatePuzzleMap(context: Context, imageUri: Uri, rows: Int, cols: Int, targetSlot: Int = -1) {
         viewModelScope.launch(Dispatchers.IO) {
             _isGenerating.value = true
-            _progressMessage.value = NbtTranslator.getString(R.string.msg_analyzing_backpack)
+            _progressMessage.value = getString(R.string.msg_analyzing_backpack)
             try {
                 val wm = worldVM ?: throw Exception(getString(R.string.msg_worldvm_missing))
                 val dbPath = wm.currentWorkingDbPath ?: throw Exception(getString(R.string.msg_db_not_loaded))
@@ -297,7 +300,7 @@ class MapArtViewModel : ViewModel() {
                 val cellH = src.height / rows
                 val totalMaps = rows * cols
 
-                _progressMessage.value = NbtTranslator.getString(R.string.msg_generating_maps, totalMaps)
+                _progressMessage.value = getString(R.string.msg_generating_maps, totalMaps)
 
                 val itemsMap = ConcurrentHashMap<Int, JsonObject>()
                 val cores = Runtime.getRuntime().availableProcessors()
@@ -459,11 +462,7 @@ class MapArtViewModel : ViewModel() {
                     if (removeIndex >= 0) inventory.remove(removeIndex)
 
                     finalBox.add("Slot", wrapTag(1, useSlot.toByte()))
-                    val wrappedBox = JsonObject().apply {
-                        addProperty("t", 10)
-                        add("v", finalBox)
-                    }
-                    inventory.add(wrappedBox)
+                    inventory.add(finalBox)
                 }
 
                 //不要再把 写回 DB 这俩行忘了
@@ -481,6 +480,7 @@ class MapArtViewModel : ViewModel() {
                 _isGenerating.value = false
                 _resultMessage.value = "Puzzle:SUCCESS:$totalMaps:$totalLayers:$startMapId:$useSlot"
             } catch (e: Exception) {
+                AppLogger.error("MapArt", "Map generation failed", e)
                 _isGenerating.value = false
                 _resultMessage.value = getString(R.string.msg_puzzle_error, e.message)
             }

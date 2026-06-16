@@ -306,7 +306,7 @@ private fun MainActivity.pastePlayerJson(targetKey: String, onSuccess: Runnable?
     val clip = cm.primaryClip ?: return
 
     AlertDialog.Builder(this)
-        .setTitle(getString(R.string.title_overwride_warning))
+        .setTitle(getString(R.string.title_overwrite_warning))
         .setMessage(getString(R.string.msg_full_overwrite_confirm, targetKey))
         .setPositiveButton(getString(R.string.btn_cover)) { _, _ ->
             val jsonStr = cm.primaryClip!!.getItemAt(0).text.toString()
