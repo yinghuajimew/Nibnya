@@ -29,10 +29,10 @@ android {
 
         // Release 签名
         release {
-            storeFile file('yhjmew.minecraft.nbteditor.keystore')
-            storePassword 'yinghuaji'
-            keyAlias 'yhjmew.minecraft.nbteditor'
-            keyPassword 'yinghuaji'
+            storeFile file("nibnya.keystore")
+            storePassword System.getenv("KEY_STORE_PASSWORD")
+            keyAlias     System.getenv("KEY_ALIAS")
+            keyPassword  System.getenv("KEY_PASSWORD")
         }
     }
 
