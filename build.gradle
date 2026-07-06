@@ -5,8 +5,10 @@ plugins {
 
 allprojects {
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/central' }
+        if (System.getenv("CI") == null) {
+            maven { url 'https://maven.aliyun.com/repository/google' }
+            maven { url 'https://maven.aliyun.com/repository/central' }
+        }
         google()
         mavenCentral()
     }
