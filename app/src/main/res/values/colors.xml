@@ -7,6 +7,8 @@
     <color name="app_text_secondary">#888888</color>
     <color name="app_text_tertiary">#999999</color>
     <color name="app_accent">#2196F3</color>
+    <!-- 底部导航选中色：Pink 600，白底对比 4.95 -->
+    <color name="nav_selected">#D81B60</color>
     <color name="app_divider">#DDDDDD</color>
     <!-- NBT 列表/树：键名与值 -->
     <color name="nbt_key">#009688</color>

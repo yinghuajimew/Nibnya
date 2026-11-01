@@ -54,7 +54,7 @@ internal class BottomNavController(private val activity: MainActivity) {
         }
 
         // 选中态：高亮 + 加粗；未选中：次级灰
-        val accent = ContextCompat.getColor(activity, R.color.app_accent)
+        val accent = ContextCompat.getColor(activity, R.color.nav_selected)
         val dim = ContextCompat.getColor(activity, R.color.app_text_secondary)
         Page.entries.forEach { p ->
             val tv = activity.findViewById<TextView>(p.textId) ?: return@forEach

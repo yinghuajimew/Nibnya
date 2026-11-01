@@ -27,7 +27,7 @@
         android:gravity="center"
         android:clickable="true"
         android:focusable="true"
-        android:minHeight="56dp"
+        android:minHeight="48dp"
         android:background="?android:attr/selectableItemBackground">
 
         <TextView
@@ -35,9 +35,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/nav_home"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold"
-            android:textColor="@color/app_accent" />
+            android:textColor="@color/nav_selected" />
     </LinearLayout>
 
     <!-- 2. 地图 -->
@@ -50,7 +50,7 @@
         android:gravity="center"
         android:clickable="true"
         android:focusable="true"
-        android:minHeight="56dp"
+        android:minHeight="48dp"
         android:background="?android:attr/selectableItemBackground">
 
         <TextView
@@ -58,7 +58,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/nav_map"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textColor="@color/app_text_secondary" />
     </LinearLayout>
 
@@ -72,7 +72,7 @@
         android:gravity="center"
         android:clickable="true"
         android:focusable="true"
-        android:minHeight="56dp"
+        android:minHeight="48dp"
         android:background="?android:attr/selectableItemBackground">
 
         <TextView
@@ -80,7 +80,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/nav_more"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textColor="@color/app_text_secondary" />
     </LinearLayout>
 

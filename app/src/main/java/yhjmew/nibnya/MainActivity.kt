@@ -955,6 +955,13 @@ class MainActivity : ComponentActivity() {
     private fun handleEdgeSwipe(ev: android.view.MotionEvent): Boolean {
         val v = sidebarView() ?: return false
         val sc = sidebarContainer() ?: return false
+
+        // 侧边栏只在「主页」响应边缘手势。
+        // 在「地图」「其他」页滑不出来 —— 那两页以后会有自己的交互（例如地图拖动），
+        // 从左边缘起手很容易和它们打架。已在打开状态时仍允许关闭，避免卡死。
+        val onHome = bottomNav?.current?.let { it == BottomNavController.Page.HOME } ?: true
+        val isOpen = drawerOpen && sc.isVisible
+        if (!onHome && !isOpen) return false
         val density = resources.displayMetrics.density
         val screenW = resources.displayMetrics.widthPixels.toFloat()
         val edgePx = edgeTriggerWidthDp * density
