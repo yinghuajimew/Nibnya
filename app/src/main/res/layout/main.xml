@@ -59,46 +59,61 @@
             <!-- === 右侧功能区 (紧凑排列) === -->
 
             <!-- 3. 树状图切换 (绿) -->
-            <Button
-                android:id="@+id/btn_fullscreen_tree"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="36dp"
-                android:text="🌲"
-                android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#4CAF50"
-                android:padding="0dp"
-                android:gravity="center"
-                android:layout_marginEnd="4dp" />
+                android:layout_marginEnd="4dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#4CAF50" />
+
+                <ImageButton
+                    android:id="@+id/btn_fullscreen_tree"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_tree_white" />
+            </FrameLayout>
 
             <!-- 4. 显示设置 (橙) -->
-            <Button
-                android:id="@+id/btn_fullscreen_view"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="36dp"
-                android:text="👁"
-                android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#FF9800"
-                android:padding="0dp"
-                android:gravity="center"
-                android:layout_marginEnd="4dp" />
+                android:layout_marginEnd="4dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#FF9800" />
+
+                <ImageButton
+                    android:id="@+id/btn_fullscreen_view"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_eye_white" />
+            </FrameLayout>
 
             <!-- 5. 搜索 (蓝) -->
-            <Button
-                android:id="@+id/btn_fullscreen_search"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="36dp"
-                android:text="🔍"
-                android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#1976D2"
-                android:padding="0dp"
-                android:gravity="center"
-                android:layout_marginEnd="0dp" />
+                android:layout_marginEnd="0dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#1976D2" />
+
+                <ImageButton
+                    android:id="@+id/btn_fullscreen_search"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_search_white" />
+            </FrameLayout>
 
             <!-- 6. 菜单 (透明) -->
             <Button
@@ -358,42 +373,60 @@
                 android:textColor="@color/app_text_secondary" />
 
             <!-- [新增] 树状图模式 -->
-            <Button
-                android:id="@+id/btn_tree_mode"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="30dp"
-                android:text="🌲"
-                android:textAllCaps="false"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#4CAF50"
-                android:layout_marginEnd="5dp"
-                android:padding="0dp" />
+                android:layout_marginEnd="5dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#4CAF50" />
+
+                <ImageButton
+                    android:id="@+id/btn_tree_mode"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_tree_white" />
+            </FrameLayout>
 
             <!-- [新增] 显示选项 -->
-            <Button
-                android:id="@+id/btn_view_options"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="30dp"
-                android:text="👁"
-                android:textAllCaps="false"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#FF9800"
-                android:layout_marginEnd="5dp"
-                android:padding="0dp" />
+                android:layout_marginEnd="5dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#FF9800" />
+
+                <ImageButton
+                    android:id="@+id/btn_view_options"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_eye_white" />
+            </FrameLayout>
             <!-- === [新增] 搜索按钮 === -->
-            <Button
-                android:id="@+id/btn_search_nbt"
+            <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="30dp"
-                android:text="🔍"
-                android:textAllCaps="false"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#2196F3"
-                android:layout_marginEnd="5dp"
-                android:padding="0dp" />
+                android:layout_marginEnd="5dp">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#2196F3" />
+
+                <ImageButton
+                    android:id="@+id/btn_search_nbt"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_search_white" />
+            </FrameLayout>
             <!-- 进入全屏 -->
             <Button
                 android:id="@+id/btn_go_fullscreen"

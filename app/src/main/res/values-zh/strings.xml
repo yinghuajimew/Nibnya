@@ -36,7 +36,7 @@
     <string name="label_sub_delete_failed">删除失败</string>
     <string name="msg_restore_target_exists">已存在同名文件夹的存档</string>
     <string name="msg_trash_content_missing">回收站内容已缺失</string>
-    <string name="title_trash">♻ 回收站 (%1$d)</string>
+    <string name="title_trash">回收站 (%1$d)</string>
     <string name="label_sub_trash_empty">回收站是空的</string>
     <string name="btn_restore_all">全部恢复</string>
     <string name="btn_clear_trash">清空回收站</string>
@@ -82,7 +82,7 @@
     <string name="btn_clear_backups_here">清空本存档的备份（%1$d 份）</string>
     <string name="msg_clear_backups_here_confirm">删除本存档的全部 %1$d 份备份？无法撤销。</string>
     <string name="toast_backups_cleared">已清空备份</string>
-    <string name="title_draft_box_no_folder">📝 草稿箱</string>
+    <string name="title_draft_box_no_folder">草稿箱</string>
     <string name="msg_draft_select_world_first">未选择存档。\n\n先选一个存档可查看该存档的草稿，或直接查看全部存档的草稿。</string>
     <string name="btn_view_all_drafts">查看全部存档</string>
     <string name="btn_clear_drafts_here">清空本存档的草稿（%1$d 份）</string>
@@ -91,27 +91,27 @@
     <string name="title_error">错误</string>
     <string name="btn_create">创建</string>
     <string name="btn_delete">删除</string>
-    <string name="btn_save">💾 保存修改</string>
-    <string name="btn_load">📂 加载存档</string>
+    <string name="btn_save">保存修改</string>
+    <string name="btn_load">加载存档</string>
     <string name="btn_replace">替换</string>
     <string name="btn_clear">清空</string>
     <!-- ============================================ -->
     <!-- Common Actions -->
     <!-- ============================================ -->
-    <string name="action_add_tag">➕ 添加新标签</string>
-    <string name="action_paste_tag">📋 粘贴子标签</string>
-    <string name="action_clear_all">🗑️ [危险] 清空当前所有数据</string>
-    <string name="action_copy_root">📄 复制当前层级数据 (JSON)</string>
-    <string name="action_paste_root">📝 粘贴/导入数据 (覆盖)</string>
-    <string name="action_switch_day">切换到：☀️ 日间模式</string>
-    <string name="action_switch_night">切换到：🌙 夜间模式</string>
+    <string name="action_add_tag">添加新标签</string>
+    <string name="action_paste_tag">粘贴子标签</string>
+    <string name="action_clear_all">[危险] 清空当前所有数据</string>
+    <string name="action_copy_root">复制当前层级数据 (JSON)</string>
+    <string name="action_paste_root">粘贴/导入数据 (覆盖)</string>
+    <string name="action_switch_day">切换到：日间模式</string>
+    <string name="action_switch_night">切换到：夜间模式</string>
     <string name="switch_to_chinese">切换中文</string>
     <string name="switch_to_english">Switch to English</string>
     <!-- ============================================ -->
     <!-- Dialog Titles -->
     <!-- ============================================ -->
     <string name="dialog_path_title">选择路径</string>
-    <string name="dialog_backup_title">🕒 恢复备份 (%1$d)</string>
+    <string name="dialog_backup_title">恢复备份 (%1$d)</string>
     <string name="btn_rename">重命名</string>
     <string name="btn_restore_action">恢复</string>
     <string name="btn_detail">详情</string>
@@ -130,20 +130,20 @@
     <string name="label_sub_name_cannot_be_empty">名称不能为空</string>
     <string name="label_sub_world_data">世界数据</string>
     <string name="label_sub_local_player">本地玩家</string>
-    <string name="dialog_danger_title">⚠️ 高能预警</string>
+    <string name="dialog_danger_title">高能预警</string>
     <!-- ============================================ -->
     <!-- Titles -->
     <!-- ============================================ -->
     <string name="title_rename">重命名</string>
     <string name="title_manage">管理: [%s]</string>
     <string name="title_manage_cache">管理缓存 (Works)</string>
-    <string name="title_database_corruption">⚠️ 数据库损坏</string>
+    <string name="title_database_corruption">数据库损坏</string>
     <string name="title_data_not_exist">数据不存在</string>
-    <string name="title_overwrite_warning">⚠️ 覆盖警告</string>
-    <string name="title_remove_warning">⚠️ 删除警告</string>
+    <string name="title_overwrite_warning">覆盖警告</string>
+    <string name="title_remove_warning">删除警告</string>
     <string name="title_paste_as">粘贴为...</string>
-    <string name="title_batch_delete">⚠️ 批量删除</string>
-    <string name="title_danger_warning">⚠️ 高能预警</string>
+    <string name="title_batch_delete">批量删除</string>
+    <string name="title_danger_warning">高能预警</string>
     <string name="title_view_mode">切换显示模式</string>
     <string name="title_search_nbt_data">搜索 NBT 数据</string>
     <string name="title_open_nbt_by_name">按名称打开 NBT</string>
@@ -152,7 +152,7 @@
     <string name="title_choose_puzzle_size">选择拼图规模</string>
     <string name="title_rename_key">重命名 Key</string>
     <string name="title_global_system_data_count">全局系统数据 (%d)</string>
-    <string name="title_warning_inventory">⚠️ 背包覆盖风险警告</string>
+    <string name="title_warning_inventory">背包覆盖风险警告</string>
     <string name="title_shizuku_not_found">Shizuku 未安装</string>
     <string name="title_need_all_files">需要所有文件访问权限</string>
     <string name="title_permission_denied">权限被拒绝</string>
@@ -162,10 +162,10 @@
     <string name="title_enchant">附魔</string>
     <string name="title_all">物品/方块</string>
     <string name="title_data">数据</string>
-    <string name="title_choose">🔍 从列表选择</string>
+    <string name="title_choose">从列表选择</string>
     <string name="title_choose_type">选择%1$s</string>
     <string name="title_edit_type_key">编辑 (%1$s): %2$s</string>
-    <string name="title_debug_menu">🔧 开发者调试菜单</string>
+    <string name="title_debug_menu">开发者调试菜单</string>
     <string name="title_edit_range">编辑 [%1$d ~ %2$d]</string>
     <string name="title_logs">日志</string>
     <string name="title_label_data">%s 数据</string>
@@ -178,8 +178,8 @@
     <string name="msg_confirm_replace">确认替换？</string>
     <string name="msg_move_to_new_key">这将移动数据到新 Key，并删除旧 Key</string>
     <string name="msg_no_data_create_new">该存档尚未生成 [%s] 数据\n是否创建一个新的空数据？</string>
-    <string name="msg_create_new_blank">➕ 新建空白 %s</string>
-    <string name="msg_paste_as_new">📋 粘贴为新 %s</string>
+    <string name="msg_create_new_blank">新建空白 %s</string>
+    <string name="msg_paste_as_new">粘贴为新 %s</string>
     <string name="msg_data_is_empty_colon">数据为空: </string>
     <string name="label_sub_database_is_not_open">数据库未打开</string>
     <string name="label_sub_database_shutdown">数据库关闭</string>
@@ -201,16 +201,16 @@
     <string name="status_analyzing_backpack">正在分析背包...</string>
     <string name="searching_label_data">正在搜索 %s 数据...</string>
     <string name="status_loading_level_dat">正在加载 level.dat...</string>
-    <string name="msg_loaded_level_dat">加载： level.dat</string>
+    <string name="msg_loaded_level_dat">加载：level.dat</string>
     <string name="label_sub_load_failed">加载失败</string>
     <string name="msg_loading_player">加载玩家...</string>
     <string name="msg_generating_maps">生成 %d 地图...</string>
     <!-- Success Messages -->
     <!-- List Action Messages -->
-    <string name="msg_copy_data_json">📄 复制数据 (JSON)</string>
-    <string name="btn_paste_overlay">📝 粘贴覆盖</string>
-    <string name="btn_list_long_press_rename">✏️ 重命名</string>
-    <string name="btn_list_long_press_delete">🗑️ 删除</string>
+    <string name="msg_copy_data_json">复制数据 (JSON)</string>
+    <string name="btn_paste_overlay">粘贴覆盖</string>
+    <string name="btn_list_long_press_rename">重命名</string>
+    <string name="btn_list_long_press_delete">删除</string>
     <!-- ============================================ -->
     <!-- Toast Messages -->
     <!-- ============================================ -->
@@ -226,9 +226,9 @@
     <string name="toast_copied">已复制到剪贴板</string>
     <string name="title_copy_as">复制为…</string>
     <string name="title_export_to">导出到…</string>
-    <string name="export_dest_clipboard">📋 复制到剪贴板</string>
-    <string name="export_dest_download">💾 保存到下载目录 (Nibnya/Exports)</string>
-    <string name="export_dest_choose">📁 选择目录…</string>
+    <string name="export_dest_clipboard">复制到剪贴板</string>
+    <string name="export_dest_download">保存到下载目录 (Nibnya/Exports)</string>
+    <string name="export_dest_choose">选择目录…</string>
     <string name="toast_exported_to">已保存：%1$s</string>
     <string name="toast_exported_ok">已导出</string>
     <string name="toast_export_failed">导出失败</string>
@@ -293,7 +293,7 @@
     <string name="err_save_failed">保存失败: %s</string>
     <string name="err_format">格式错误: %s</string>
     <string name="err_json_parse">JSON 解析失败，请检查剪贴板内容</string>
-    <string name="err_shizuku_not_running">❌ Shizuku 服务未运行\n\n请先打开 Shizuku 应用，点击「启动」按钮\n并确保 Shizuku 在后台运行</string>
+    <string name="err_shizuku_not_running">Shizuku 服务未运行\n\n请先打开 Shizuku 应用，点击「启动」按钮\n并确保 Shizuku 在后台运行</string>
     <string name="err_shizuku_binder_not_ready">Shizuku 连接已断开\n\n可能原因：\n1. Shizuku 被系统杀后台\n2. 刚刚重启过手机\n3. Shizuku 权限被撤销\n\n请重新打开 Shizuku 应用启动服务</string>
     <string name="err_saf_scan_failed">SAF 扫描失败: %s</string>
     <!-- Technical Error Messages -->
@@ -384,7 +384,7 @@
     <!-- ============================================ -->
     <string name="btn_fullscreen">⛶ 全屏编辑</string>
     <string name="btn_reparse">⟳ 重新解析</string>
-    <string name="btn_clear_all">🧹 一键清空</string>
+    <string name="btn_clear_all">一键清空</string>
     <string name="btn_confirm_clear">确定清空</string>
     <string name="btn_view_and_edit_clips">查看/编辑片段</string>
     <string name="btn_export">导出</string>
@@ -405,9 +405,9 @@
     <string name="mode_simple">极简模式 (仅翻译 + 解析)</string>
     <string name="mode_raw_trans">原文+翻译 (Key + 翻译)</string>
     <!-- Tree View -->
-    <string name="emoji_tree">🌳 树 /</string>
-    <string name="emoji_tree_player_data">"🌳 树 / 玩家数据</string>
-    <string name="emoji_tree_world_data">🌳 树 / 世界数据</string>
+    <string name="emoji_tree">树 /</string>
+    <string name="emoji_tree_player_data">" 树 / 玩家数据</string>
+    <string name="emoji_tree_world_data">树 / 世界数据</string>
     <!-- ============================================ -->
     <!-- World/Archive Module -->
     <!-- ============================================ -->
@@ -416,7 +416,7 @@
     <!-- ============================================ -->
     <!-- Player Module -->
     <!-- ============================================ -->
-    <string name="btn_edit_player">👤 编辑玩家</string>
+    <string name="btn_edit_player">编辑玩家</string>
     <string name="btn_edit_online_players">编辑联机玩家 (player_...)</string>
     <string name="msg_for_example_player">例如: player_uuid</string>
     <string name="msg_player_data_not_found">未找到玩家数据 (~local_player)</string>
@@ -436,10 +436,10 @@
     <!-- ============================================ -->
     <!-- Puzzle Module -->
     <!-- ============================================ -->
-    <string name="msg_create_puzzle">🧩 创建巨型拼图画 (自动导入背包)</string>
+    <string name="msg_create_puzzle">创建巨型拼图画 (自动导入背包)</string>
     <string name="title_puzzle_slot_select">选择存放位置</string>
     <string name="label_puzzle_slot">格子 %d</string>
-    <string name="title_puzzle_slot_occupied">⚠ 格子已被占用</string>
+    <string name="title_puzzle_slot_occupied">格子已被占用</string>
     <string name="msg_puzzle_slot_has_items" formatted="false">%s 上有:\n%s x%d\n\n确认覆盖？</string>
     <string name="btn_puzzle_confirm_overwrite">确认覆盖</string>
     <string name="text_slot_empty">--空--</string>
@@ -447,7 +447,7 @@
     <string name="puzzle_opt_2x2">2x2 (需要4格)</string>
     <string name="puzzle_opt_3x3">3x3 (需要9格)</string>
     <string name="puzzle_opt_custom">自定义尺寸</string>
-    <string name="text_import_map_images">🖼️ 导入图片生成地图画</string>
+    <string name="text_import_map_images">导入图片生成地图画</string>
     <string name="msg_backpack_full">背包已满，至少需要 1 个空位</string>
     <string name="msg_warning_puzzle">此功能将生成大量地图并尝试放入您的背包\n虽然程序会尝试寻找空位，但为了绝对安全\n请务必在游戏内【清空背包】后再使用此功能！\n\n否则可能会导致原有物品丢失或错乱！\n均由玩家您自行承担后果！\n会在1.0.4下个版本修复</string>
     <string name="btn_i_understand_continue">我已清空，继续</string>
@@ -456,9 +456,9 @@
     <!-- ============================================ -->
     <!-- Backup Module -->
     <!-- ============================================ -->
-    <string name="btn_draft_box">📝 草稿箱</string>
+    <string name="btn_draft_box">草稿箱</string>
     <string name="title_backup_or_draft">备份 / 草稿箱</string>
-    <string name="title_draft_box">📝 草稿箱 (%1$d)</string>
+    <string name="title_draft_box">草稿箱 (%1$d)</string>
     <string name="label_sub_no_drafts">暂无草稿</string>
     <string name="draft_ago_just_now">刚刚</string>
     <string name="draft_ago_minutes">%1$d 分钟前</string>
@@ -472,7 +472,7 @@
     <string name="msg_delete_draft_confirm">删除草稿「%1$s」？</string>
     <string name="toast_draft_deleted">已删除草稿</string>
     <string name="toast_draft_restored">已恢复到编辑器 —— 请记得点击「保存修改」写入磁盘</string>
-    <string name="btn_restore">🕒 恢复备份</string>
+    <string name="btn_restore">恢复备份</string>
     <string name="toast_level_restored">世界备份已恢复</string>
     <string name="toast_level_dat_saved">level.dat 已保存</string>
     <!-- ============================================ -->
@@ -494,11 +494,11 @@
     <string name="msg_shizuku_recommend_install">建议安装 Shizuku 以获得完整功能。是否前往下载？</string>
     <string name="msg_need_all_files">Android 11+ 需要"所有文件访问"权限才能读写旧版路径（/games/...），请在下一页授予</string>
     <string name="msg_need_storage">樱喵NBT需要存储权限才能读写存档，请前往设置手动授予</string>
-    <string name="box_draft_autosave">📝 编辑时自动保存草稿</string>
+    <string name="box_draft_autosave">编辑时自动保存草稿</string>
     <string name="subtitle_draft_autosave">未保存的编辑会存入草稿箱，可随时找回。0 = 关闭</string>
     <string name="label_draft_interval">间隔：</string>
     <string name="label_draft_max">草稿上限：</string>
-    <string name="box_draft_keep_original">🧩 同时保存改动前的原始数据</string>
+    <string name="box_draft_keep_original">同时保存改动前的原始数据</string>
     <string name="subtitle_draft_keep_original">可对比改动内容，但草稿体积翻倍</string>
     <string name="draft_interval_off">关闭</string>
     <string name="unit_seconds">秒</string>
@@ -513,10 +513,10 @@
     <!-- ============================================ -->
     <!-- Debug Module -->
     <!-- ============================================ -->
-    <string name="debug_crash_test">💥 崩溃测试（模拟应用崩溃）</string>
-    <string name="debug_show_logs">📋 显示日志</string>
-    <string name="debug_copy_logs">📄 复制日志到剪贴板</string>
-    <string name="debug_export_logs">💾 导出日志到文件</string>
+    <string name="debug_crash_test">崩溃测试（模拟应用崩溃）</string>
+    <string name="debug_show_logs">显示日志</string>
+    <string name="debug_copy_logs">复制日志到剪贴板</string>
+    <string name="debug_export_logs">导出日志到文件</string>
     <string name="msg_no_logs_to_copy">没有日志可复制</string>
     <string name="msg_no_logs_to_export">没有日志可导出</string>
     <string name="label_sub_no_logs">暂无操作日志</string>
@@ -563,9 +563,9 @@
     <!-- ============================================ -->
     <string name="about_header">关于</string>
     <string name="settings_header">设置</string>
-    <string name="box_multithread_io">🚀 文件操作多线程加速</string>
+    <string name="box_multithread_io">文件操作多线程加速</string>
     <string name="subtitle_io_multithread">仅影响存档读写，关闭后使用单线程</string>
-    <string name="box_puzzle_multithread">🧩 拼图生成多线程加速</string>
+    <string name="box_puzzle_multithread">拼图生成多线程加速</string>
     <string name="subtitle_puzzle_multithread">关闭可降低内存占用，但生成更慢</string>
     <string name="label_thread_count">并发线程数：</string>
     <string name="thread_count_auto">自动</string>
@@ -590,7 +590,7 @@
     <string name="msg_migrate_done">迁移完成：已搬运 %1$d 项，跳过 %2$d 项（新位置已存在）</string>
     <string name="msg_migrate_partial">迁移未全部完成：成功 %1$d 项，跳过 %2$d 项，失败 %3$d 项。\n旧目录已保留，未删除任何东西。</string>
     <string name="msg_migrate_nothing">没有需要迁移的旧数据。</string>
-    <string name="label_migrate_settings">📦 迁移旧数据（旧目录 → 新目录）</string>
+    <string name="label_migrate_settings">迁移旧数据（旧目录 → 新目录）</string>
     <string name="msg_migrate_none_left">未发现旧数据目录，无需迁移。</string>
     <!-- ============================================
          权限说明弹窗 / 切换语言提示
@@ -604,7 +604,7 @@
     <!-- ============================================
          保存前自动备份（策略对齐草稿箱）
          ============================================ -->
-    <string name="box_backup_auto">💾 保存前自动备份</string>
+    <string name="box_backup_auto">保存前自动备份</string>
     <string name="subtitle_backup_auto">覆盖存档前先留一份快照，保存出错可回滚。0 = 关闭</string>
     <string name="label_backup_interval">间隔：</string>
     <string name="label_backup_max">备份上限：</string>
@@ -753,7 +753,7 @@ ID：%3$s
 原图 %5$d×%6$d → 每块 %7$d×%8$d</string>
     <string name="msg_puzzle_boxes_one">装 1 个潜影盒</string>
     <string name="msg_puzzle_boxes_many">装 %1$d 个潜影盒（嵌套）</string>
-    <string name="msg_puzzle_low_res">⚠ 每块不足 128×128，上墙后会模糊</string>
+    <string name="msg_puzzle_low_res">每块不足 128×128，上墙后会模糊</string>
     <string name="btn_next_pick_slot">选槽位</string>
     <!-- 拼图预览：自由裁剪 -->
     <string name="btn_undo">↶ 撤销</string>
@@ -761,7 +761,7 @@ ID：%3$s
     <string name="btn_reset">⟲ 重置</string>
     <string name="msg_puzzle_lock_ratio">锁定比例（正方形）</string>
     <string name="msg_puzzle_crop_info">裁出 %1$d×%2$d → %3$d×%4$d 共 %5$d 张（每张 128×128）</string>
-    <string name="msg_puzzle_crop_not_square">⚠ 当前裁剪比例接近正方形，上墙才不会变形</string>
+    <string name="msg_puzzle_crop_not_square">当前裁剪比例接近正方形，上墙才不会变形</string>
     <!-- 拼图：裁剪相关设置 -->
     <string name="label_crop_min_size">裁剪框最小尺寸</string>
     <string name="subtitle_crop_min_size">太小会难以拖动，建议保持默认</string>
@@ -816,9 +816,9 @@ ID：%3$s
     <string name="toast_perm_shizuku_only">权限检查：Shizuku 正常，但缺少「所有文件访问」</string>
     <string name="toast_perm_files_only">权限检查：所有文件访问已授予，但 Shizuku 未运行</string>
     <string name="toast_perm_none">权限检查：尚未获得任何权限</string>
-    <string name="btn_check_perm_long">🔍 检查权限</string>
+    <string name="btn_check_perm_long">检查权限</string>
     <string name="msg_shizuku_cannot_write">无法写入：\n%1$s\n\nShizuku 已连接，但它的 shell 命令被系统限制了写入权限。\n\n小米 / HyperOS 用户请检查：\n开发者选项 →「USB 调试（安全设置）」是否已开启（与普通「USB 调试」是两个开关）。\n\n或改用「切换路径」选择一个可写目录。</string>
-    <string name="btn_use_saf">🔓 改用 SAF 授权（推荐）</string>
+    <string name="btn_use_saf">改用 SAF 授权（推荐）</string>
     <string name="toast_shizuku_no_write">Shizuku 已连接，但无法写入目标目录。\n\n小米 / HyperOS 用户请检查：\n开发者选项 →「USB 调试（安全设置）」是否开启\n（它和普通「USB 调试」是两个独立开关）</string>
     <string name="err_privileged_unavailable">当前没有可用的提权方式（root / Shizuku 都不可用）</string>
     <string name="err_command_refused">命令被安全策略拒绝：%1$s</string>

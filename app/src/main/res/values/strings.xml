@@ -36,7 +36,7 @@ This CANNOT be undone.</string>
     <string name="label_sub_delete_failed">Delete failed</string>
     <string name="msg_restore_target_exists">A save with the same folder name already exists</string>
     <string name="msg_trash_content_missing">Recycle bin content is missing</string>
-    <string name="title_trash">♻ Recycle bin (%1$d)</string>
+    <string name="title_trash">Recycle bin (%1$d)</string>
     <string name="label_sub_trash_empty">Recycle bin is empty</string>
     <string name="btn_restore_all">Restore all</string>
     <string name="btn_clear_trash">Empty recycle bin</string>
@@ -82,7 +82,7 @@ Delete them as well?</string>
     <string name="btn_clear_backups_here">Clear backups of this save (%1$d)</string>
     <string name="msg_clear_backups_here_confirm">Delete all %1$d backups of this save? This cannot be undone.</string>
     <string name="toast_backups_cleared">Backups cleared</string>
-    <string name="title_draft_box_no_folder">📝 Draft Box</string>
+    <string name="title_draft_box_no_folder">Draft Box</string>
     <string name="msg_draft_select_world_first">No save selected.\n\nPick a save first to see that save\'s drafts, or view drafts of all saves.</string>
     <string name="btn_view_all_drafts">View all saves</string>
     <string name="btn_clear_drafts_here">Clear drafts of this save (%1$d)</string>
@@ -91,27 +91,27 @@ Delete them as well?</string>
     <string name="title_error">Error</string>
     <string name="btn_create">Create</string>
     <string name="btn_delete">Delete</string>
-    <string name="btn_save">💾 Save changes</string>
-    <string name="btn_load">📂 Load archive</string>
+    <string name="btn_save">Save changes</string>
+    <string name="btn_load">Load archive</string>
     <string name="btn_replace">Replace</string>
     <string name="btn_clear">Clear</string>
     <!-- ============================================ -->
     <!-- Common Actions -->
     <!-- ============================================ -->
-    <string name="action_add_tag">➕ Add new label</string>
-    <string name="action_paste_tag">📋 Paste sub tags</string>
-    <string name="action_clear_all">🗑️ [Danger] Clear all current data</string>
-    <string name="action_copy_root">📄 Copy current level data (JSON)</string>
-    <string name="action_paste_root">📝 Paste/import data (overwrite)</string>
-    <string name="action_switch_day">Switch to: ☀️ Day Mode</string>
-    <string name="action_switch_night">Switch to: 🌙 Night Mode</string>
+    <string name="action_add_tag">Add new label</string>
+    <string name="action_paste_tag">Paste sub tags</string>
+    <string name="action_clear_all">[Danger] Clear all current data</string>
+    <string name="action_copy_root">Copy current level data (JSON)</string>
+    <string name="action_paste_root">Paste/import data (overwrite)</string>
+    <string name="action_switch_day">Switch to: Day Mode</string>
+    <string name="action_switch_night">Switch to: Night Mode</string>
     <string name="switch_to_chinese">Switch to Chinese</string>
     <string name="switch_to_english">Switch to English</string>
     <!-- ============================================ -->
     <!-- Dialog Titles -->
     <!-- ============================================ -->
     <string name="dialog_path_title">Select path</string>
-    <string name="dialog_backup_title">🕒 Restore backup (%1$d)</string>
+    <string name="dialog_backup_title">Restore backup (%1$d)</string>
     <string name="btn_rename">Rename</string>
     <string name="btn_restore_action">Restore</string>
     <string name="btn_detail">Details</string>
@@ -130,20 +130,20 @@ Delete them as well?</string>
     <string name="label_sub_name_cannot_be_empty">Name cannot be empty</string>
     <string name="label_sub_world_data">World data</string>
     <string name="label_sub_local_player">Local player</string>
-    <string name="dialog_danger_title">⚠️ High energy warning</string>
+    <string name="dialog_danger_title">High energy warning</string>
     <!-- ============================================ -->
     <!-- Titles -->
     <!-- ============================================ -->
     <string name="title_rename">Rename</string>
     <string name="title_manage">Manage: [%s]</string>
     <string name="title_manage_cache">Manage Cache (Works)</string>
-    <string name="title_database_corruption">⚠️ Database corruption</string>
+    <string name="title_database_corruption">Database corruption</string>
     <string name="title_data_not_exist">Data does not exist</string>
-    <string name="title_overwrite_warning">⚠️ Overwrite warning</string>
+    <string name="title_overwrite_warning">Overwrite warning</string>
     <string name="title_remove_warning">Remove warning</string>
     <string name="title_paste_as">Paste as...</string>
-    <string name="title_batch_delete">⚠️ Batch delete</string>
-    <string name="title_danger_warning">⚠️ High energy warning</string>
+    <string name="title_batch_delete">Batch delete</string>
+    <string name="title_danger_warning">High energy warning</string>
     <string name="title_view_mode">Switch display mode</string>
     <string name="title_search_nbt_data">Search NBT data</string>
     <string name="title_open_nbt_by_name">Open NBT by name</string>
@@ -152,7 +152,7 @@ Delete them as well?</string>
     <string name="title_choose_puzzle_size">Choose puzzle size</string>
     <string name="title_rename_key">Rename Key</string>
     <string name="title_global_system_data_count">Global System Data (%d)</string>
-    <string name="title_warning_inventory">⚠️ Inventory Overwrite Warning</string>
+    <string name="title_warning_inventory">Inventory Overwrite Warning</string>
     <string name="title_shizuku_not_found">Shizuku Not Installed</string>
     <string name="title_need_all_files">All Files Access Required</string>
     <string name="title_permission_denied">Permission Denied</string>
@@ -162,10 +162,10 @@ Delete them as well?</string>
     <string name="title_enchant">Enchantment</string>
     <string name="title_all">Item / Block</string>
     <string name="title_data">Data</string>
-    <string name="title_choose">🔍 Pick from list</string>
+    <string name="title_choose">Pick from list</string>
     <string name="title_choose_type">Choose %1$s</string>
     <string name="title_edit_type_key">Edit [%1$s]: %2$s</string>
-    <string name="title_debug_menu">🔧 Developer Debug Menu</string>
+    <string name="title_debug_menu">Developer Debug Menu</string>
     <string name="title_edit_range">Edit [%1$d ~ %2$d]</string>
     <string name="title_logs">Logs</string>
     <string name="title_label_data">%s Data</string>
@@ -178,8 +178,8 @@ Delete them as well?</string>
     <string name="msg_confirm_replace">Confirm replacement?</string>
     <string name="msg_move_to_new_key">This will move the data to the new key and delete the old key</string>
     <string name="msg_no_data_create_new">This save file has not yet generated [%s] data.\nWould you like to create a new empty data set?</string>
-    <string name="msg_create_new_blank">➕ Create New Blank %s</string>
-    <string name="msg_paste_as_new">📋 Paste as New %s</string>
+    <string name="msg_create_new_blank">Create New Blank %s</string>
+    <string name="msg_paste_as_new">Paste as New %s</string>
     <string name="msg_data_is_empty_colon">Data is empty:</string>
     <string name="label_sub_database_is_not_open">Database is not open</string>
     <string name="label_sub_database_shutdown">Database shutdown</string>
@@ -207,10 +207,10 @@ Delete them as well?</string>
     <string name="msg_generating_maps">Generating %d maps...</string>
     <!-- Success Messages -->
     <!-- List Action Messages -->
-    <string name="msg_copy_data_json">📄 Copy data (JSON)</string>
-    <string name="btn_paste_overlay">📝 Paste overlay</string>
-    <string name="btn_list_long_press_rename">✏️ Rename</string>
-    <string name="btn_list_long_press_delete">🗑️ Delete</string>
+    <string name="msg_copy_data_json">Copy data (JSON)</string>
+    <string name="btn_paste_overlay">Paste overlay</string>
+    <string name="btn_list_long_press_rename">Rename</string>
+    <string name="btn_list_long_press_delete">Delete</string>
     <!-- ============================================ -->
     <!-- Toast Messages -->
     <!-- ============================================ -->
@@ -226,9 +226,9 @@ Delete them as well?</string>
     <string name="toast_copied">Copied to clipboard</string>
     <string name="title_copy_as">Copy as…</string>
     <string name="title_export_to">Export to…</string>
-    <string name="export_dest_clipboard">📋 Copy to clipboard</string>
-    <string name="export_dest_download">💾 Save to Download (Nibnya/Exports)</string>
-    <string name="export_dest_choose">📁 Choose a folder…</string>
+    <string name="export_dest_clipboard">Copy to clipboard</string>
+    <string name="export_dest_download">Save to Download (Nibnya/Exports)</string>
+    <string name="export_dest_choose">Choose a folder…</string>
     <string name="toast_exported_to">Saved: %1$s</string>
     <string name="toast_exported_ok">Exported</string>
     <string name="toast_export_failed">Export failed</string>
@@ -293,7 +293,7 @@ Delete them as well?</string>
     <string name="err_save_failed">Save failed: %s</string>
     <string name="err_format">Format error: %s</string>
     <string name="err_json_parse">JSON parsing failed, please check clipboard contents</string>
-    <string name="err_shizuku_not_running">❌ Shizuku service not running\n\nPlease open Shizuku app and tap \"Start\"\nEnsure Shizuku is running in background</string>
+    <string name="err_shizuku_not_running">Shizuku service not running\n\nPlease open Shizuku app and tap \"Start\"\nEnsure Shizuku is running in background</string>
     <string name="err_shizuku_binder_not_ready">Shizuku connection lost\n\nPossible causes:\n1. Shizuku was killed by system\n2. Phone just rebooted\n3. Shizuku permission revoked\n\nPlease restart Shizuku service</string>
     <string name="err_saf_scan_failed">SAF scan failed: %s</string>
     <!-- Technical Error Messages -->
@@ -384,7 +384,7 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <string name="btn_fullscreen">⛶ Full screen editing</string>
     <string name="btn_reparse">⟳ Re-parse</string>
-    <string name="btn_clear_all">🧹 Clear with one click</string>
+    <string name="btn_clear_all">Clear with one click</string>
     <string name="btn_confirm_clear">OK to clear</string>
     <string name="btn_view_and_edit_clips">View/edit clips</string>
     <string name="btn_export">Export</string>
@@ -405,9 +405,9 @@ Delete them as well?</string>
     <string name="mode_simple">Minimalist mode (only translation + parsing)</string>
     <string name="mode_raw_trans">Original text + translation (Key + translation)</string>
     <!-- Tree View -->
-    <string name="emoji_tree">🌳 Tree /</string>
-    <string name="emoji_tree_player_data">"🌳 Tree / Player Data</string>
-    <string name="emoji_tree_world_data">🌳 Tree / World Data</string>
+    <string name="emoji_tree">Tree /</string>
+    <string name="emoji_tree_player_data">" Tree / Player Data</string>
+    <string name="emoji_tree_world_data">Tree / World Data</string>
     <!-- ============================================ -->
     <!-- World/Archive Module -->
     <!-- ============================================ -->
@@ -416,7 +416,7 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <!-- Player Module -->
     <!-- ============================================ -->
-    <string name="btn_edit_player">👤 Edit player</string>
+    <string name="btn_edit_player">Edit player</string>
     <string name="btn_edit_online_players">Edit online players (player_...)</string>
     <string name="msg_for_example_player">For example: player_uuid</string>
     <string name="msg_player_data_not_found">Player data not found (~local_player)</string>
@@ -436,10 +436,10 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <!-- Puzzle Module -->
     <!-- ============================================ -->
-    <string name="msg_create_puzzle">🧩Create giant puzzles (automatically imported into backpack)</string>
+    <string name="msg_create_puzzle">Create giant puzzles (automatically imported into backpack)</string>
     <string name="title_puzzle_slot_select">Select slot</string>
     <string name="label_puzzle_slot">Slot %d</string>
-    <string name="title_puzzle_slot_occupied">⚠ Slot occupied</string>
+    <string name="title_puzzle_slot_occupied">Slot occupied</string>
     <string name="msg_puzzle_slot_has_items" formatted="false">%s has:\n%s x%d\n\nConfirm overwrite?</string>
     <string name="btn_puzzle_confirm_overwrite">Confirm overwrite</string>
     <string name="text_slot_empty">--empty--</string>
@@ -447,7 +447,7 @@ Delete them as well?</string>
     <string name="puzzle_opt_2x2">2x2 (requires 4 cells)</string>
     <string name="puzzle_opt_3x3">3x3 (requires 9 cells)</string>
     <string name="puzzle_opt_custom">Custom size</string>
-    <string name="text_import_map_images">🖼️ Import images to generate map images</string>
+    <string name="text_import_map_images">Import images to generate map images</string>
     <string name="msg_backpack_full">Backpack full, need at least 1 empty slot</string>
     <string name="msg_warning_puzzle">This feature will generate maps and put them into your inventory\nPlease EMPTY YOUR INVENTORY in-game before proceeding!\n\nFailure to do so may result in item loss\nYou, the player, are responsible for the consequences!\nWill be fixed in the next version 1.0.4</string>
     <string name="btn_i_understand_continue">I Understand, Continue</string>
@@ -455,9 +455,9 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <!-- Backup Module -->
     <!-- ============================================ -->
-    <string name="btn_draft_box">📝 Draft Box</string>
+    <string name="btn_draft_box">Draft Box</string>
     <string name="title_backup_or_draft">Backup / Draft Box</string>
-    <string name="title_draft_box">📝 Draft Box (%1$d)</string>
+    <string name="title_draft_box">Draft Box (%1$d)</string>
     <string name="label_sub_no_drafts">No drafts</string>
     <string name="draft_ago_just_now">Just now</string>
     <string name="draft_ago_minutes">%1$d min ago</string>
@@ -471,7 +471,7 @@ Delete them as well?</string>
     <string name="msg_delete_draft_confirm">Delete draft "%1$s"?</string>
     <string name="toast_draft_deleted">Draft deleted</string>
     <string name="toast_draft_restored">Restored to editor — remember to tap "Save" to write to disk</string>
-    <string name="btn_restore">🕒 Restore backup</string>
+    <string name="btn_restore">Restore backup</string>
     <string name="toast_level_restored">The world backup has been restored</string>
     <string name="toast_level_dat_saved">level.dat saved</string>
     <!-- ============================================ -->
@@ -493,11 +493,11 @@ Delete them as well?</string>
     <string name="msg_shizuku_recommend_install">It is recommended to install Shizuku for full functionality. Go to download?</string>
     <string name="msg_need_all_files">Android 11+ requires "All Files Access" permission to read/write legacy paths (/games/...), please grant on the next page</string>
     <string name="msg_need_storage">Nibnya requires storage permission to read/write saves, please go to settings to grant manually</string>
-    <string name="box_draft_autosave">📝 Auto-save drafts while editing</string>
+    <string name="box_draft_autosave">Auto-save drafts while editing</string>
     <string name="subtitle_draft_autosave">Unsaved edits are kept in Draft Box; recover them anytime. 0 = off</string>
     <string name="label_draft_interval">Interval:</string>
     <string name="label_draft_max">Max drafts:</string>
-    <string name="box_draft_keep_original">🧩 Also keep the pre-edit original</string>
+    <string name="box_draft_keep_original">Also keep the pre-edit original</string>
     <string name="subtitle_draft_keep_original">Enables change comparison, but doubles draft size</string>
     <string name="draft_interval_off">Off</string>
     <string name="unit_seconds">Seconds</string>
@@ -512,10 +512,10 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <!-- Debug Module -->
     <!-- ============================================ -->
-    <string name="debug_crash_test">💥 Crash test (simulate crash)</string>
-    <string name="debug_show_logs">📋 Show logs</string>
-    <string name="debug_copy_logs">📄 Copy logs to clipboard</string>
-    <string name="debug_export_logs">💾 Export logs to file</string>
+    <string name="debug_crash_test">Crash test (simulate crash)</string>
+    <string name="debug_show_logs">Show logs</string>
+    <string name="debug_copy_logs">Copy logs to clipboard</string>
+    <string name="debug_export_logs">Export logs to file</string>
     <string name="msg_no_logs_to_copy">No logs to copy</string>
     <string name="msg_no_logs_to_export">No logs to export</string>
     <string name="label_sub_no_logs">No operation logs yet</string>
@@ -562,9 +562,9 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <string name="about_header">About</string>
     <string name="settings_header">Settings</string>
-    <string name="box_multithread_io">🚀 Multi-thread file operations</string>
+    <string name="box_multithread_io">Multi-thread file operations</string>
     <string name="subtitle_io_multithread">Affects save read/write only. Disable to use a single thread.</string>
-    <string name="box_puzzle_multithread">🧩 Multi-thread puzzle generation</string>
+    <string name="box_puzzle_multithread">Multi-thread puzzle generation</string>
     <string name="subtitle_puzzle_multithread">Disable to lower memory usage, but generation is slower.</string>
     <string name="label_thread_count">Threads:</string>
     <string name="thread_count_auto">Auto</string>
@@ -589,7 +589,7 @@ Delete them as well?</string>
     <string name="msg_migrate_done">Migration finished: %1$d item(s) moved, %2$d skipped (already present)</string>
     <string name="msg_migrate_partial">Migration partly finished: %1$d moved, %2$d skipped, %3$d failed.\nThe old folder was kept — nothing was deleted.</string>
     <string name="msg_migrate_nothing">No old data to migrate.</string>
-    <string name="label_migrate_settings">📦 Migrate old data (old → new folder)</string>
+    <string name="label_migrate_settings">Migrate old data (old → new folder)</string>
     <string name="msg_migrate_none_left">No old data folder found. Nothing to do.</string>
     <!-- ============================================
          权限说明弹窗 / 切换语言提示
@@ -603,7 +603,7 @@ Delete them as well?</string>
     <!-- ============================================
          保存前自动备份（策略对齐草稿箱）
          ============================================ -->
-    <string name="box_backup_auto">💾 Back up before saving</string>
+    <string name="box_backup_auto">Back up before saving</string>
     <string name="subtitle_backup_auto">Keeps a snapshot before overwriting the world, so a bad save can be rolled back. 0 = off</string>
     <string name="label_backup_interval">Interval:</string>
     <string name="label_backup_max">Keep up to:</string>
@@ -752,7 +752,7 @@ Count: %4$d</string>
 Source %5$d×%6$d → %7$d×%8$d each</string>
     <string name="msg_puzzle_boxes_one">Fits in 1 shulker box</string>
     <string name="msg_puzzle_boxes_many">Needs %1$d shulker boxes (nested)</string>
-    <string name="msg_puzzle_low_res">⚠ Each tile is under 128×128; it will look blurry</string>
+    <string name="msg_puzzle_low_res">Each tile is under 128×128; it will look blurry</string>
     <string name="btn_next_pick_slot">Pick slot</string>
     <!-- Puzzle preview: free crop -->
     <string name="btn_undo">↶ Undo</string>
@@ -760,7 +760,7 @@ Source %5$d×%6$d → %7$d×%8$d each</string>
     <string name="btn_reset">⟲ Reset</string>
     <string name="msg_puzzle_lock_ratio">Lock ratio (square)</string>
     <string name="msg_puzzle_crop_info">Crop %1$d×%2$d → %3$d×%4$d, %5$d maps (128×128 each)</string>
-    <string name="msg_puzzle_crop_not_square">⚠ Keep the crop square so it will not stretch</string>
+    <string name="msg_puzzle_crop_not_square">Keep the crop square so it will not stretch</string>
     <!-- Puzzle: crop settings -->
     <string name="label_crop_min_size">Minimum crop size</string>
     <string name="subtitle_crop_min_size">Too small is hard to drag; default is recommended</string>
@@ -814,9 +814,9 @@ Source %5$d×%6$d → %7$d×%8$d each</string>
     <string name="toast_perm_shizuku_only">Permissions: Shizuku OK, but All files access is missing</string>
     <string name="toast_perm_files_only">Permissions: All files access granted, but Shizuku is not running</string>
     <string name="toast_perm_none">Permissions: none granted yet</string>
-    <string name="btn_check_perm_long">🔍 Check permissions</string>
+    <string name="btn_check_perm_long">Check permissions</string>
     <string name="msg_shizuku_cannot_write">Cannot write to:\n%1$s\n\nShizuku is connected, but the system is restricting its shell write access.\n\nXiaomi / HyperOS users: check whether "USB debugging (Security settings)" is enabled in Developer options (it is a separate toggle from "USB debugging").\n\nAlternatively use "Switch path" to pick a writable folder.</string>
-    <string name="btn_use_saf">🔓 Use SAF authorization (recommended)</string>
+    <string name="btn_use_saf">Use SAF authorization (recommended)</string>
     <string name="toast_shizuku_no_write">Shizuku is connected but cannot write to the target folder.\n\nXiaomi / HyperOS users: check Developer options → \"USB debugging (Security settings)\"\n(it is a separate toggle from \"USB debugging\")</string>
     <string name="err_privileged_unavailable">No privilege method available (neither root nor Shizuku)</string>
     <string name="err_command_refused">Command refused by safety policy: %1$s</string>

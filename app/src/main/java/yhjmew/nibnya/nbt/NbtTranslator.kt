@@ -261,33 +261,19 @@ object NbtTranslator {
         }
     }
 
+    /**
+     * NBT 键 -> 图标。
+     *
+     * 历史版本会给常见键返回一个 emoji（🌱 种子、🔥 火焰…），在树形视图里当图标用。
+     * **2026-10-27 起改为不返回 emoji**：全部走 [NbtTreeAdapter.setupNormalIcon] 的
+     * 字母 + 颜色方案（B / S / I / L / F / D / [B] / T / [] / {}），
+     * 视觉上更统一，也不再依赖各厂商对 emoji 字体的渲染。
+     *
+     * 保留这个函数是为了不打断调用点；将来若要加回图标，在这里改即可。
+     */
     @JvmStatic
     fun getEmojiIcon(key: String?): String? {
-        if (key == null) return null
-        return when (key) {
-            "Time", "DayTime" -> "⏰"
-            "rainTime", "rainLevel" -> "🌧️"
-            "lightningTime", "lightningLevel" -> "⚡"
-            "LastPlayed" -> "📅"
-            "Pos", "SpawnX", "SpawnY", "SpawnZ" -> "📍"
-            "DimensionId" -> "🌌"
-            "Rotation" -> "🧭"
-            "Motion" -> "💨"
-            "Health", "HealF" -> "❤️"
-            "Air" -> "🫧"
-            "Fire" -> "🔥"
-            "FoodLevel" -> "🍗"
-            "Score", "XpLevel", "PlayerLevel" -> "✨"
-            "Sleeping", "SleepTimer" -> "🛏️"
-            "EnderChestInventory" -> "🟪"
-            "Inventory" -> "🎒"
-            "Armor" -> "🛡️"
-            "LevelName" -> "🏷️"
-            "RandomSeed" -> "🌱"
-            "GameType", "Difficulty" -> "🎮"
-            "colors" -> "🎨"
-            else -> null
-        }
+        return null
     }
 
     private fun isBooleanKey(key: String): Boolean {

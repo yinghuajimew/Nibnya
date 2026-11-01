@@ -1760,7 +1760,7 @@ class MainActivity : ComponentActivity() {
         if (list.isEmpty()) { toast(getString(R.string.toast_cache_empty)); return }
         val lv = ListView(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_list_item_1,
-                list.map { "${if (it.isDirectory) "📁" else "📄"} ${it.name}" })
+                list.map { (if (it.isDirectory) "[D] " else "[F] ") + it.name })
         }
         AlertDialog.Builder(this).setTitle(getString(R.string.title_manage_cache)).setView(lv)
             .setNeutralButton(getString(R.string.btn_close), null)

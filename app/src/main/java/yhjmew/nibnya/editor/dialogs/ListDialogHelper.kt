@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import android.widget.ImageButton
 import android.widget.*
 import androidx.core.view.isVisible
 import com.google.gson.JsonObject
@@ -159,11 +160,11 @@ private fun MainActivity.showListDialogUI(
     val customTitle = LayoutInflater.from(this)
         .inflate(R.layout.dialog_title_with_search, null, false)
     val tvTitle = customTitle.findViewById<TextView>(R.id.tv_dialog_title)
-    val btnSearch = customTitle.findViewById<Button>(R.id.btn_search_toggle)
+    val btnSearch = customTitle.findViewById<ImageButton>(R.id.btn_search_toggle)
     val searchContainer = customTitle.findViewById<View>(R.id.search_container)
     val etSearch = customTitle.findViewById<EditText>(R.id.et_search_input)
     val btnClear = customTitle.findViewById<View>(R.id.btn_clear_search)
-    val btnBatchDelete = customTitle.findViewById<Button>(R.id.btn_batch_delete)
+    val btnBatchDelete = customTitle.findViewById<ImageButton>(R.id.btn_batch_delete)
 
     tvTitle.text = "$baseTitle (${dataList.size})"
 
