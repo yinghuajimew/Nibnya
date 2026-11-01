@@ -71,7 +71,6 @@ class MainActivity : ComponentActivity() {
     internal var layoutNormalUi: View? = null
     internal var layoutEditorHeader: View? = null
     internal var layoutFullscreenBar: View? = null
-    internal var viewMainContent: View? = null
     internal var viewSidebar: View? = null
 
     // ============================================
@@ -92,6 +91,9 @@ class MainActivity : ComponentActivity() {
     // ============================================
     internal var isNightMode = false
     internal var isFullScreen = false
+
+    /** 底部三格导航（主页 / 地图 / 其他）。在 initViews() 里创建。 */
+    internal var bottomNav: BottomNavController? = null
     internal var currentLang: String? = null
     internal var prefs: SharedPreferences? = null
 
@@ -502,7 +504,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initViews() {
-        viewMainContent = findViewById(R.id.main_content)
         viewSidebar = findViewById(R.id.sidebar_content)
         etWorldName = findViewById<EditText>(R.id.et_world_name)?.also { et ->
             // 这个控件只是「点击打开存档选择器」的触发器，不参与文本编辑。
@@ -519,6 +520,8 @@ class MainActivity : ComponentActivity() {
         layoutEditorHeader = findViewById(R.id.layout_editor_header)
         layoutFullscreenBar = findViewById(R.id.layout_fullscreen_bar)
         tvFullscreenPath = findViewById(R.id.tv_fullscreen_path)
+
+        bottomNav = BottomNavController(this)
     }
 
     // ============================================
@@ -1044,6 +1047,8 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (isFullScreen) { toggleFullScreen(false); return }
+        // 不在「主页」时，返回键先退回主页（符合三键导航的直觉）
+        if (bottomNav?.handleBack() == true) return
         super.onBackPressed()
     }
 
@@ -1055,6 +1060,7 @@ class MainActivity : ComponentActivity() {
         outState.putString("currentWorkingFileOrDir", worldVM.currentWorkingFileOrDir)
         outState.putBoolean("isTreeMode", editorVM.isTreeMode.value)
         etWorldName?.text?.toString()?.let { outState.putString("worldName", it) }
+        bottomNav?.saveState(outState)
     }
 
     private fun restoreSavedState(savedInstanceState: Bundle?) {
@@ -1068,6 +1074,7 @@ class MainActivity : ComponentActivity() {
         savedInstanceState.getString("worldName")?.let {
             etWorldName?.setText(it); worldVM.lastLoadedWorldFolder = it
         }
+        bottomNav?.restoreState(savedInstanceState)
     }
 
     // ============================================

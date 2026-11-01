@@ -95,6 +95,14 @@ Delete them as well?</string>
     <string name="btn_load">Load archive</string>
     <string name="btn_replace">Replace</string>
     <string name="btn_clear">Clear</string>
+    <!-- 底部导航 / 占位页 -->
+    <string name="nav_home">Home</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_more">More</string>
+    <string name="page_map_placeholder_title">Map feature is under construction</string>
+    <string name="page_map_placeholder_body">This will become an interface for editing player maps directly:\nbrowse explored chunks, edit map art, adjust map colors.\n\nFor now it is a placeholder, used to verify that the bottom navigation switches correctly.</string>
+    <string name="page_more_placeholder_title">Nothing here yet</string>
+    <string name="page_more_placeholder_body">The "More" tab is for feature entries that do not belong on Home.\nWhat goes here is not decided yet.\n\nAlso a placeholder, to verify the bottom navigation switching.</string>
     <!-- ============================================ -->
     <!-- Common Actions -->
     <!-- ============================================ -->

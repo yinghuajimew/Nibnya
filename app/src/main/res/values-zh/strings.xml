@@ -95,6 +95,14 @@
     <string name="btn_load">加载存档</string>
     <string name="btn_replace">替换</string>
     <string name="btn_clear">清空</string>
+    <!-- 底部导航 / 占位页 -->
+    <string name="nav_home">主页</string>
+    <string name="nav_map">地图</string>
+    <string name="nav_more">其他</string>
+    <string name="page_map_placeholder_title">地图功能正在建设中</string>
+    <string name="page_map_placeholder_body">这里以后会是一个可以直接编辑玩家地图的界面：\n查看已探索的区块、修改地图画、调整地图配色。\n\n现在还只是个占位页，用来先验证底部导航能不能正常切换。</string>
+    <string name="page_more_placeholder_title">这里还什么都没有</string>
+    <string name="page_more_placeholder_body">「其他」用来放和主页不冲突的功能入口，\n具体放什么还没定。\n\n同样是占位页，先验证底部导航的切换。</string>
     <!-- ============================================ -->
     <!-- Common Actions -->
     <!-- ============================================ -->

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  底部导航栏（仿 Android 三键导航）。
+
+  三格等宽，文字居中，无图标 —— 先以纯文本验证交互，
+  后续若决定加图标，把 TextView 换成「ImageView + TextView」的竖排即可，
+  选中态由代码调 setTextColor / 背景色表现。
+
+  ⚠️ 高度固定 56dp，用 fitsSystemWindows + 底部 padding 避让手势条。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_bottom_nav"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:baselineAligned="false"
+    android:background="@color/app_surface"
+    android:elevation="8dp">
+
+    <!-- 1. 主页 -->
+    <LinearLayout
+        android:id="@+id/nav_tab_home"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:minHeight="56dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <TextView
+            android:id="@+id/nav_text_home"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_home"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/app_accent" />
+    </LinearLayout>
+
+    <!-- 2. 地图 -->
+    <LinearLayout
+        android:id="@+id/nav_tab_map"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:minHeight="56dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <TextView
+            android:id="@+id/nav_text_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_map"
+            android:textSize="14sp"
+            android:textColor="@color/app_text_secondary" />
+    </LinearLayout>
+
+    <!-- 3. 其他 -->
+    <LinearLayout
+        android:id="@+id/nav_tab_more"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:minHeight="56dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <TextView
+            android:id="@+id/nav_text_more"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_more"
+            android:textSize="14sp"
+            android:textColor="@color/app_text_secondary" />
+    </LinearLayout>
+
+</LinearLayout>

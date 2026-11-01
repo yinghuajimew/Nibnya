@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「地图」页 —— 当前为占位页（2026-11-02 随底部导航一起加入）。
+
+  规划：真正可编辑玩家地图的界面（地图画 / 已探索区块 / 地图物品）。
+  现在只放一段说明文字，用来验证底部导航的切换与状态保持是否正常。
+  真正实现时把下面的占位内容整体替换成地图视图即可，外部 id 不用改。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/page_map"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@color/app_bg"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/page_map_placeholder_title"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/app_text_primary"
+        android:gravity="center" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/page_map_placeholder_body"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="@color/app_text_secondary"
+        android:gravity="center" />
+
+</LinearLayout>

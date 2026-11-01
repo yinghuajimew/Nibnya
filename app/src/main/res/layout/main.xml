@@ -8,451 +8,472 @@
     <!-- ========================================= -->
     <!-- [层级 1] 主界面内容 (原 LinearLayout) -->
     <!-- ========================================= -->
-    <LinearLayout
-        android:id="@+id/main_content"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <!-- 全屏模式下的顶栏 (功能齐全版) -->
-        <LinearLayout
-            android:id="@+id/layout_fullscreen_bar"
+        <!-- ========================================= -->
+        <!-- 页面容器：主页 / 地图 / 其他，三页叠放靠可见性切换 -->
+        <!-- ========================================= -->
+        <FrameLayout
+            android:id="@+id/page_container"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            android:background="#2196F3"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:gravity="center_vertical"
-            android:elevation="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
-            <!-- 1. 返回 -->
-            <Button
-                android:id="@+id/btn_exit_fullscreen"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:text="←"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:background="#00000000"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:padding="0dp"
-                android:gravity="center" />
-
-            <!-- 2. 路径显示 -->
-            <TextView
-                android:id="@+id/tv_fullscreen_path"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="@string/path"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:gravity="center_vertical|start"
-                android:paddingStart="4dp"
-                android:ellipsize="middle"
-                android:singleLine="true" />
-
-            <!-- === 右侧功能区 (紧凑排列) === -->
-
-            <!-- 3. 树状图切换 (绿) -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="36dp"
-                android:layout_marginEnd="4dp">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#4CAF50" />
-
-                <ImageButton
-                    android:id="@+id/btn_fullscreen_tree"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_tree_white" />
-            </FrameLayout>
-
-            <!-- 4. 显示设置 (橙) -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="36dp"
-                android:layout_marginEnd="4dp">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#FF9800" />
-
-                <ImageButton
-                    android:id="@+id/btn_fullscreen_view"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_eye_white" />
-            </FrameLayout>
-
-            <!-- 5. 搜索 (蓝) -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="36dp"
-                android:layout_marginEnd="0dp">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#1976D2" />
-
-                <ImageButton
-                    android:id="@+id/btn_fullscreen_search"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_search_white" />
-            </FrameLayout>
-
-            <!-- 6. 菜单 (透明) -->
-            <Button
-                android:id="@+id/btn_fullscreen_menu"
-                android:layout_width="36dp"
-                android:layout_height="40dp"
-                android:text="⋮"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:background="#00000000"
-                android:textSize="22sp"
-                android:padding="0dp"
-                android:gravity="center" />
-
-        </LinearLayout>
-
-        <!-- 正常 UI (紧凑版) -->
-        <LinearLayout
-            android:id="@+id/layout_normal_ui"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- 1. 标题栏区域 -->
+            <!-- ===== 页面 1：主页（原 main_content） ===== -->
             <LinearLayout
+                    android:id="@+id/page_home"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
-                <!-- 减小底部间距 -->
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <!-- [修改] 侧边栏触发按钮 (汉堡菜单) -->
-                <!-- 增加 elevation 确保浮在顶层 -->
-                <!-- 增加 clickable 和 focusable 属性 -->
+            <!-- 全屏模式下的顶栏 (功能齐全版) -->
+            <LinearLayout
+                android:id="@+id/layout_fullscreen_bar"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                android:background="#2196F3"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:gravity="center_vertical"
+                android:elevation="4dp">
+
+                <!-- 1. 返回 -->
                 <Button
-                    android:id="@+id/btn_open_drawer"
-                    android:layout_width="45dp"
-                    android:layout_height="45dp"
-                    android:text="☰"
+                    android:id="@+id/btn_exit_fullscreen"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:text="←"
                     android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:background="#00000000"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    android:textColor="@color/app_text_primary"
-                    android:background="#00000000"
-                    android:gravity="center"
                     android:padding="0dp"
-                    android:layout_marginEnd="8dp"
-                    android:elevation="10dp"
-                    android:clickable="true"
-                    android:focusable="true" />
+                    android:gravity="center" />
 
-                <!-- 标题 -->
-                <!-- [修改] 动态标题区 (垂直布局：上面名字，下面种子) -->
-                <LinearLayout
+                <!-- 2. 路径显示 -->
+                <TextView
+                    android:id="@+id/tv_fullscreen_path"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center_vertical"
+                    android:text="@string/path"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:gravity="center_vertical|start"
                     android:paddingStart="4dp"
-                    android:paddingEnd="4dp">
+                    android:ellipsize="middle"
+                    android:singleLine="true" />
 
-                    <!-- 大标题：显示 APP名 或 存档名 -->
-                    <TextView
-                        android:id="@+id/tv_app_title"
+                <!-- === 右侧功能区 (紧凑排列) === -->
+
+                <!-- 3. 树状图切换 (绿) -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="4dp">
+
+                    <View
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/app_name"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/app_text_primary"
-                        android:maxLines="3"
-                        android:ellipsize="end" />
+                        android:layout_height="match_parent"
+                        android:background="#4CAF50" />
 
-                    <!-- 种子：点一下直接复制纯数字（不靠长按选中，免得把 emoji 复制进去） -->
-                    <TextView
-                        android:id="@+id/tv_info_seed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/key_seed_placeholder"
-                        android:textSize="10sp"
-                        android:textColor="@color/app_text_secondary"
-                        android:visibility="gone"
-                        android:clickable="true"
-                        android:focusable="false"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
-                </LinearLayout>
+                    <ImageButton
+                        android:id="@+id/btn_fullscreen_tree"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_tree_white" />
+                </FrameLayout>
 
-                <!-- 右侧按钮组 (更紧凑) -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="end">
+                <!-- 4. 显示设置 (橙) -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="4dp">
 
-                    <!-- 第一行 -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <Button
-                            android:id="@+id/btn_clear_cache"
-                            android:layout_width="wrap_content"
-                            android:layout_height="28dp"
-                            android:text="@string/btn_clean_cache"
-                            android:textAllCaps="false"
-                            android:textSize="11sp"
-                            android:backgroundTint="#607D8B"
-                            android:textColor="#FFFFFF"
-                            android:paddingTop="0dp"
-                            android:paddingBottom="0dp"
-                            android:layout_marginEnd="4dp" />
-                    </LinearLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#FF9800" />
 
-                    <!-- 第二行 -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="2dp">
-                        <Button
-                            android:id="@+id/btn_switch_path"
-                            android:layout_width="wrap_content"
-                            android:layout_height="28dp"
-                            android:text="@string/btn_switch_path"
-                            android:textAllCaps="false"
-                            android:textSize="11sp"
-                            android:textColor="#FFFFFF"
-                            android:backgroundTint="#607D8B"
-                            android:paddingTop="0dp"
-                            android:paddingBottom="0dp"
-                            android:layout_marginEnd="4dp" />
-                    </LinearLayout>
-                </LinearLayout>
+                    <ImageButton
+                        android:id="@+id/btn_fullscreen_view"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_eye_white" />
+                </FrameLayout>
+
+                <!-- 5. 搜索 (蓝) -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="0dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#1976D2" />
+
+                    <ImageButton
+                        android:id="@+id/btn_fullscreen_search"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_search_white" />
+                </FrameLayout>
+
+                <!-- 6. 菜单 (透明) -->
+                <Button
+                    android:id="@+id/btn_fullscreen_menu"
+                    android:layout_width="36dp"
+                    android:layout_height="40dp"
+                    android:text="⋮"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:background="#00000000"
+                    android:textSize="22sp"
+                    android:padding="0dp"
+                    android:gravity="center" />
+
             </LinearLayout>
 
-            <!-- 2. 存档选择框 (高度减小) -->
-            <EditText
-                android:id="@+id/et_world_name"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:hint="@string/hint_select_world"
-                android:background="@color/app_surface"
-                android:padding="5dp"
-                android:gravity="center"
-                android:layout_marginBottom="6dp"
-                android:focusable="false"
-                android:clickable="true"
-                android:textSize="14sp"
-                android:textIsSelectable="false"
-                android:longClickable="false"
-                android:cursorVisible="false"
-                android:inputType="none"
-                android:importantForAutofill="no" />
-
-            <!-- 3. 核心按钮矩阵 (高度减小，间距减小) -->
+            <!-- 正常 UI (紧凑版) -->
             <LinearLayout
+                android:id="@+id/layout_normal_ui"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="4dp">
+                android:orientation="vertical">
 
-                <!-- 第一行 加载/保存 -->
+                <!-- 1. 标题栏区域 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="4dp">
+                    <!-- 减小底部间距 -->
+
+                    <!-- [修改] 侧边栏触发按钮 (汉堡菜单) -->
+                    <!-- 增加 elevation 确保浮在顶层 -->
+                    <!-- 增加 clickable 和 focusable 属性 -->
                     <Button
-                        android:id="@+id/btn_copy"
-                        android:layout_width="0dp"
-                        android:layout_height="38dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_load"
+                        android:id="@+id/btn_open_drawer"
+                        android:layout_width="45dp"
+                        android:layout_height="45dp"
+                        android:text="☰"
                         android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:backgroundTint="#2196F3"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginEnd="4dp" />
-                    <Button
-                        android:id="@+id/btn_save"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/app_text_primary"
+                        android:background="#00000000"
+                        android:gravity="center"
+                        android:padding="0dp"
+                        android:layout_marginEnd="8dp"
+                        android:elevation="10dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <!-- 标题 -->
+                    <!-- [修改] 动态标题区 (垂直布局：上面名字，下面种子) -->
+                    <LinearLayout
                         android:layout_width="0dp"
-                        android:layout_height="38dp"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/btn_save"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:backgroundTint="#F44336"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginStart="4dp" />
+                        android:orientation="vertical"
+                        android:gravity="center_vertical"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp">
+
+                        <!-- 大标题：显示 APP名 或 存档名 -->
+                        <TextView
+                            android:id="@+id/tv_app_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/app_name"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/app_text_primary"
+                            android:maxLines="3"
+                            android:ellipsize="end" />
+
+                        <!-- 种子：点一下直接复制纯数字（不靠长按选中，免得把 emoji 复制进去） -->
+                        <TextView
+                            android:id="@+id/tv_info_seed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/key_seed_placeholder"
+                            android:textSize="10sp"
+                            android:textColor="@color/app_text_secondary"
+                            android:visibility="gone"
+                            android:clickable="true"
+                            android:focusable="false"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp" />
+                    </LinearLayout>
+
+                    <!-- 右侧按钮组 (更紧凑) -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="end">
+
+                        <!-- 第一行 -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <Button
+                                android:id="@+id/btn_clear_cache"
+                                android:layout_width="wrap_content"
+                                android:layout_height="28dp"
+                                android:text="@string/btn_clean_cache"
+                                android:textAllCaps="false"
+                                android:textSize="11sp"
+                                android:backgroundTint="#607D8B"
+                                android:textColor="#FFFFFF"
+                                android:paddingTop="0dp"
+                                android:paddingBottom="0dp"
+                                android:layout_marginEnd="4dp" />
+                        </LinearLayout>
+
+                        <!-- 第二行 -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="2dp">
+                            <Button
+                                android:id="@+id/btn_switch_path"
+                                android:layout_width="wrap_content"
+                                android:layout_height="28dp"
+                                android:text="@string/btn_switch_path"
+                                android:textAllCaps="false"
+                                android:textSize="11sp"
+                                android:textColor="#FFFFFF"
+                                android:backgroundTint="#607D8B"
+                                android:paddingTop="0dp"
+                                android:paddingBottom="0dp"
+                                android:layout_marginEnd="4dp" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
 
-                <!-- 第二行 玩家/恢复 -->
+                <!-- 2. 存档选择框 (高度减小) -->
+                <EditText
+                    android:id="@+id/et_world_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:hint="@string/hint_select_world"
+                    android:background="@color/app_surface"
+                    android:padding="5dp"
+                    android:gravity="center"
+                    android:layout_marginBottom="6dp"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:textSize="14sp"
+                    android:textIsSelectable="false"
+                    android:longClickable="false"
+                    android:cursorVisible="false"
+                    android:inputType="none"
+                    android:importantForAutofill="no" />
+
+                <!-- 3. 核心按钮矩阵 (高度减小，间距减小) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <Button
-                        android:id="@+id/btn_edit_player"
-                        android:layout_width="0dp"
-                        android:layout_height="38dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_edit_player"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:backgroundTint="#673AB7"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginEnd="4dp" />
-                    <Button
-                        android:id="@+id/btn_backup_history"
-                        android:layout_width="0dp"
-                        android:layout_height="38dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_restore"
-                        android:textAllCaps="false"
-                        android:textSize="13sp"
-                        android:backgroundTint="#4CAF50"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginStart="4dp" />
+                    android:orientation="vertical"
+                    android:layout_marginBottom="4dp">
+
+                    <!-- 第一行 加载/保存 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp">
+                        <Button
+                            android:id="@+id/btn_copy"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_load"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            android:backgroundTint="#2196F3"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginEnd="4dp" />
+                        <Button
+                            android:id="@+id/btn_save"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_save"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            android:backgroundTint="#F44336"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginStart="4dp" />
+                    </LinearLayout>
+
+                    <!-- 第二行 玩家/恢复 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <Button
+                            android:id="@+id/btn_edit_player"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_edit_player"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            android:backgroundTint="#673AB7"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginEnd="4dp" />
+                        <Button
+                            android:id="@+id/btn_backup_history"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_restore"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            android:backgroundTint="#4CAF50"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginStart="4dp" />
+                    </LinearLayout>
                 </LinearLayout>
+
+                <!-- 4. 重新解析 (变扁) -->
+                <Button
+                    android:id="@+id/btn_parse"
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:text="@string/btn_reparse"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:backgroundTint="#9E9E9E"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="4dp"
+                    android:padding="0dp" />
+
             </LinearLayout>
 
-            <!-- 4. 重新解析 (变扁) -->
-            <Button
-                android:id="@+id/btn_parse"
+            <!-- 3. 数据编辑标题栏 (工具栏) -->
+            <LinearLayout
+                android:id="@+id/layout_editor_header"
                 android:layout_width="match_parent"
-                android:layout_height="30dp"
-                android:text="@string/btn_reparse"
-                android:textAllCaps="false"
-                android:textSize="12sp"
-                android:backgroundTint="#9E9E9E"
-                android:textColor="#FFFFFF"
-                android:layout_marginBottom="4dp"
-                android:padding="0dp" />
-
-        </LinearLayout>
-
-        <!-- 3. 数据编辑标题栏 (工具栏) -->
-        <LinearLayout
-            android:id="@+id/layout_editor_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="5dp"
-            android:layout_marginTop="5dp">
-
-            <TextView
-                android:id="@+id/tv_current_path"
-                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="5dp"
+                android:layout_marginTop="5dp">
+
+                <TextView
+                    android:id="@+id/tv_current_path"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/label_editor"
+                    android:textSize="12sp"
+                    android:textColor="@color/app_text_secondary" />
+
+                <!-- [新增] 树状图模式 -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#4CAF50" />
+
+                    <ImageButton
+                        android:id="@+id/btn_tree_mode"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_tree_white" />
+                </FrameLayout>
+
+                <!-- [新增] 显示选项 -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#FF9800" />
+
+                    <ImageButton
+                        android:id="@+id/btn_view_options"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_eye_white" />
+                </FrameLayout>
+                <!-- === [新增] 搜索按钮 === -->
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#2196F3" />
+
+                    <ImageButton
+                        android:id="@+id/btn_search_nbt"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_search_white" />
+                </FrameLayout>
+                <!-- 进入全屏 -->
+                <Button
+                    android:id="@+id/btn_go_fullscreen"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:text="@string/btn_fullscreen"
+                    android:textAllCaps="false"
+                    android:backgroundTint="#FF5722"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10sp"
+                    android:padding="0dp" />
+            </LinearLayout>
+
+            <!-- 4. 主列表 -->
+            <ListView
+                android:id="@+id/lv_nbt_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:text="@string/label_editor"
-                android:textSize="12sp"
-                android:textColor="@color/app_text_secondary" />
+                android:background="@color/app_surface"
+                android:divider="#EEEEEE"
+                android:dividerHeight="1dp"
+                android:padding="5dp"
+                android:layout_marginTop="5dp" />
 
-            <!-- [新增] 树状图模式 -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="5dp">
+            </LinearLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#4CAF50" />
+            <!-- ===== 页面 2：地图（占位） ===== -->
+            <include layout="@layout/page_map" />
 
-                <ImageButton
-                    android:id="@+id/btn_tree_mode"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_tree_white" />
-            </FrameLayout>
+            <!-- ===== 页面 3：其他（占位） ===== -->
+            <include layout="@layout/page_more" />
 
-            <!-- [新增] 显示选项 -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="5dp">
+        </FrameLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#FF9800" />
-
-                <ImageButton
-                    android:id="@+id/btn_view_options"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_eye_white" />
-            </FrameLayout>
-            <!-- === [新增] 搜索按钮 === -->
-            <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="5dp">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="#2196F3" />
-
-                <ImageButton
-                    android:id="@+id/btn_search_nbt"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_search_white" />
-            </FrameLayout>
-            <!-- 进入全屏 -->
-            <Button
-                android:id="@+id/btn_go_fullscreen"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                android:text="@string/btn_fullscreen"
-                android:textAllCaps="false"
-                android:backgroundTint="#FF5722"
-                android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:padding="0dp" />
-        </LinearLayout>
-
-        <!-- 4. 主列表 -->
-        <ListView
-            android:id="@+id/lv_nbt_list"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@color/app_surface"
-            android:divider="#EEEEEE"
-            android:dividerHeight="1dp"
-            android:padding="5dp"
-            android:layout_marginTop="5dp" />
-
-    </LinearLayout>
+        <!-- 底部导航栏（仿三键导航，纯文本） -->
+        <include layout="@layout/bar_bottom_nav" />
 
 
 <!-- 侧边栏容器：整屏铺满，内部叠放「侧边栏 + 遮罩」。
