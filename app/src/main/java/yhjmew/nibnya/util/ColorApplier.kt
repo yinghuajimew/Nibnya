@@ -37,17 +37,24 @@ object ColorApplier {
         // ── 1) 按钮类 ──
         ColorSlots.buttonIds.forEach { (key, viewId) ->
             val slot = byKey[key] ?: return@forEach
-            val color = ColorScheme.value(prefs, slot, night)
             val v = activity.findViewById<View?>(viewId) ?: return@forEach
 
+            // ⚠️ 只有用户真的改过这一项才动它。
+            //    默认模式、或这一项没被改过 —— 一律不碰，让布局里的
+            //    android:background / backgroundTint 原样生效。
+            //    早期版本无条件 setBackground(ColorDrawable)，把 Material
+            //    按钮自带的圆角状态背景整个覆盖掉，按钮变成了直角（2026-11-02）。
+            if (!ColorScheme.isModified(prefs, slot, night)) return@forEach
+
+            val color = ColorScheme.value(prefs, slot, night)
+
             if (v is Button) {
-                // backgroundTint 在布局里设的，运行时通过 ColorDrawable 直接覆盖背景
-                v.background = ColorDrawable(color)
+                // 用圆角 drawable 而不是纯色，保持原有观感
+                v.background = roundedDrawable(activity, color, cornerDp = 2f)
                 v.backgroundTintList = null
                 v.setTextColor(ColorScheme.onColor(color))
             } else {
                 v.setBackgroundColor(color)
-                // 顶栏/侧边栏里的文字要跟着反色
                 if (v is android.view.ViewGroup) {
                     applyTextColorRecursive(v, ColorScheme.onColor(color))
                 }
@@ -57,6 +64,7 @@ object ColorApplier {
         // ── 2) 纯色块 View ──
         ColorSlots.viewIds.forEach { (key, viewId) ->
             val slot = byKey[key] ?: return@forEach
+            if (!ColorScheme.isModified(prefs, slot, night)) return@forEach
             val color = ColorScheme.value(prefs, slot, night)
             activity.findViewById<View?>(viewId)?.setBackgroundColor(color)
         }
@@ -80,27 +88,34 @@ object ColorApplier {
         val ctx = root.context
         val slots = ColorSlots.build(ctx).associateBy { it.key }
 
-        fun color(key: String): Int? =
-            slots[key]?.let { ColorScheme.value(prefs, it, night) }
+        // 同样只在用户改过该项时才覆盖，否则保留 drawable 里的原始观感
+        fun changed(key: String): Int? {
+            val slot = slots[key] ?: return null
+            return if (ColorScheme.isModified(prefs, slot, night))
+                ColorScheme.value(prefs, slot, night) else null
+        }
 
-        // 设置圆底
-        color("c_badge_settings")?.let { c ->
+        changed("c_badge_settings")?.let { c ->
             root.findViewById<View?>(settingsBadgeRes)?.background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(c)
             }
         }
-        // 关于圆底
-        color("c_badge_about")?.let { c ->
+        changed("c_badge_about")?.let { c ->
             root.findViewById<View?>(aboutBadgeRes)?.background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(c)
             }
         }
-        // 顶部渐变头
-        val start = color("c_header_green")
-        val end = color("c_header_green_dark")
-        if (start != null && end != null) {
+
+        // 顶部渐变头：两端都改过才重画，只改一端也照样生效
+        val startSlot = slots["c_header_green"]
+        val endSlot = slots["c_header_green_dark"]
+        val startChanged = startSlot != null && ColorScheme.isModified(prefs, startSlot, night)
+        val endChanged = endSlot != null && ColorScheme.isModified(prefs, endSlot, night)
+        if ((startChanged || endChanged) && startSlot != null && endSlot != null) {
+            val start = ColorScheme.value(prefs, startSlot, night)
+            val end = ColorScheme.value(prefs, endSlot, night)
             root.findViewById<View?>(R.id.dialog_color_header)?.background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(start, end),
@@ -112,6 +127,14 @@ object ColorApplier {
             }
         }
     }
+
+    /** 圆角纯色 drawable —— 用于替代 Material 按钮背景时保住圆角 */
+    private fun roundedDrawable(ctx: Context, color: Int, cornerDp: Float): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = cornerDp * ctx.resources.displayMetrics.density
+            setColor(color)
+        }
 
     private fun applyTextColorRecursive(v: android.view.ViewGroup, color: Int) {
         for (i in 0 until v.childCount) {

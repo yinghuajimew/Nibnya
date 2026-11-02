@@ -46,17 +46,25 @@ object ColorPickerDialog {
         }
 
         // ── 预览块 ──
-        val preview = View(ctx).apply {
+        // 一个圆角色块，中间叠十六进制文字。
+        // ⚠️ 早期版本把 preview 先 addView 到 root、又想再塞进 FrameLayout，
+        //    触发 "The specified child already has a parent" 崩溃（2026-11-02）。
+        //    现在直接构造好再一次性加入，不做「先加后移」。
+        val previewWrap = FrameLayout(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 56)
+            ).apply { bottomMargin = dp(ctx, 12) }
+        }
+        val preview = View(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
             )
             background = GradientDrawable().apply {
                 cornerRadius = dp(ctx, 10).toFloat()
                 setColor(current)
             }
         }
-        root.addView(preview)
-
         val previewText = TextView(ctx).apply {
             text = ColorScheme.toHex(current)
             gravity = Gravity.CENTER
@@ -67,19 +75,9 @@ object ColorPickerDialog {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
-        (preview.parent as? ViewGroup)?.removeView(previewText)
-        // 把文字叠在预览块上
-        val previewWrap = FrameLayout(ctx).apply {
-            addView(preview, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 56)
-            ))
-            addView(previewText)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 56)
-            ).apply { bottomMargin = dp(ctx, 12) }
-        }
-        root.removeView(preview)
-        root.addView(previewWrap, 0)
+        previewWrap.addView(preview)
+        previewWrap.addView(previewText)
+        root.addView(previewWrap)
 
         // ── 十六进制 ──
         val hexRow = LinearLayout(ctx).apply {
