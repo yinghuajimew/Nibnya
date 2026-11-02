@@ -140,17 +140,32 @@ object ColorScheme {
 
     // ── 互换 / 重置 ─────────────────────────────────────────
 
-    /** 日间 ⇄ 夜间 整套互换。只在「夜间单独配色」打开时有意义。 */
-    fun swapDayNight(prefs: SharedPreferences, slots: List<Slot>) {
-        if (!isNightSeparate(prefs)) return
+    /**
+     * 日间 ⇄ 夜间 整套互换。只在「夜间单独配色」打开时有意义。
+     *
+     * ⚠️ 返回 true 表示两套**内容确实不同、换完有变化**；false 表示两套一样，
+     *    换完看不出区别 —— UI 据此给用户一句提示，否则点下去「毫无反应」
+     *    会让人以为按钮坏了（2026-11-02）。
+     *
+     * 可以反复点击：每次都把两套完整对调，来回点就是来回换。
+     */
+    fun swapDayNight(prefs: SharedPreferences, slots: List<Slot>): Boolean {
+        if (!isNightSeparate(prefs)) return false
+
+        // 先判断两套是否真的有差异（没有就没得换）
+        val differs = slots.any { dayValue(prefs, it) != nightValue(prefs, it) }
+        if (!differs) return false
+
         val ed = prefs.edit()
         slots.forEach { slot ->
+            // 两个值必须在写入前都读出来，否则第二行会读到刚写进去的新值
             val d = dayValue(prefs, slot)
             val n = nightValue(prefs, slot)
             ed.putInt(PREFIX_DAY + slot.key, n)
             ed.putInt(PREFIX_NIGHT + slot.key, d)
         }
         ed.apply()
+        return true
     }
 
     /** 清空所有自定义项，回到「默认颜色」模式 */

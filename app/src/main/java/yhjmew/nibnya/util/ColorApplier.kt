@@ -39,17 +39,19 @@ object ColorApplier {
             val slot = byKey[key] ?: return@forEach
             val v = activity.findViewById<View?>(viewId) ?: return@forEach
 
-            // ⚠️ 只有用户真的改过这一项才动它。
-            //    默认模式、或这一项没被改过 —— 一律不碰，让布局里的
-            //    android:background / backgroundTint 原样生效。
-            //    早期版本无条件 setBackground(ColorDrawable)，把 Material
-            //    按钮自带的圆角状态背景整个覆盖掉，按钮变成了直角（2026-11-02）。
-            if (!ColorScheme.isModified(prefs, slot, night)) return@forEach
+            // 只有用户真的改过这一项才覆盖；没改过就不碰，
+            // 让布局里的 android:background / backgroundTint 原样生效。
+            // ⚠️ 早期版本无条件覆盖，把 Material 按钮自带的圆角状态背景
+            //    整个抹掉，按钮变成直角（2026-11-02 修）。
+            if (!ColorScheme.isModified(prefs, slot, night)) {
+                restoreOriginal(v)
+                return@forEach
+            }
 
             val color = ColorScheme.value(prefs, slot, night)
+            rememberOriginal(v)
 
             if (v is Button) {
-                // 用圆角 drawable 而不是纯色，保持原有观感
                 v.background = roundedDrawable(activity, color, cornerDp = 2f)
                 v.backgroundTintList = null
                 v.setTextColor(ColorScheme.onColor(color))
@@ -64,9 +66,13 @@ object ColorApplier {
         // ── 2) 纯色块 View ──
         ColorSlots.viewIds.forEach { (key, viewId) ->
             val slot = byKey[key] ?: return@forEach
-            if (!ColorScheme.isModified(prefs, slot, night)) return@forEach
-            val color = ColorScheme.value(prefs, slot, night)
-            activity.findViewById<View?>(viewId)?.setBackgroundColor(color)
+            val v = activity.findViewById<View?>(viewId) ?: return@forEach
+            if (!ColorScheme.isModified(prefs, slot, night)) {
+                restoreOriginal(v)
+                return@forEach
+            }
+            rememberOriginal(v)
+            v.setBackgroundColor(ColorScheme.value(prefs, slot, night))
         }
 
         // ── 3) 圆形徽章：保留 oval，只换 solid ──
@@ -126,6 +132,28 @@ object ColorApplier {
                 )
             }
         }
+    }
+
+    /**
+     * 把控件背景还原成布局里定义的原始资源。
+     *
+     * 为什么需要：用户改过颜色 -> 被覆盖 -> 再点「恢复默认」，
+     * 此时 `isModified` 变回 false，如果只是「跳过不处理」，
+     * View 上还留着上次覆盖的背景，永远回不去（2026-11-02）。
+     *
+     * 用 WeakHashMap 记录原始背景，第一次覆盖前记下，还原时取回。
+     * （不能用 View.setTag(String, ...) —— 那个 key 必须是资源 id（Int），传字符串编译不过）
+     */
+    private val originals = java.util.WeakHashMap<View, android.graphics.drawable.Drawable?>()
+
+    private fun rememberOriginal(v: View) {
+        if (originals.containsKey(v)) return
+        originals[v] = v.background
+    }
+
+    private fun restoreOriginal(v: View) {
+        if (!originals.containsKey(v)) return
+        v.background = originals.remove(v)
     }
 
     /** 圆角纯色 drawable —— 用于替代 Material 按钮背景时保住圆角 */

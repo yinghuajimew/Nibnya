@@ -795,7 +795,19 @@ fun MainActivity.showAppInfoDialog() {
         prefs?.let { p ->
             fun rebuild() {
                 ColorSettingsUi.build(this, p, box) {
-                    rebuild()
+                    // ⚠️ 必须 post 到下一帧再重建：
+                    //    rebuild() 会 removeAllViews() 把整片列表销毁重建，
+                    //    在点击回调里同步做，等于把正在派发事件的 View 抽走，
+                    //    第二次点击会落到已分离的旧 View 上 —— 表现就是「只能点一次」。
+                    box.post { rebuild() }
+                    // 对话框自身跟着变（徽章圆底 / 顶部渐变）
+                    ColorApplier.applyToDialogView(
+                        dialogView, p, ColorScheme.isNight(this),
+                        R.id.badge_settings_circle, R.id.badge_about_circle,
+                    )
+                    // 主页立刻刷成新颜色 —— 不用关对话框就能看到效果
+                    // ⚠️ 之前漏了这行：改完要关掉对话框重进才生效（2026-11-02）
+                    box.post { ColorApplier.apply(this, p) }
                     remeasure()
                 }
             }

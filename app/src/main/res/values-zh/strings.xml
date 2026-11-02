@@ -927,4 +927,7 @@ ID：%3$s
     <string name="color_simple_mode_desc">只显示最常调整的几项</string>
     <string name="color_modified">已修改</string>
     <string name="color_value_default">默认</string>
+    <string name="color_day_palette">日间配色</string>
+    <string name="color_night_palette">夜间配色</string>
+    <string name="color_swap_same_hint">日间与夜间配色完全相同，互换后没有变化</string>
 </resources>

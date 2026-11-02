@@ -151,8 +151,18 @@ object ColorSettingsUi {
                 ctx.getString(R.string.color_swap_day_night_desc),
                 accent, dim,
             ) {
-                ColorScheme.swapDayNight(prefs, slots)
-                onChange()
+                val changed = ColorScheme.swapDayNight(prefs, slots)
+                if (changed) {
+                    onChange()
+                } else {
+                    // 两套内容一样时换完看不出区别，必须给反馈，
+                    // 否则用户会以为按钮坏了（2026-11-02）
+                    android.widget.Toast.makeText(
+                        ctx,
+                        ctx.getString(R.string.color_swap_same_hint),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                }
             })
         }
 
@@ -173,9 +183,9 @@ object ColorSettingsUi {
         }
 
         if (nightSep) {
-            container.addView(subLabel(ctx, "☀ " + ctx.getString(R.string.color_mode_label), accent, top = dp(ctx, 14)))
+            container.addView(subLabel(ctx, ctx.getString(R.string.color_day_palette), accent, top = dp(ctx, 14)))
             addSection(false)
-            container.addView(subLabel(ctx, "🌙 " + ctx.getString(R.string.color_mode_label), accent, top = dp(ctx, 18)))
+            container.addView(subLabel(ctx, ctx.getString(R.string.color_night_palette), accent, top = dp(ctx, 18)))
             addSection(true)
         } else {
             addSection(night)

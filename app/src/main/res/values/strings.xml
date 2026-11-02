@@ -925,4 +925,7 @@ Make sure the path belongs to an installed app.</string>
     <string name="color_simple_mode_desc">Show only the most frequently adjusted items</string>
     <string name="color_modified">Modified</string>
     <string name="color_value_default">Default</string>
+    <string name="color_day_palette">Day colors</string>
+    <string name="color_night_palette">Night colors</string>
+    <string name="color_swap_same_hint">Day and night palettes are identical — nothing to swap</string>
 </resources>
