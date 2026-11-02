@@ -94,13 +94,23 @@ object ColorPickerDialog {
             hint = ctx.getString(R.string.color_edit_hex_hint)
             textSize = 14f
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            filters = arrayOf(InputFilter.LengthFilter(9))
+            filters = arrayOf(InputFilter.LengthFilter(20))
             setSingleLine(true)
             setText(ColorScheme.toHex(current))
             setSelection(text.length)
         }
         hexRow.addView(etHex, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(hexRow)
+
+        // 校验提示：格式不对时显红字，正确时隐藏
+        val tvInvalid = TextView(ctx).apply {
+            text = ctx.getString(R.string.color_edit_invalid)
+            textSize = 11f
+            setTextColor(0xFFE53935.toInt())
+            setPadding(dp(ctx, 72), 0, 0, dp(ctx, 2))
+            visibility = View.GONE
+        }
+        root.addView(tvInvalid)
 
         // ── RGB 三滑块 ──
         fun channelRow(label: String, max: Int): Pair<SeekBar, TextView> {
@@ -146,8 +156,10 @@ object ColorPickerDialog {
             setTextColor(ContextCompat.getColor(ctx, R.color.app_text_secondary))
         })
 
+        // 24 个预设 × 5 列 = 5 行，在常见屏宽下刚好排满不溢出。
+        // 之前用 8 列，每格 30dp + 边距，总宽超出容器被裁掉，看起来「不能滑动」。
         val grid = GridLayout(ctx).apply {
-            columnCount = 8
+            columnCount = 5
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             )
@@ -161,6 +173,8 @@ object ColorPickerDialog {
             if (updatePreview) {
                 (preview.background as GradientDrawable).setColor(current)
                 previewText.setTextColor(ColorScheme.onColor(current))
+                // ⚠️ 只改颜色不改文字的话，中间那串十六进制会一直停在初始值
+                previewText.text = ColorScheme.toHex(current)
             }
             if (updateHex) {
                 syncing = true
@@ -218,14 +232,33 @@ object ColorPickerDialog {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 if (syncing) return
-                val parsed = ColorScheme.parseHex(s?.toString() ?: return) ?: return
+                val text = s?.toString().orEmpty().trim()
+
+                // 空输入不算错，只是没东西可解析
+                if (text.isEmpty()) {
+                    tvInvalid.visibility = View.GONE
+                    return
+                }
+                val parsed = ColorScheme.parseHex(text)
+                if (parsed == null) {
+                    // 还没输完（比如只打了 #4C）不算错，只有明显不合法才提示
+                    val body = text.removePrefix("#").let {
+                        if (it.startsWith("0x", true)) it.substring(2) else it
+                    }.replace(Regex("""[\s,;]"""), "")
+                    tvInvalid.visibility =
+                        if (body.length > 8 && !text.contains("rgb")) View.VISIBLE else View.GONE
+                    return
+                }
+                tvInvalid.visibility = View.GONE
                 current = parsed
                 refreshAll(updateHex = false, updateRgb = true, updatePreview = true)
             }
         })
 
-        // 预设色块
-        val size = dp(ctx, 30)
+        // 预设色块：按屏宽算格子大小，保证 5 列正好铺满、留出边距
+        val screenW = ctx.resources.displayMetrics.widthPixels
+        val dialogW = (screenW * 0.92f).toInt() - dp(ctx, 40)   // 减去对话框与内容左右 padding
+        val size = ((dialogW - dp(ctx, 6) * 10) / 5).coerceIn(dp(ctx, 34), dp(ctx, 56))
         ColorScheme.PRESETS.forEach { hex ->
             val c = hex.toColorInt()
             val sw = View(ctx).apply {

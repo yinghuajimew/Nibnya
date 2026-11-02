@@ -167,12 +167,67 @@ object ColorScheme {
 
     // ── 颜色工具 ────────────────────────────────────────────
 
-    /** 解析 `#RRGGBB` / `#AARRGGBB` / `RRGGBB`，失败返回 null */
+    /**
+     * 宽容地解析用户输入的颜色。接受的写法：
+     *
+     * ```
+     * #4CAF50        4CAF50          ← 有没有 # 都行
+     * #FF4CAF50      FF4CAF50        ← 带 alpha 的 8 位
+     * #4C5           #4CF            ← 3 位简写，自动展开成 44CC55 / 44CCFF
+     * 0x4CAF50       4caf50          ← 0x 前缀、小写都行
+     * rgb(76,175,80) 76,175,80       ← RGB 逗号写法
+     * 4C AF 50                       ← 中间有空格也认
+     * ```
+     *
+     * 为什么这么宽容：用户可能从别处复制一个色值过来，
+     * 带着 `#`、`0x`、大小写、空格、逗号各种变体。
+     * 与其让人自己删干净，不如都认。
+     */
     fun parseHex(input: String): Int? {
-        val s = input.trim().removePrefix("#")
-        if (s.length != 6 && s.length != 8) return null
-        if (!s.all { it.isDigit() || it in "abcdefABCDEF" }) return null
-        return runCatching { ("#" + s).toColorInt() }.getOrNull()
+        val raw = input.trim()
+        if (raw.isEmpty()) return null
+
+        // rgb(76,175,80) / rgba(76,175,80)
+        Regex("""rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})""", RegexOption.IGNORE_CASE)
+            .find(raw)?.let { m ->
+                val r = m.groupValues[1].toIntOrNull() ?: return null
+                val g = m.groupValues[2].toIntOrNull() ?: return null
+                val b = m.groupValues[3].toIntOrNull() ?: return null
+                if (r !in 0..255 || g !in 0..255 || b !in 0..255) return null
+                return android.graphics.Color.rgb(r, g, b)
+            }
+
+        // 76,175,80 这种「裸 RGB」写法
+        if (!raw.contains('#') && raw.contains(',')) {
+            val parts = raw.split(',').map { it.trim().toIntOrNull() }
+            if (parts.size == 3) {
+                val r = parts[0]
+                val g = parts[1]
+                val b = parts[2]
+                if (r != null && g != null && b != null &&
+                    r in 0..255 && g in 0..255 && b in 0..255
+                ) return android.graphics.Color.rgb(r, g, b)
+            }
+        }
+
+        // 去掉前缀与分隔符：# / 0x / 空白 / 逗号 / 分号
+        var s = raw
+        if (s.startsWith("#")) s = s.substring(1)
+        if (s.startsWith("0x", ignoreCase = true)) s = s.substring(2)
+        s = s.replace(Regex("""[\s,;]"""), "")
+
+        if (s.isEmpty() || !s.all { it.isDigit() || it in "abcdefABCDEF" }) return null
+
+        return when (s.length) {
+            3 -> {   // #4C5 -> #44CC55
+                val r = s[0].toString().repeat(2)
+                val g = s[1].toString().repeat(2)
+                val b = s[2].toString().repeat(2)
+                runCatching { ("#" + r + g + b).toColorInt() }.getOrNull()
+            }
+            6, 8 -> runCatching { ("#" + s).toColorInt() }.getOrNull()
+            else -> null
+        }
     }
 
     fun toHex(color: Int): String = String.format("#%06X", 0xFFFFFF and color)
