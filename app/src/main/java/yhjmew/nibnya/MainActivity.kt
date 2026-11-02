@@ -51,6 +51,7 @@ import yhjmew.nibnya.util.NbtClipboard
 import yhjmew.nibnya.util.NbtExporter
 import yhjmew.nibnya.util.WorldExporter
 import yhjmew.nibnya.util.TrashStore
+import yhjmew.nibnya.util.ColorApplier
 
 class MainActivity : ComponentActivity() {
 
@@ -522,6 +523,9 @@ class MainActivity : ComponentActivity() {
         tvFullscreenPath = findViewById(R.id.tv_fullscreen_path)
 
         bottomNav = BottomNavController(this)
+
+        // 按用户配色刷一遍主页（默认颜色模式时走 colors.xml 原值，等于没刷）
+        prefs?.let { ColorApplier.apply(this, it) }
     }
 
     // ============================================

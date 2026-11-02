@@ -24,6 +24,9 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import yhjmew.nibnya.MainActivity
 import yhjmew.nibnya.R
+import yhjmew.nibnya.editor.dialogs.ColorSettingsUi
+import yhjmew.nibnya.util.ColorApplier
+import yhjmew.nibnya.util.ColorScheme
 import yhjmew.nibnya.nbt.adapter.NbtTreeAdapter
 import yhjmew.nibnya.nbt.NbtTranslator
 import yhjmew.nibnya.nbt.NbtTranslator.getString
@@ -781,6 +784,29 @@ fun MainActivity.showAppInfoDialog() {
 
         // 默认停在「外观」
         selectTab(tabs.first())
+    }
+
+    // ============================================
+    // 配色（外观页底部，整块由代码构建）
+    // ============================================
+    // 色槽清单来自 ColorSlots 注册表，加一项不需要改布局。
+    // 每次切标签 / 调完颜色都重建一次，保证显示的是当前值。
+    dialogView.findViewById<LinearLayout?>(R.id.layout_color_settings)?.let { box ->
+        prefs?.let { p ->
+            fun rebuild() {
+                ColorSettingsUi.build(this, p, box) {
+                    rebuild()
+                    remeasure()
+                }
+            }
+            rebuild()
+
+            // 打开对话框时先按用户配色刷一遍（徽章圆底 / 顶部渐变）
+            ColorApplier.applyToDialogView(
+                dialogView, p, ColorScheme.isNight(this),
+                R.id.badge_settings_circle, R.id.badge_about_circle,
+            )
+        }
     }
 
     // ① 文件操作多线程

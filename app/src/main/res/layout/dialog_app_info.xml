@@ -13,6 +13,7 @@
 
     <!-- 顶部彩色头部 -->
     <LinearLayout
+        android:id="@+id/dialog_color_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_gradient_header"
@@ -71,9 +72,10 @@
             <!-- 蓝色圆底 + 白色齿轮图标。原来是 emoji ⚙，去 emoji 时误改成「设置」两字，
                  24dp 圆里放不下会被截成「设」。这里改用矢量图标，不依赖 emoji 字体。 -->
             <FrameLayout
+                android:id="@+id/badge_settings_circle"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:background="@drawable/bg_circle_blue"
+                android:background="@drawable/bg_circle_settings"
                 android:layout_marginEnd="16dp">
 
                 <ImageView
@@ -230,6 +232,24 @@
                 android:textSize="14sp"
                 android:gravity="start|center_vertical"
                 android:paddingStart="4dp" />
+
+            <!-- ═══════════════════════════════════════════════
+                 配色（2026-11-02）
+                 内部控件全部由 ColorSettingsUi 在运行时构建，
+                 因为色槽清单来自 ColorSlots 注册表，不在布局里写死。
+                 ═══════════════════════════════════════════════ -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="@color/app_divider" />
+
+            <LinearLayout
+                android:id="@+id/layout_color_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
         </LinearLayout>
 
@@ -1096,13 +1116,14 @@
             android:background="?android:attr/selectableItemBackground">
 
             <TextView
+                android:id="@+id/badge_about_circle"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:text="!"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:gravity="center"
-                android:background="@drawable/bg_circle_green"
+                android:background="@drawable/bg_circle_about"
                 android:layout_marginEnd="16dp" />
 
             <TextView

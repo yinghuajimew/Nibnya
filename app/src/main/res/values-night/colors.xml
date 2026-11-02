@@ -27,4 +27,60 @@
     <color name="slot_empty_stroke">#2E7D32</color>
     <color name="slot_used_bg">#2A2A2A</color>
     <color name="slot_used_stroke">#444444</color>
+    <!-- ══════════════════════════════════════════════════════
+         可自定义配色（2026-11-02）
+         默认值与改造前完全一致 —— 选「默认颜色」模式时使用的就是这些值。
+         用户在设置里改过的颜色由 ColorScheme 运行时覆盖，不写进这里。
+         ⚠️ 改这里的默认值 = 改所有用户的初始观感，慎改。
+         ══════════════════════════════════════════════════════ -->
+    <!-- 编辑联机玩家 · 主页 · 功能按钮 -->
+    <color name="c_btn_player">#2196F3</color>
+    <!-- 编辑地图数据 · 主页 · 功能按钮 -->
+    <color name="c_btn_map">#FF9800</color>
+    <!-- 编辑村庄数据 · 主页 · 功能按钮 -->
+    <color name="c_btn_village">#795548</color>
+    <!-- 打开任意 NBT · 主页 · 功能按钮 -->
+    <color name="c_btn_any_key">#607D8B</color>
+    <!-- 全局系统数据 · 主页 · 功能按钮 -->
+    <color name="c_btn_global">#673AB7</color>
+    <!-- 复制 · 主页 · 工具栏 -->
+    <color name="c_btn_copy">#2196F3</color>
+    <!-- 保存修改 · 主页 · 工具栏 · 危险操作 -->
+    <color name="c_btn_save">#F44336</color>
+    <!-- 编辑玩家 · 主页 · 工具栏 -->
+    <color name="c_btn_edit_player">#673AB7</color>
+    <!-- 恢复备份 · 主页 · 工具栏 -->
+    <color name="c_btn_backup">#4CAF50</color>
+    <!-- 解析 · 主页 · 工具栏 -->
+    <color name="c_btn_parse">#9E9E9E</color>
+    <!-- 进入全屏 · 主页 · 工具栏 -->
+    <color name="c_btn_fullscreen">#FF5722</color>
+    <!-- 清理缓存 · 侧边栏 · 工具按钮 -->
+    <color name="c_btn_clear_cache">#607D8B</color>
+    <!-- 切换路径 · 侧边栏 · 工具按钮 -->
+    <color name="c_btn_switch_path">#607D8B</color>
+    <!-- 侧边栏头部色条 · 侧边栏 · 顶部 -->
+    <color name="c_bar_sidebar">#4CAF50</color>
+    <!-- 树形切换（主页） · 小图标按钮 · 绿 -->
+    <color name="c_icon_tree">#4CAF50</color>
+    <!-- 显示选项（主页） · 小图标按钮 · 橙 -->
+    <color name="c_icon_view">#FF9800</color>
+    <!-- 搜索（主页） · 小图标按钮 · 蓝 -->
+    <color name="c_icon_search">#2196F3</color>
+    <!-- 全屏顶栏 · 全屏编辑 · 顶部条 -->
+    <color name="c_bar_top">#2196F3</color>
+    <!-- 树形切换（全屏） · 全屏 · 小图标按钮 · 绿 -->
+    <color name="c_icon_tree_fs">#4CAF50</color>
+    <!-- 显示选项（全屏） · 全屏 · 小图标按钮 · 深蓝 -->
+    <color name="c_icon_view_fs">#FF9800</color>
+    <!-- 搜索（全屏） · 全屏 · 小图标按钮 · 蓝 -->
+    <color name="c_icon_search_fs">#1976D2</color>
+    <!-- 设置图标圆底 · 设置弹窗 · 蓝色圆 -->
+    <color name="c_badge_settings">#2196F3</color>
+    <!-- 关于图标圆底 · 设置弹窗 · 绿色圆 -->
+    <color name="c_badge_about">#4CAF50</color>
+    <!-- 弹窗绿色头部 · 设置弹窗 · 顶部大色块 -->
+    <color name="c_header_green">#4CAF50</color>
+    <color name="c_header_green_dark">#2E7D32</color>
+
 </resources>

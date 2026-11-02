@@ -37,7 +37,7 @@
                     android:layout_height="50dp"
                     android:orientation="horizontal"
                     android:visibility="gone"
-                    android:background="#2196F3"
+                    android:background="@color/c_bar_top"
                     android:paddingStart="4dp"
                     android:paddingEnd="4dp"
                     android:gravity="center_vertical"
@@ -80,9 +80,10 @@
                         android:layout_marginEnd="4dp">
 
                         <View
+                            android:id="@+id/view_bg_fullscreen_tree"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#4CAF50" />
+                            android:background="@color/c_icon_tree_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_tree"
@@ -99,9 +100,10 @@
                         android:layout_marginEnd="4dp">
 
                         <View
+                            android:id="@+id/view_bg_fullscreen_view"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#FF9800" />
+                            android:background="@color/c_icon_view_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_view"
@@ -118,9 +120,10 @@
                         android:layout_marginEnd="0dp">
 
                         <View
+                            android:id="@+id/view_bg_fullscreen_search"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#1976D2" />
+                            android:background="@color/c_icon_search_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_search"
@@ -238,7 +241,7 @@
                                     android:text="@string/btn_clean_cache"
                                     android:textAllCaps="false"
                                     android:textSize="11sp"
-                                    android:backgroundTint="#607D8B"
+                                    android:backgroundTint="@color/c_btn_clear_cache"
                                     android:textColor="#FFFFFF"
                                     android:paddingTop="0dp"
                                     android:paddingBottom="0dp"
@@ -259,7 +262,7 @@
                                     android:textAllCaps="false"
                                     android:textSize="11sp"
                                     android:textColor="#FFFFFF"
-                                    android:backgroundTint="#607D8B"
+                                    android:backgroundTint="@color/c_btn_switch_path"
                                     android:paddingTop="0dp"
                                     android:paddingBottom="0dp"
                                     android:layout_marginEnd="4dp" />
@@ -307,7 +310,7 @@
                                 android:text="@string/btn_load"
                                 android:textAllCaps="false"
                                 android:textSize="13sp"
-                                android:backgroundTint="#2196F3"
+                                android:backgroundTint="@color/c_btn_copy"
                                 android:textColor="#FFFFFF"
                                 android:layout_marginEnd="4dp" />
                             <Button
@@ -318,7 +321,7 @@
                                 android:text="@string/btn_save"
                                 android:textAllCaps="false"
                                 android:textSize="13sp"
-                                android:backgroundTint="#F44336"
+                                android:backgroundTint="@color/c_btn_save"
                                 android:textColor="#FFFFFF"
                                 android:layout_marginStart="4dp" />
                         </LinearLayout>
@@ -336,7 +339,7 @@
                                 android:text="@string/btn_edit_player"
                                 android:textAllCaps="false"
                                 android:textSize="13sp"
-                                android:backgroundTint="#673AB7"
+                                android:backgroundTint="@color/c_btn_edit_player"
                                 android:textColor="#FFFFFF"
                                 android:layout_marginEnd="4dp" />
                             <Button
@@ -347,7 +350,7 @@
                                 android:text="@string/btn_restore"
                                 android:textAllCaps="false"
                                 android:textSize="13sp"
-                                android:backgroundTint="#4CAF50"
+                                android:backgroundTint="@color/c_btn_backup"
                                 android:textColor="#FFFFFF"
                                 android:layout_marginStart="4dp" />
                         </LinearLayout>
@@ -361,7 +364,7 @@
                         android:text="@string/btn_reparse"
                         android:textAllCaps="false"
                         android:textSize="12sp"
-                        android:backgroundTint="#9E9E9E"
+                        android:backgroundTint="@color/c_btn_parse"
                         android:textColor="#FFFFFF"
                         android:layout_marginBottom="4dp"
                         android:padding="0dp" />
@@ -394,9 +397,10 @@
                         android:layout_marginEnd="5dp">
 
                         <View
+                            android:id="@+id/view_bg_tree_mode"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#4CAF50" />
+                            android:background="@color/c_icon_tree" />
 
                         <ImageButton
                             android:id="@+id/btn_tree_mode"
@@ -413,9 +417,10 @@
                         android:layout_marginEnd="5dp">
 
                         <View
+                            android:id="@+id/view_bg_view_options"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#FF9800" />
+                            android:background="@color/c_icon_view" />
 
                         <ImageButton
                             android:id="@+id/btn_view_options"
@@ -431,9 +436,10 @@
                         android:layout_marginEnd="5dp">
 
                         <View
+                            android:id="@+id/view_bg_search_nbt"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="#2196F3" />
+                            android:background="@color/c_icon_search" />
 
                         <ImageButton
                             android:id="@+id/btn_search_nbt"
@@ -449,7 +455,7 @@
                         android:layout_height="30dp"
                         android:text="@string/btn_fullscreen"
                         android:textAllCaps="false"
-                        android:backgroundTint="#FF5722"
+                        android:backgroundTint="@color/c_btn_fullscreen"
                         android:textColor="#FFFFFF"
                         android:textSize="10sp"
                         android:padding="0dp" />
@@ -505,7 +511,7 @@
             android:id="@+id/sidebar_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#4CAF50"
+            android:background="@color/c_bar_sidebar"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="16dp"
@@ -569,7 +575,7 @@
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
-                    android:background="#2196F3"
+                    android:background="@color/c_btn_player"
                     android:layout_marginBottom="10dp" />
 
                 <Button
@@ -578,7 +584,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_edit_map_data"
                     android:textAllCaps="false"
-                    android:background="#FF9800"
+                    android:background="@color/c_btn_map"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -588,7 +594,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_edit_village_data"
                     android:textAllCaps="false"
-                    android:background="#795548"
+                    android:background="@color/c_btn_village"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -598,7 +604,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_open_nbt_by_name_dvanced"
                     android:textAllCaps="false"
-                    android:background="#607D8B"
+                    android:background="@color/c_btn_any_key"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -608,7 +614,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_global_system_data"
                     android:textAllCaps="false"
-                    android:background="#673AB7"
+                    android:background="@color/c_btn_global"
                     android:textColor="#FFFFFF" />
 
             </LinearLayout>
