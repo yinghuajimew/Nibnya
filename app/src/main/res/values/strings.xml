@@ -928,4 +928,8 @@ Make sure the path belongs to an installed app.</string>
     <string name="color_day_palette">Day colors</string>
     <string name="color_night_palette">Night colors</string>
     <string name="color_swap_same_hint">Day and night palettes are identical — nothing to swap</string>
+    <string name="color_theme_label">Color themes</string>
+    <string name="color_theme_current">Current: %1$s</string>
+    <string name="color_theme_none">No theme applied</string>
+    <string name="color_manual_tune">Fine-tune individually</string>
 </resources>

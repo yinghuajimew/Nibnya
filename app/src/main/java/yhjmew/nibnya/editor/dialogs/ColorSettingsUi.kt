@@ -20,6 +20,7 @@ import androidx.core.view.isVisible
 import yhjmew.nibnya.R
 import yhjmew.nibnya.util.ColorScheme
 import yhjmew.nibnya.util.ColorSlots
+import yhjmew.nibnya.util.ColorThemes
 
 /**
  * 「外观 › 配色」区域的构建与交互（2026-11-02）。
@@ -118,6 +119,11 @@ object ColorSettingsUi {
             return
         }
 
+        // ── 主题配色 ──
+        // 一套主题 = 24 个色槽一次性填好，用户不用逐项调。
+        // 套完仍可往下逐项微调，主题不是「锁定」状态。
+        addThemeSection(ctx, prefs, slots, container, primary, dim, accent, night, onChange)
+
         // ── 简单模式 ──
         container.addView(checkRow(
             ctx,
@@ -166,8 +172,50 @@ object ColorSettingsUi {
             })
         }
 
-        // ── 色槽列表 ──
-        // 两套模式下按「日间 / 夜间」分两大段；单套模式只显示一段（不标日间）
+        // ── 逐项微调（可折叠）──
+        // 24 个色槽竖直排下来要滑好几屏，折叠起来避免设置页被撑得老长。
+        // 折叠状态存在 prefs 里，下次打开还是上次的样子。
+        val expandedKey = "color_slots_expanded"
+        var expanded = prefs.getBoolean(expandedKey, false)
+
+        // 折叠头（整行可点，右侧箭头指示状态）
+        val headerRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(ctx, 12), 0, dp(ctx, 6))
+            isClickable = true
+        }
+        val headerTitle = TextView(ctx).apply {
+            text = ctx.getString(R.string.color_manual_tune)
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(primary)
+        }
+        val headerArrow = TextView(ctx).apply {
+            text = if (expanded) "▲" else "▼"
+            textSize = 12f
+            setTextColor(dim)
+            setPadding(dp(ctx, 8), 0, 0, 0)
+        }
+        headerRow.addView(headerTitle)
+        headerRow.addView(headerArrow)
+
+        val bodyWrap = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (expanded) View.VISIBLE else View.GONE
+        }
+
+        headerRow.setOnClickListener {
+            expanded = !expanded
+            prefs.edit().putBoolean(expandedKey, expanded).apply()
+            headerArrow.text = if (expanded) "▲" else "▼"
+            bodyWrap.visibility = if (expanded) View.VISIBLE else View.GONE
+            onChange()
+        }
+        container.addView(headerRow)
+        container.addView(bodyWrap)
+
+        // 折叠体内部的内容
         val visible = slots.filter { if (simple) it.key in ColorScheme.SIMPLE_KEYS else true }
 
         fun addSection(isNightSection: Boolean) {
@@ -176,22 +224,177 @@ object ColorSettingsUi {
                 val cur = ColorScheme.value(prefs, slot, isNightSection)
                 if (slot.groupRes != lastGroup) {
                     lastGroup = slot.groupRes
-                    container.addView(subLabel(ctx, ctx.getString(slot.groupRes), dim, top = dp(ctx, 12)))
+                    bodyWrap.addView(subLabel(ctx, ctx.getString(slot.groupRes), dim, top = dp(ctx, 12)))
                 }
-                container.addView(colorRow(ctx, prefs, slot, isNightSection, cur, primary, dim, onChange))
+                bodyWrap.addView(colorRow(ctx, prefs, slot, isNightSection, cur, primary, dim, onChange))
             }
         }
 
         if (nightSep) {
-            container.addView(subLabel(ctx, ctx.getString(R.string.color_day_palette), accent, top = dp(ctx, 14)))
+            bodyWrap.addView(subLabel(ctx, ctx.getString(R.string.color_day_palette), accent, top = dp(ctx, 10)))
             addSection(false)
-            container.addView(subLabel(ctx, ctx.getString(R.string.color_night_palette), accent, top = dp(ctx, 18)))
+            bodyWrap.addView(subLabel(ctx, ctx.getString(R.string.color_night_palette), accent, top = dp(ctx, 18)))
             addSection(true)
         } else {
             addSection(night)
         }
 
         container.addView(resetButton(ctx, prefs, slots, onChange))
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 主题配色
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * 主题色卡：一行一个色卡，显示「五个色块 + 名字」。
+     *
+     * 点一下 = 把 24 个色槽全部填成这套主题的颜色，并切到「自定义」模式。
+     * 正在使用的主题右侧标一个勾。
+     */
+    private fun addThemeSection(
+        ctx: Context,
+        prefs: SharedPreferences,
+        slots: List<ColorScheme.Slot>,
+        container: LinearLayout,
+        primary: Int,
+        dim: Int,
+        accent: Int,
+        isNight: Boolean,
+        onChange: () -> Unit,
+    ) {
+        container.addView(subLabel(ctx, ctx.getString(R.string.color_theme_label), dim, top = dp(ctx, 10)))
+
+        // 主题列表折叠状态（23 套全展开太长）
+        val themeExpandedKey = "color_theme_expanded"
+        var themeExpanded = prefs.getBoolean(themeExpandedKey, false)
+
+        val themeBody = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        val toggleRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(ctx, 4), 0, dp(ctx, 4))
+            isClickable = true
+        }
+        val currentId = ColorScheme.currentTheme(prefs)
+        val currentName = ColorThemes.THEMES.firstOrNull { it.id == currentId }
+            ?.name(ctx.resources.configuration.locales[0].language)
+            ?: ctx.getString(R.string.color_theme_none)
+        val toggleLabel = TextView(ctx).apply {
+            text = ctx.getString(R.string.color_theme_current, currentName)
+            textSize = 13f
+            setTextColor(primary)
+        }
+        val toggleArrow = TextView(ctx).apply {
+            text = if (themeExpanded) "▲" else "▼"
+            textSize = 12f
+            setTextColor(dim)
+            setPadding(dp(ctx, 8), 0, 0, 0)
+        }
+        toggleRow.addView(toggleLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        toggleRow.addView(toggleArrow)
+
+        // 当前主题的色条预览
+        ColorThemes.THEMES.firstOrNull { it.id == currentId }?.let { th ->
+            toggleRow.addView(themeDots(ctx, th, sizeDp = 10))
+        }
+
+        container.addView(toggleRow)
+        container.addView(themeBody)
+        themeBody.visibility = if (themeExpanded) View.VISIBLE else View.GONE
+
+        fun rebuildThemes() {
+            themeBody.removeAllViews()
+            ColorThemes.THEMES.forEach { theme ->
+                themeBody.addView(themeRow(ctx, prefs, slots, theme, isNight, accent, dim) {
+                    onChange()
+                })
+            }
+        }
+        rebuildThemes()
+
+        toggleRow.setOnClickListener {
+            themeExpanded = !themeExpanded
+            prefs.edit().putBoolean(themeExpandedKey, themeExpanded).apply()
+            themeBody.visibility = if (themeExpanded) View.VISIBLE else View.GONE
+            themeArrow(toggleArrow, themeExpanded)
+            onChange()
+        }
+    }
+
+    private fun themeArrow(tv: TextView, expanded: Boolean) {
+        tv.text = if (expanded) "▲" else "▼"
+    }
+
+    /** 一行主题：五个预览色块 + 名字 + 选中勾 */
+    private fun themeRow(
+        ctx: Context,
+        prefs: SharedPreferences,
+        slots: List<ColorScheme.Slot>,
+        theme: ColorThemes.Theme,
+        isNight: Boolean,
+        accent: Int,
+        dim: Int,
+        onApplied: () -> Unit,
+    ): View {
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(ctx, 7), 0, dp(ctx, 7))
+            isClickable = true
+        }
+
+        val name = TextView(ctx).apply {
+            text = theme.name(ctx.resources.configuration.locales[0].language)
+            textSize = 13f
+            setTextColor(if (ColorScheme.currentTheme(prefs) == theme.id) accent
+                          else ContextCompat.getColor(ctx, R.color.app_text_primary))
+            setTypeface(null, if (ColorScheme.currentTheme(prefs) == theme.id) Typeface.BOLD
+            else Typeface.NORMAL)
+        }
+        row.addView(name, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(themeDots(ctx, theme, sizeDp = 14))
+
+        if (ColorScheme.currentTheme(prefs) == theme.id) {
+            row.addView(TextView(ctx).apply {
+                text = "✓"
+                textSize = 14f
+                setTextColor(accent)
+                setPadding(dp(ctx, 8), 0, 0, 0)
+            })
+        }
+
+        row.setOnClickListener {
+            val colors = ColorThemes.build(theme)
+            ColorScheme.applyTheme(prefs, slots, colors, night = isNight)
+            ColorScheme.setCurrentTheme(prefs, theme.id)
+            onApplied()
+        }
+        return row
+    }
+
+    /** 五个小色块，横向排开作为主题预览 */
+    private fun themeDots(ctx: Context, theme: ColorThemes.Theme, sizeDp: Int): View {
+        val wrap = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        listOf(theme.primaryInt, theme.secondaryInt, theme.accentInt, theme.successInt
+        ).forEach { c ->
+            wrap.addView(View(ctx).apply {
+                background = GradientDrawable().apply {
+                    cornerRadius = sizeDp / 3f * ctx.resources.displayMetrics.density
+                    setColor(c)
+                    setStroke(dp(ctx, 1), 0x33000000)
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(ctx, sizeDp), dp(ctx, sizeDp))
+                    .apply { marginEnd = dp(ctx, 3) }
+            })
+        }
+        return wrap
     }
 
     // ══════════════════════════════════════════════════════

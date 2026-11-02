@@ -35,6 +35,7 @@ object ColorScheme {
     private const val PREF_NIGHT_SEPARATE = "color_night_separate"
     private const val PREFIX_DAY = "color_day_"
     private const val PREFIX_NIGHT = "color_night_"
+    private const val PREF_THEME = "color_theme_id"
 
     const val MODE_DEFAULT = "default"
     const val MODE_CUSTOM = "custom"
@@ -166,6 +167,40 @@ object ColorScheme {
         }
         ed.apply()
         return true
+    }
+
+    /**
+     * 套用一整套主题配色。
+     *
+     * 会把主题展开出来的所有色槽一次性写进去，然后切到「自定义」模式。
+     * 用户套完之后仍然可以逐项微调 —— 主题只是把 24 个槽一次填好，
+     * 不存在「主题模式下不能改」这回事。
+     *
+     * @param night 是否写到夜间那套（只在「夜间单独配色」打开时有意义）
+     */
+    fun applyTheme(
+        prefs: SharedPreferences,
+        slots: List<Slot>,
+        themeColors: Map<String, Int>,
+        night: Boolean = false,
+    ) {
+        val useNight = night && isNightSeparate(prefs)
+        val prefix = if (useNight) PREFIX_NIGHT else PREFIX_DAY
+        val ed = prefs.edit()
+        slots.forEach { slot ->
+            val c = themeColors[slot.key] ?: return@forEach
+            ed.putInt(prefix + slot.key, c)
+        }
+        ed.putString(PREF_MODE, MODE_CUSTOM)
+        ed.apply()
+    }
+
+    /** 当前记录的主题 id（仅用于设置页高亮「正在用哪个主题」） */
+    fun currentTheme(prefs: SharedPreferences): String? =
+        prefs.getString(PREF_THEME, null)
+
+    fun setCurrentTheme(prefs: SharedPreferences, id: String?) {
+        prefs.edit().putString(PREF_THEME, id).apply()
     }
 
     /** 清空所有自定义项，回到「默认颜色」模式 */
