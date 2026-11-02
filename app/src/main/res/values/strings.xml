@@ -570,6 +570,12 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <string name="about_header">About</string>
     <string name="settings_header">Settings</string>
+    <!-- 设置分类标签栏 -->
+    <string name="settings_tab_appearance">Appearance</string>
+    <string name="settings_tab_editor">Editor</string>
+    <string name="settings_tab_data">Data</string>
+    <string name="settings_tab_advanced">Advanced</string>
+    <string name="settings_tab_hint">Tap a category above to show its options.</string>
     <string name="box_multithread_io">Multi-thread file operations</string>
     <string name="subtitle_io_multithread">Affects save read/write only. Disable to use a single thread.</string>
     <string name="box_puzzle_multithread">Multi-thread puzzle generation</string>

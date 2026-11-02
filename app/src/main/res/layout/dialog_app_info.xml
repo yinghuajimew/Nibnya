@@ -107,11 +107,143 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
             android:paddingTop="0dp"
             android:visibility="gone">
 
-            <!-- 1. 文件操作多线程 -->
+        <!-- 设置分类标签栏：四个标签，横向可滑（以后加更多分类不必改布局） -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:background="@color/app_surface">
+
+            <LinearLayout
+                android:id="@+id/layout_settings_tabs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:id="@+id/tab_settings_appearance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/settings_tab_appearance"
+                    android:textSize="14sp"
+                    android:textColor="@color/tab_bar_text"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground" />
+                <TextView
+                    android:id="@+id/tab_settings_editor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/settings_tab_editor"
+                    android:textSize="14sp"
+                    android:textColor="@color/tab_bar_text"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground" />
+                <TextView
+                    android:id="@+id/tab_settings_data"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/settings_tab_data"
+                    android:textSize="14sp"
+                    android:textColor="@color/tab_bar_text"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground" />
+                <TextView
+                    android:id="@+id/tab_settings_advanced"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/settings_tab_advanced"
+                    android:textSize="14sp"
+                    android:textColor="@color/tab_bar_text"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground" />
+
+            </LinearLayout>
+
+        </HorizontalScrollView>
+
+        <!-- 标签栏下细分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/app_divider" />
+
+        <!-- ===== 分类：外观 ===== -->
+        <LinearLayout
+            android:id="@+id/page_settings_appearance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:paddingTop="12dp"
+            android:visibility="visible">
+
+            <!-- 日夜模式 -->
+            <Button
+                android:id="@+id/btn_dialog_theme"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/action_switch_night"
+                android:textAllCaps="false"
+                android:textColor="#FF9800"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 7. 语言 -->
+
+            <!-- 语言 -->
+            <Button
+                android:id="@+id/btn_dialog_lang"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="Switch to English"
+                android:textAllCaps="false"
+                android:textColor="#2196F3"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- ===== 分类：编辑器 ===== -->
+        <LinearLayout
+            android:id="@+id/page_settings_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:paddingTop="12dp"
+            android:visibility="gone">
+
+            <!-- 文件操作多线程 -->
             <CheckBox
                 android:id="@+id/cb_dialog_multithread"
                 android:layout_width="match_parent"
@@ -128,6 +260,7 @@
                 android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
+            <!--   └ 并发线程数 -->
             <LinearLayout
                 android:id="@+id/layout_io_thread_count"
                 android:layout_width="match_parent"
@@ -172,6 +305,8 @@
             </LinearLayout>
 
             <!-- 2. 拼图生成多线程 -->
+
+            <!-- 拼图生成多线程 -->
             <CheckBox
                 android:id="@+id/cb_dialog_puzzle_multithread"
                 android:layout_width="match_parent"
@@ -188,6 +323,7 @@
                 android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
+            <!--   └ 并发线程数 -->
             <LinearLayout
                 android:id="@+id/layout_puzzle_thread_count"
                 android:layout_width="match_parent"
@@ -232,6 +368,8 @@
             </LinearLayout>
 
             <!-- 2.5 裁剪框最小尺寸 -->
+
+            <!-- 裁剪框最小尺寸 -->
             <LinearLayout
                 android:id="@+id/layout_puzzle_crop_min"
                 android:layout_width="match_parent"
@@ -285,6 +423,8 @@
                 android:layout_marginBottom="12dp" />
 
             <!-- 2.7 拼图命名前缀 -->
+
+            <!-- 拼图命名前缀 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -320,6 +460,8 @@
                 android:layout_marginBottom="12dp" />
 
             <!-- 2.8 潜影盒颜色 -->
+
+            <!-- 潜影盒颜色 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -342,6 +484,8 @@
             </LinearLayout>
 
             <!-- 2.6 每次进入裁剪前询问 -->
+
+            <!-- 生成前询问裁剪 -->
             <CheckBox
                 android:id="@+id/cb_puzzle_ask_crop"
                 android:layout_width="match_parent"
@@ -360,6 +504,20 @@
 
 
             <!-- 保存前自动备份（策略对齐草稿箱；放在草稿箱上面） -->
+
+        </LinearLayout>
+
+        <!-- ===== 分类：数据 ===== -->
+        <LinearLayout
+            android:id="@+id/page_settings_data"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:paddingTop="12dp"
+            android:visibility="gone">
+
+            <!-- 保存前自动备份 -->
             <CheckBox
                 android:id="@+id/cb_backup_auto"
                 android:layout_width="match_parent"
@@ -377,6 +535,8 @@
                 android:layout_marginBottom="6dp" />
 
             <!-- 间隔 + 单位 -->
+
+            <!--   └ 间隔 -->
             <LinearLayout
                 android:id="@+id/layout_backup_interval"
                 android:layout_width="match_parent"
@@ -426,6 +586,8 @@
             </LinearLayout>
 
             <!-- 备份上限 -->
+
+            <!--   └ 备份上限 -->
             <LinearLayout
                 android:id="@+id/layout_backup_max"
                 android:layout_width="match_parent"
@@ -478,6 +640,8 @@
                 android:layout_marginBottom="14dp" />
 
             <!-- 草稿箱：自动保存 -->
+
+            <!-- 编辑时自动保存草稿 -->
             <CheckBox
                 android:id="@+id/cb_draft_autosave"
                 android:layout_width="match_parent"
@@ -495,6 +659,8 @@
                 android:layout_marginBottom="6dp" />
 
             <!-- 间隔 + 单位 -->
+
+            <!--   └ 间隔 / 上限 -->
             <LinearLayout
                 android:id="@+id/layout_draft_interval"
                 android:layout_width="match_parent"
@@ -587,6 +753,8 @@
             </LinearLayout>
 
             <!-- 同时保存改动前的原始数据（用于对比） -->
+
+            <!--   └ 同时保存原始数据 -->
             <CheckBox
                 android:id="@+id/cb_draft_keep_original"
                 android:layout_width="match_parent"
@@ -604,6 +772,8 @@
                 android:layout_marginBottom="14dp" />
 
             <!-- 回收站自动清理 -->
+
+            <!-- 回收站保留 -->
             <LinearLayout
                 android:id="@+id/layout_trash_keep"
                 android:layout_width="match_parent"
@@ -658,6 +828,20 @@
             <!-- 3. Shizuku -->
 
             <!-- 3.5 运行模式：行内展开（不是弹窗），点击行展开选项列表 -->
+
+        </LinearLayout>
+
+        <!-- ===== 分类：高级 ===== -->
+        <LinearLayout
+            android:id="@+id/page_settings_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:paddingTop="12dp"
+            android:visibility="gone">
+
+            <!-- 运行模式 / su 模板 / 预设 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -857,6 +1041,8 @@
 
             <!-- 4. 权限检查：和「迁移旧数据 / 切换日夜 / 切换语言」完全同款
                  —— 带图标 + 彩色文字，一眼看得出是可点的操作，不会误认成小标题 -->
+
+            <!-- 检查权限 -->
             <Button
                 android:id="@+id/btn_check_permission_in_settings"
                 style="?android:attr/borderlessButtonStyle"
@@ -873,6 +1059,8 @@
             <!-- 5. 迁移旧数据（NbtEditor_Data → Nibnya） -->
             <!-- 必须关掉 textAllCaps：Android 的 Button 默认会把文案转成全大写，
                  中文不受影响、夹在里面的英文路径却被转成 NBTEDITOR_DATA，看着像「半中半英」 -->
+
+            <!-- 迁移旧数据 -->
             <Button
                 android:id="@+id/btn_migrate_data"
                 style="?android:attr/borderlessButtonStyle"
@@ -887,32 +1075,8 @@
                 android:layout_marginBottom="8dp" />
 
             <!-- 6. 日夜模式 -->
-            <Button
-                android:id="@+id/btn_dialog_theme"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="@string/action_switch_night"
-                android:textAllCaps="false"
-                android:textColor="#FF9800"
-                android:textSize="14sp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="4dp"
-                android:layout_marginBottom="8dp" />
 
-            <!-- 7. 语言 -->
-            <Button
-                android:id="@+id/btn_dialog_lang"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="Switch to English"
-                android:textAllCaps="false"
-                android:textColor="#2196F3"
-                android:textSize="14sp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="4dp" />
-
+        </LinearLayout>
         </LinearLayout>
     </LinearLayout>
     <!-- 关于项（点击展开） -->

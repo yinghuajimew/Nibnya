@@ -571,6 +571,12 @@
     <!-- ============================================ -->
     <string name="about_header">关于</string>
     <string name="settings_header">设置</string>
+    <!-- 设置分类标签栏 -->
+    <string name="settings_tab_appearance">外观</string>
+    <string name="settings_tab_editor">编辑器</string>
+    <string name="settings_tab_data">数据</string>
+    <string name="settings_tab_advanced">高级</string>
+    <string name="settings_tab_hint">点击上方的子选项，展示对应的功能。</string>
     <string name="box_multithread_io">文件操作多线程加速</string>
     <string name="subtitle_io_multithread">仅影响存档读写，关闭后使用单线程</string>
     <string name="box_puzzle_multithread">拼图生成多线程加速</string>

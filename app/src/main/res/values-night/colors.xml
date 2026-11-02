@@ -10,6 +10,10 @@
     <!-- 底部导航选中色：Pink 300，暗底对比 6.13 -->
     <color name="nav_selected">#F06292</color>
     <color name="app_divider">#333333</color>
+    <!-- 标签栏选中格背景（夜间深青） -->
+    <color name="tab_bar_selected_bg">#12332E</color>
+    <!-- 标签栏未选中文字（夜间） -->
+    <color name="tab_bar_text">#B0B0B0</color>
     <!-- NBT 列表/树：夜间用更亮的键名/值，避免深色在深底上看不清 -->
     <color name="nbt_key">#4DD0E1</color>
     <color name="nbt_value_string">#FF80AB</color>

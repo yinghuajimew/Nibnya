@@ -13,6 +13,7 @@ import android.text.method.LinkMovementMethod
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.core.content.edit
@@ -729,6 +730,57 @@ fun MainActivity.showAppInfoDialog() {
             settingsExpand?.text = if (it.isVisible) "▲" else "▼"
             remeasure()
         }
+    }
+
+    // ============================================
+    // 设置分类标签栏：外观 / 编辑器 / 数据 / 高级
+    // ============================================
+    // 每个分类是一个独立的 LinearLayout 页面，切换只改可见性。
+    // 所有控件仍在这棵 View 树里，findViewById 照常能取到，
+    // 所以下面各段的绑定代码不用改，也不会因为切换标签而失效。
+    run {
+        class Tab(val tabId: Int, val pageId: Int)
+
+        val tabs = listOf(
+            Tab(R.id.tab_settings_appearance, R.id.page_settings_appearance),
+            Tab(R.id.tab_settings_editor, R.id.page_settings_editor),
+            Tab(R.id.tab_settings_data, R.id.page_settings_data),
+            Tab(R.id.tab_settings_advanced, R.id.page_settings_advanced),
+        )
+
+        val accent = ContextCompat.getColor(dialogView.context, R.color.nbt_key)
+        val dim = ContextCompat.getColor(dialogView.context, R.color.tab_bar_text)
+        val selectedBg = ContextCompat.getColor(dialogView.context, R.color.tab_bar_selected_bg)
+
+        fun selectTab(current: Tab) {
+            tabs.forEach { tab ->
+                val tv = dialogView.findViewById<TextView?>(tab.tabId)
+                val page = dialogView.findViewById<View?>(tab.pageId)
+                val on = tab == current
+                page?.isVisible = on
+                tv?.let {
+                    it.setTextColor(if (on) accent else dim)
+                    it.setTypeface(
+                        null,
+                        if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                    )
+                    it.setBackgroundColor(
+                        if (on) selectedBg else android.graphics.Color.TRANSPARENT
+                    )
+                }
+            }
+            // 高度按当前页重算：外观只有两项、编辑器很长，不重算会留一大块空白
+            remeasure()
+        }
+
+        tabs.forEach { tab ->
+            dialogView.findViewById<View?>(tab.tabId)?.setOnClickListener {
+                selectTab(tab)
+            }
+        }
+
+        // 默认停在「外观」
+        selectTab(tabs.first())
     }
 
     // ① 文件操作多线程
