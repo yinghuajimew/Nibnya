@@ -934,4 +934,10 @@ ID：%3$s
     <string name="color_theme_current">当前：%1$s</string>
     <string name="color_theme_none">未使用主题</string>
     <string name="color_manual_tune">逐项微调</string>
+    <string name="color_group_common">通用 · 强调色与选中态</string>
+    <string name="color_name_accent">强调色（链接 / 勾选 / 标签）</string>
+    <string name="color_name_tab_selected">标签选中格背景</string>
+    <string name="color_name_tab_unselected">标签未选中文字</string>
+    <string name="color_name_nav_selected">底部导航选中</string>
+    <string name="color_name_danger">危险操作（保存 / 删除）</string>
 </resources>

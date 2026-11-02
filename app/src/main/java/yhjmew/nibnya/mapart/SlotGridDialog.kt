@@ -207,7 +207,7 @@ private fun MainActivity.buildCell(
         cell.addView(TextView(this).apply {
             text = getString(R.string.msg_puzzle_slot_count, s.count)
             textSize = 10f
-            setTextColor("#E65100".toColorInt())
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.c_danger))
         })
     } else {
         cell.addView(TextView(this).apply {

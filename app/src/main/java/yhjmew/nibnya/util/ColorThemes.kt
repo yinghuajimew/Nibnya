@@ -172,6 +172,15 @@ object ColorThemes {
             "c_header_green_dark" to darken(h, 0.18f),
             "c_badge_settings" to p,
             "c_badge_about" to ok,
+
+            // ── 通用强调色 / 选中态 ──
+            // 这些是「一类元素」的颜色，跟着主题走才能整体统一。
+            // 标签选中格背景用主色压得很浅的版本，避免和文字撞色。
+            "c_accent" to p,
+            "c_tab_selected" to lighten(p, 0.82f),
+            "c_tab_unselected" to "#666666",
+            "c_nav_selected" to p,
+            "c_danger" to danger,
         )
         // 统一转成 ARGB int，UI 直接用
         return hexMap.mapValues { (_, hex) -> android.graphics.Color.parseColor(hex) }
@@ -186,6 +195,9 @@ object ColorThemes {
 
     private fun desaturate(hex: String, satScale: Float, lumShift: Float): String =
         tune(hex) { h, s, l -> Triple(h, (s * satScale).coerceIn(0f, 1f), (l + lumShift).coerceIn(0f, 1f)) }
+
+    private fun lighten(hex: String, amount: Float): String =
+        tune(hex) { h, s, l -> Triple(h, s * 0.55f, (l + amount).coerceIn(0f, 1f)) }
 
     private fun darken(hex: String, amount: Float): String =
         tune(hex) { h, s, l -> Triple(h, s, (l - amount).coerceIn(0f, 1f)) }

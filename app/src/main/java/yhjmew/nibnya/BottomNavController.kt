@@ -54,7 +54,13 @@ internal class BottomNavController(private val activity: MainActivity) {
         }
 
         // 选中态：高亮 + 加粗；未选中：次级灰
-        val accent = ContextCompat.getColor(activity, R.color.nav_selected)
+        // 跟随配色方案：用户改过 c_nav_selected 就用他的，否则用默认值
+        val accent = activity.prefs?.let { p ->
+            val ctx = activity.applicationContext
+            val slot = yhjmew.nibnya.util.ColorSlots.build(ctx)
+                .first { it.key == "c_nav_selected" }
+            yhjmew.nibnya.util.ColorScheme.value(p, slot, yhjmew.nibnya.util.ColorScheme.isNight(ctx))
+        } ?: ContextCompat.getColor(activity, R.color.nav_selected)
         val dim = ContextCompat.getColor(activity, R.color.app_text_secondary)
         Page.entries.forEach { p ->
             val tv = activity.findViewById<TextView>(p.textId) ?: return@forEach

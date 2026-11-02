@@ -499,7 +499,7 @@ fun MainActivity.showEditValueDialog(key: String, item: JsonObject, listElementI
             // 玩家才知道这个按钮是干什么的
             text = getString(R.string.title_choose)
             isAllCaps = false
-            setTextColor("#2196F3".toColorInt())
+            setTextColor(ContextCompat.getColor(context, R.color.c_accent))
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener { showAutocompleteDialog(input, detectedType) }
         })

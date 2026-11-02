@@ -52,6 +52,7 @@ import yhjmew.nibnya.util.NbtExporter
 import yhjmew.nibnya.util.WorldExporter
 import yhjmew.nibnya.util.TrashStore
 import yhjmew.nibnya.util.ColorApplier
+import yhjmew.nibnya.util.ColorScheme
 
 class MainActivity : ComponentActivity() {
 
@@ -1602,6 +1603,13 @@ class MainActivity : ComponentActivity() {
         // 底部：全部恢复 / 清空回收站 / 关闭
         val density = resources.displayMetrics.density
         val vpad = (12 * density).toInt()
+        // 强调色 / 危险色走色槽，跟随主题（2026-11-02）
+        val accentHex = ColorScheme.toHex(
+            ColorScheme.value(prefs!!, slotOf("c_accent"), ColorScheme.isNight(this))
+        )
+        val dangerHex = ColorScheme.toHex(
+            ColorScheme.value(prefs!!, slotOf("c_danger"), ColorScheme.isNight(this))
+        )
         fun tabBtn(text: String, weight: Float, color: String, onClick: () -> Unit) =
             TextView(this).apply {
                 this.text = text
@@ -1613,13 +1621,13 @@ class MainActivity : ComponentActivity() {
                 isClickable = true
                 setOnClickListener { onClick() }
             }
-        bar.addView(tabBtn(getString(R.string.btn_restore_all), 1f, "#009688") {
+        bar.addView(tabBtn(getString(R.string.btn_restore_all), 1f, accentHex) {
             dlg.dismiss(); confirmRestoreAll(items)
         })
-        bar.addView(tabBtn(getString(R.string.btn_clear_trash), 1f, "#E53935") {
+        bar.addView(tabBtn(getString(R.string.btn_clear_trash), 1f, dangerHex) {
             dlg.dismiss(); confirmClearTrash()
         })
-        bar.addView(tabBtn(getString(R.string.btn_close), 0.8f, "#009688") { dlg.dismiss() })
+        bar.addView(tabBtn(getString(R.string.btn_close), 0.8f, accentHex) { dlg.dismiss() })
 
         dlg.setOnDismissListener { currentDialog = null }
         currentDialog = dlg
@@ -2096,6 +2104,12 @@ class MainActivity : ComponentActivity() {
         val vpad = (12 * density).toInt()
         val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
 
+        // 标签栏配色也走色槽，跟随主题（2026-11-02）
+        val night = ColorScheme.isNight(this)
+        val accentInt = ColorScheme.value(prefs!!, slotOf("c_accent"), night)
+        val tabSelBg = ColorScheme.value(prefs!!, slotOf("c_tab_selected"), night)
+        val tabUnselText = ColorScheme.value(prefs!!, slotOf("c_tab_unselected"), night)
+
         for (tab in tabs) {
             val isSel = tab == selected
             bar.addView(TextView(this).apply {
@@ -2106,11 +2120,11 @@ class MainActivity : ComponentActivity() {
                 layoutParams = lp
                 isClickable = true
                 if (isSel) {
-                    setTextColor("#009688".toColorInt())
+                    setTextColor(accentInt)
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setBackgroundColor("#E0F2F1".toColorInt())
+                    setBackgroundColor(tabSelBg)
                 } else {
-                    setTextColor("#666666".toColorInt())
+                    setTextColor(tabUnselText)
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 }
                 setOnClickListener { onSelect(tab) }
@@ -2123,7 +2137,7 @@ class MainActivity : ComponentActivity() {
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, vpad, 0, vpad)
                 textSize = 16f
-                setTextColor("#009688".toColorInt())
+                setTextColor(accentInt)
                 layoutParams = LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.7f
                 )
@@ -2148,11 +2162,18 @@ class MainActivity : ComponentActivity() {
             gravity = android.view.Gravity.CENTER
             setPadding(0, vpad, 0, vpad)
             textSize = 13f
-            setTextColor("#009688".toColorInt())
+            setTextColor(accentInt)
             layoutParams = lp
             isClickable = true
             setOnClickListener { currentDialog?.dismiss() }
         })
+    }
+
+    /** 取某个色槽的当前值（含主题 / 默认模式解析） */
+    private fun slotOf(key: String): yhjmew.nibnya.util.ColorScheme.Slot {
+        val ctx = applicationContext
+        return yhjmew.nibnya.util.ColorSlots.build(ctx)
+            .first { it.key == key }
     }
 
     /** 当前显示的带标签列表对话框（供标签栏的「关闭」使用） */

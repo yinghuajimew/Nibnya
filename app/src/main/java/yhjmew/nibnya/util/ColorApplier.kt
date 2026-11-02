@@ -83,6 +83,30 @@ object ColorApplier {
         }
     }
 
+    /**
+     * 给一个具体的控件列表套上某个色槽的颜色。
+     *
+     * 用于「同一个色槽影响多处」的场景，例如 c_accent 同时作用于
+     * 标签栏、勾选框、链接文字 —— 这些不在 [ColorSlots.buttonIds] 里，
+     * 因为它们不是「一个有 id 的按钮」，而是散落在各处的通用元素。
+     */
+    fun applyToViews(prefs: SharedPreferences, night: Boolean, key: String, views: List<View?>) {
+        val slot = ColorSlots.build(views.firstOrNull()?.context ?: return)
+            .firstOrNull { it.key == key } ?: return
+        if (!ColorScheme.isModified(prefs, slot, night)) return
+        val color = ColorScheme.value(prefs, slot, night)
+        views.forEach { v ->
+            when (v) {
+                null -> {}
+                is TextView -> v.setTextColor(color)
+                else -> {
+                    rememberOriginal(v)
+                    v.setBackgroundColor(color)
+                }
+            }
+        }
+    }
+
     /** 只刷 Activity 自身布局里的东西；对话框另走 [applyToDialogView] */
     fun applyToDialogView(
         root: View,

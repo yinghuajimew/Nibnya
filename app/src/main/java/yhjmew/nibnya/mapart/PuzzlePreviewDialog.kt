@@ -208,7 +208,7 @@ internal fun MainActivity.showPuzzlePreview(
     root.addView(tvInfo)
 
     val tvWarn = TextView(this).apply {
-        textSize = 12f; setTextColor("#E65100".toColorInt())
+        textSize = 12f; setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.c_danger))
         setPadding(px(4), px(6), px(4), 0)
     }
     root.addView(tvWarn)

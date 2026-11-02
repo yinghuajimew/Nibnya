@@ -435,16 +435,22 @@ object ColorSettingsUi {
         dim: Int,
         onToggle: (Boolean) -> Unit,
     ): View {
+        // ⚠️ 用 TOP 而不是 CENTER_VERTICAL：
+        //    说明文字换行时整块变高，CENTER_VERTICAL 会把勾选框拉到中间偏下，
+        //    看起来像压在文字上（2026-11-02 截图反馈）。
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.TOP
             setPadding(0, dp(ctx, 4), 0, dp(ctx, 4))
         }
         val cb = CheckBox(ctx).apply {
             isChecked = checked
             setOnCheckedChangeListener { _, v -> onToggle(v) }
         }
-        row.addView(cb)
+        row.addView(cb, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        ).apply { topMargin = dp(ctx, 2) })
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(TextView(ctx).apply {
             text = label

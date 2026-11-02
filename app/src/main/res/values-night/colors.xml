@@ -83,4 +83,16 @@
     <color name="c_header_green">#4CAF50</color>
     <color name="c_header_green_dark">#2E7D32</color>
 
+    <!-- ══ 通用强调色 / 选中态（2026-11-02 新增）══ -->
+    <!-- 强调色（链接/标签/勾选） · 通用 · 强调色 -->
+    <color name="c_accent">#4DD0E1</color>
+    <!-- 标签选中格背景 · 通用 · 选中态 -->
+    <color name="c_tab_selected">#12332E</color>
+    <!-- 标签未选中文字 · 通用 · 选中态 -->
+    <color name="c_tab_unselected">#B0B0B0</color>
+    <!-- 底部导航选中 · 通用 · 底部导航 -->
+    <color name="c_nav_selected">#F06292</color>
+    <!-- 危险操作 · 通用 · 危险操作 -->
+    <color name="c_danger">#EF5350</color>
+
 </resources>

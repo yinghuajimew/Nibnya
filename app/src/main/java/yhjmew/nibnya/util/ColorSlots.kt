@@ -84,6 +84,15 @@ object ColorSlots {
         slot(ctx, "c_header_green_dark", R.string.color_group_dialog, R.string.color_name_header_green_dark),
         slot(ctx, "c_badge_settings",    R.string.color_group_dialog, R.string.color_name_badge_settings),
         slot(ctx, "c_badge_about",       R.string.color_group_dialog, R.string.color_name_badge_about),
+
+        // ── 通用强调色 / 选中态 ──
+        // 这些不是某个具体按钮，而是「一类界面元素」的统一色，
+        // 改了会影响多处（标签栏、勾选框、链接、底部导航等）。
+        slot(ctx, "c_accent",         R.string.color_group_common, R.string.color_name_accent),
+        slot(ctx, "c_tab_selected",   R.string.color_group_common, R.string.color_name_tab_selected),
+        slot(ctx, "c_tab_unselected", R.string.color_group_common, R.string.color_name_tab_unselected),
+        slot(ctx, "c_nav_selected",   R.string.color_group_common, R.string.color_name_nav_selected),
+        slot(ctx, "c_danger",         R.string.color_group_common, R.string.color_name_danger),
     )
 
     private fun slot(ctx: Context, key: String, groupRes: Int, labelRes: Int): ColorScheme.Slot {
