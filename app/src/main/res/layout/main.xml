@@ -581,7 +581,7 @@
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
-                    android:background="@color/c_btn_player"
+                    android:backgroundTint="@color/c_btn_player"
                     android:layout_marginBottom="10dp" />
 
                 <Button
@@ -590,7 +590,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_edit_map_data"
                     android:textAllCaps="false"
-                    android:background="@color/c_btn_map"
+                    android:backgroundTint="@color/c_btn_map"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -600,7 +600,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_edit_village_data"
                     android:textAllCaps="false"
-                    android:background="@color/c_btn_village"
+                    android:backgroundTint="@color/c_btn_village"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -610,7 +610,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_open_nbt_by_name_dvanced"
                     android:textAllCaps="false"
-                    android:background="@color/c_btn_any_key"
+                    android:backgroundTint="@color/c_btn_any_key"
                     android:textColor="#FFFFFF"
                     android:layout_marginBottom="10dp" />
 
@@ -620,7 +620,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/btn_global_system_data"
                     android:textAllCaps="false"
-                    android:background="@color/c_btn_global"
+                    android:backgroundTint="@color/c_btn_global"
                     android:textColor="#FFFFFF" />
 
             </LinearLayout>

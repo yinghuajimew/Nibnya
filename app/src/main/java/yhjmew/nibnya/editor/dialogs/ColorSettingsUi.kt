@@ -79,17 +79,26 @@ object ColorSettingsUi {
             // ⚠️ 用真正的 RadioButton，而不是用 ◉ / ○ 这两个字符画：
             //    字符在不同字体下宽度不一致，配 fixed width 会被裁切/错位，
             //    看起来「大小不对、有东西影响了」（2026-11-02 反馈）。
-            val radio = android.widget.RadioButton(ctx).apply {
-                isChecked = ColorScheme.mode(prefs) == value
-                isClickable = false      // 整行可点，按钮自己不抢事件
-                isFocusable = false
-                buttonTintList = android.content.res.ColorStateList.valueOf(
-                    if (ColorScheme.mode(prefs) == value) accent else dim
-                )
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                ).apply { topMargin = dp(ctx, 2) }
+            // ⚠️ RadioButton 在 Theme.Material 下需要显式给尺寸和 tintMode，
+            //    否则圆钮可能完全不绘制（2026-11-02 用户反馈「圆钮丢失」）。
+            //    这里最小化依赖：直接自己画一个圆，不依赖控件主题。
+            val selected = ColorScheme.mode(prefs) == value
+            val size = dp(ctx, 18)
+            val radio = View(ctx).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    if (selected) {
+                        setColor(accent)
+                        setStroke(dp(ctx, 4), 0xFFFFFFFF.toInt())
+                    } else {
+                        setColor(android.graphics.Color.TRANSPARENT)
+                        setStroke(dp(ctx, 2), dim)
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                    topMargin = dp(ctx, 3)
+                }
+                isClickable = false
             }
 
             val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }

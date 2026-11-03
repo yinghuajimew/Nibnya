@@ -741,6 +741,9 @@ fun MainActivity.showAppInfoDialog() {
     // 每个分类是一个独立的 LinearLayout 页面，切换只改可见性。
     // 所有控件仍在这棵 View 树里，findViewById 照常能取到，
     // 所以下面各段的绑定代码不用改，也不会因为切换标签而失效。
+    // 供配色区回调：主题变更后重刷标签栏颜色（2026-11-02）
+    var refreshSettingsTabs: (() -> Unit)? = null
+
     run {
         class Tab(val tabId: Int, val pageId: Int)
 
@@ -761,11 +764,11 @@ fun MainActivity.showAppInfoDialog() {
                 p, slot, yhjmew.nibnya.util.ColorScheme.isNight(ctx),
             )
         }
-        val accent = slotColor("c_accent",
+        fun accentNow() = slotColor("c_accent",
             ContextCompat.getColor(dialogView.context, R.color.nbt_key))
-        val dim = slotColor("c_tab_unselected",
+        fun dimNow() = slotColor("c_tab_unselected",
             ContextCompat.getColor(dialogView.context, R.color.tab_bar_text))
-        val selectedBg = slotColor("c_tab_selected",
+        fun selectedBgNow() = slotColor("c_tab_selected",
             ContextCompat.getColor(dialogView.context, R.color.tab_bar_selected_bg))
 
         fun selectTab(current: Tab) {
@@ -775,13 +778,13 @@ fun MainActivity.showAppInfoDialog() {
                 val on = tab == current
                 page?.isVisible = on
                 tv?.let {
-                    it.setTextColor(if (on) accent else dim)
+                    it.setTextColor(if (on) accentNow() else dimNow())
                     it.setTypeface(
                         null,
                         if (on) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
                     )
                     it.setBackgroundColor(
-                        if (on) selectedBg else android.graphics.Color.TRANSPARENT
+                        if (on) selectedBgNow() else android.graphics.Color.TRANSPARENT
                     )
                 }
             }
@@ -789,14 +792,20 @@ fun MainActivity.showAppInfoDialog() {
             remeasure()
         }
 
+        // 默认停在「外观」
+        var currentTab = tabs.first()
+        selectTab(currentTab)
         tabs.forEach { tab ->
             dialogView.findViewById<View?>(tab.tabId)?.setOnClickListener {
+                currentTab = tab
                 selectTab(tab)
             }
         }
 
-        // 默认停在「外观」
-        selectTab(tabs.first())
+        // 暴露给配色区：主题变更后重刷标签栏颜色
+        refreshSettingsTabs = {
+            selectTab(currentTab)
+        }
     }
 
     // ============================================
@@ -821,6 +830,8 @@ fun MainActivity.showAppInfoDialog() {
                     // 主页立刻刷成新颜色 —— 不用关对话框就能看到效果
                     // ⚠️ 之前漏了这行：改完要关掉对话框重进才生效（2026-11-02）
                     box.post { ColorApplier.apply(this, p) }
+                    // 设置页四个分类标签也要跟着换色（2026-11-02）
+                    box.post { refreshSettingsTabs?.invoke() }
                     remeasure()
                 }
             }

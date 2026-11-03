@@ -44,26 +44,25 @@ object ColorApplier {
             // ⚠️ 早期版本无条件覆盖，把 Material 按钮自带的圆角状态背景
             //    整个抹掉，按钮变成直角（2026-11-02 修）。
             if (!ColorScheme.isModified(prefs, slot, night)) {
-                restoreOriginal(v)
+                restoreOriginal(v, slot)
                 return@forEach
             }
 
             val color = ColorScheme.value(prefs, slot, night)
-            rememberOriginal(v)
 
             if (v is Button) {
-                // ⚠️ 只改 backgroundTintList，**不要替换 background**。
+                // 两种背景机制要分开处理：
+                //   A) 布局写 backgroundTint="@color/xxx"（复制/保存/编辑/备份等）
+                //      -> 改 tint，原 background 不动，保留圆角和按下效果
+                //   B) 布局写 background="@color/xxx"（联机玩家/地图/村庄/任意 NBT/全局）
+                //      -> 那是纯色，backgroundTint 对它无效，必须直接换背景
                 //
-                //    之前用 `background = roundedDrawable(...)` + `backgroundTintList = null`，
-                //    有两个后果：
-                //      1. Material 按钮的圆角/ripple/阴影全被换掉，看起来成为方角
-                //         （roundedDrawable 只给 2dp，原样式约 4~6dp）
-                //      2. 切回「默认颜色」时 restoreOriginal 只还原了 background，
-                //         backgroundTintList 已经被设为 null，永远回不来 ——
-                //         按钮变全白、文字消失，必须杀进程重开（2026-11-02）
-                //
-                //    改成只设 tint，原 background（含圆角状态）完全不动。
-                v.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+                // ⚠️ 之前只处理 A，B 类按钮就「雷打不动」（2026-11-02）。
+                if (usesBackgroundTint(v)) {
+                    v.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+                } else {
+                    v.setBackgroundColor(color)
+                }
                 v.setTextColor(ColorScheme.onColor(color))
             } else {
                 v.setBackgroundColor(color)
@@ -78,10 +77,9 @@ object ColorApplier {
             val slot = byKey[key] ?: return@forEach
             val v = activity.findViewById<View?>(viewId) ?: return@forEach
             if (!ColorScheme.isModified(prefs, slot, night)) {
-                restoreOriginal(v)
+                restoreOriginal(v, slot)
                 return@forEach
             }
-            rememberOriginal(v)
             // 图标块用的是 shape + backgroundTint，不是纯色 background，
             // 直接 setBackgroundColor 会把 drawable 换掉、圆角丢失。
             // 有 tint 的就改 tint，没有的才改 background。
@@ -118,10 +116,7 @@ object ColorApplier {
             when (v) {
                 null -> {}
                 is TextView -> v.setTextColor(color)
-                else -> {
-                    rememberOriginal(v)
-                    v.setBackgroundColor(color)
-                }
+                else -> v.setBackgroundColor(color)
             }
         }
     }
@@ -178,37 +173,37 @@ object ColorApplier {
     }
 
     /**
-     * 把控件背景还原成布局里定义的原始资源。
+     * 这个控件是否用 backgroundTint 上色。
      *
-     * 为什么需要：用户改过颜色 -> 被覆盖 -> 再点「恢复默认」，
-     * 此时 `isModified` 变回 false，如果只是「跳过不处理」，
-     * View 上还留着上次覆盖的背景，永远回不去（2026-11-02）。
-     *
-     * 用 WeakHashMap 记录原始背景，第一次覆盖前记下，还原时取回。
-     * （不能用 View.setTag(String, ...) —— 那个 key 必须是资源 id（Int），传字符串编译不过）
+     * 布局里 `backgroundTint="@color/x"` 会被解析成非空 ColorStateList；
+     * 而 `background="@color/x"` 是纯色 ColorDrawable，没有 tint。
+     * 依赖 tint 的控件，改 background 会丢掉圆角状态，必须改 tint。
      */
+    private fun usesBackgroundTint(v: View): Boolean =
+        v.backgroundTintList != null
+
     /**
-     * 记录控件的原始背景与 tint。
+     * 把控件还原成「布局里写的那个颜色」。
      *
-     * 两个都要存 —— 只存 background 的话，我们设过的 backgroundTintList
-     * 在还原时不会恢复，按钮会变成全白（2026-11-02 踩过）。
+     * ⚠️ 早期版本用 WeakHashMap 缓存 View 的原始 background/tint，有两个坑：
+     *
+     *   1. `restoreOriginal` 用 `remove()` 取一次就删，下次上色又记一次，
+     *      而这时 View 上残留的是上一次覆盖的颜色 —— 被当成原值存进缓存。
+     *   2. Activity 与 Dialog 共用同一个 object 的缓存，
+     *      两边的同一批控件（若 id 相同）会互相覆盖对方的「原值」。
+     *
+     * 结果：切主题时某些按钮「雷打不动」，切回默认时又回不到原样。
+     *
+     * 现在改成不做缓存 —— 直接把这个 slot 对应的**资源默认值**取出来写回去。
+     * slot 里已经带着 `defaultResId`（已解析的 ARGB），见 ColorScheme.Slot。
      */
-    private class OriginalBg(
-        val background: android.graphics.drawable.Drawable?,
-        val tint: android.content.res.ColorStateList?,
-    )
-
-    private val originals = java.util.WeakHashMap<View, OriginalBg>()
-
-    private fun rememberOriginal(v: View) {
-        if (originals.containsKey(v)) return
-        originals[v] = OriginalBg(v.background, v.backgroundTintList)
-    }
-
-    private fun restoreOriginal(v: View) {
-        val orig = originals.remove(v) ?: return
-        v.background = orig.background
-        v.backgroundTintList = orig.tint
+    private fun restoreOriginal(v: View, slot: ColorScheme.Slot) {
+        if (usesBackgroundTint(v)) {
+            v.backgroundTintList = android.content.res.ColorStateList.valueOf(slot.defaultResId)
+        } else {
+            v.setBackgroundColor(slot.defaultResId)
+        }
+        if (v is TextView) v.setTextColor(ColorScheme.onColor(slot.defaultResId))
     }
 
     /** 圆角纯色 drawable —— 用于替代 Material 按钮背景时保住圆角 */
