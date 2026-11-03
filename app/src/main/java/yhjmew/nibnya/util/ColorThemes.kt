@@ -132,9 +132,6 @@ object ColorThemes {
         val ok = theme.success
         val h = theme.header
 
-        // 危险色固定红：保存、删除这类语义不能跟着主题乱变
-        val danger = "#F44336"
-
         val hexMap = mapOf(
             // ── 主页功能按钮 ──
             "c_btn_player" to p,
@@ -145,7 +142,10 @@ object ColorThemes {
 
             // ── 主页工具栏 ──
             "c_btn_copy" to p,
-            "c_btn_save" to danger,
+            // 保存：跟随主题。之前写死 #F44336，任何主题下都是同一块红，
+            // 用户反馈「不管怎么切换，它就是一直红色」（2026-11-02）。
+            // 用主色压暗一点，既有辨识度又不脱离主题。
+            "c_btn_save" to darken(p, 0.10f),
             "c_btn_edit_player" to a,
             "c_btn_backup" to ok,
             "c_btn_parse" to "#9E9E9E",                        // 中性，不随主题
@@ -180,7 +180,8 @@ object ColorThemes {
             "c_tab_selected" to lighten(p, 0.82f),
             "c_tab_unselected" to "#666666",
             "c_nav_selected" to p,
-            "c_danger" to danger,
+            // 危险色（删除/清空回收站）：同样跟随主题，压得更深以保留警示感
+            "c_danger" to darken(p, 0.22f),
         )
         // 统一转成 ARGB int，UI 直接用
         return hexMap.mapValues { (_, hex) -> android.graphics.Color.parseColor(hex) }

@@ -192,7 +192,11 @@ object ColorScheme {
             ed.putInt(prefix + slot.key, c)
         }
         ed.putString(PREF_MODE, MODE_CUSTOM)
-        ed.apply()
+        // ⚠️ 必须 commit 而不是 apply：
+        //    主题是一次性写 30 个键、写完立刻要被读出来刷界面的场景。
+        //    apply() 异步落盘 + 内存副本更新时机不确定，
+        //    紧跟着的 applyToDialogView 可能仍读到旧值 —— 顶部渐变不换色就是这么来的（2026-11-02）。
+        ed.commit()
     }
 
     /** 当前记录的主题 id（仅用于设置页高亮「正在用哪个主题」） */
@@ -200,7 +204,7 @@ object ColorScheme {
         prefs.getString(PREF_THEME, null)
 
     fun setCurrentTheme(prefs: SharedPreferences, id: String?) {
-        prefs.edit().putString(PREF_THEME, id).apply()
+        prefs.edit().putString(PREF_THEME, id).commit()
     }
 
     /** 清空所有自定义项，回到「默认颜色」模式 */

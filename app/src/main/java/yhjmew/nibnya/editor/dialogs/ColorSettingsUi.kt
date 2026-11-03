@@ -82,24 +82,48 @@ object ColorSettingsUi {
             // ⚠️ RadioButton 在 Theme.Material 下需要显式给尺寸和 tintMode，
             //    否则圆钮可能完全不绘制（2026-11-02 用户反馈「圆钮丢失」）。
             //    这里最小化依赖：直接自己画一个圆，不依赖控件主题。
+            // 自绘单选圆，不依赖 RadioButton 的控件主题
+            // （RadioButton 在 Theme.Material 下可能完全不绘制，2026-11-02 踩过）。
+            //   选中 = 实心圆 + 中间小白点（同心圆，白底上也清楚）
+            //   未选 = 空心圆 + 灰色描边
             val selected = ColorScheme.mode(prefs) == value
             val size = dp(ctx, 18)
             val radio = View(ctx).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
+                    setColor(accent)
                     if (selected) {
-                        setColor(accent)
-                        setStroke(dp(ctx, 4), 0xFFFFFFFF.toInt())
+                        // 实心：外圈 accent，中间留白点 —— 用 LayerDrawable 更准，
+                        // 这里用描边宽度模拟「环 + 心」，简单且在任意底色上都可见
+                        setStroke(dp(ctx, 1), accent)
                     } else {
                         setColor(android.graphics.Color.TRANSPARENT)
                         setStroke(dp(ctx, 2), dim)
                     }
                 }
+                isClickable = false
+            }
+            // 选中的中间小白点
+            val dotWrap = android.widget.FrameLayout(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     topMargin = dp(ctx, 3)
                 }
-                isClickable = false
+                addView(radio, android.widget.FrameLayout.LayoutParams(size, size))
+                if (selected) {
+                    addView(View(ctx).apply {
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(0xFFFFFFFF.toInt())
+                        }
+                        layoutParams = android.widget.FrameLayout.LayoutParams(
+                            dp(ctx, 6), dp(ctx, 6), Gravity.CENTER
+                        )
+                    })
+                }
             }
+            // 注意：radio 有自己的 layoutParams，放进 dotWrap 前要重置，
+            // 否则 FrameLayout 会用 LinearLayout 的参数导致尺寸为 0
+            radio.layoutParams = android.widget.FrameLayout.LayoutParams(size, size)
 
             val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(ctx).apply {
@@ -114,6 +138,7 @@ object ColorSettingsUi {
                 setTextColor(dim)
                 setPadding(0, dp(ctx, 2), 0, 0)
             })
+            row.addView(dotWrap)
             row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             container.addView(row)
         }

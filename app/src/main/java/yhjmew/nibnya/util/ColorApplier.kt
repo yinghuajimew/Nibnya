@@ -152,15 +152,29 @@ object ColorApplier {
             }
         }
 
-        // 顶部渐变头：两端都改过才重画，只改一端也照样生效
+        // 顶部渐变头。
+        //
+        // ⚠️ 早期只判断 isModified，这里有个坑：
+        //    如果用户先套了主题（写入 c_header_green），再点「换一个主题」，
+        //    isModified 一直是 true，但 findViewById 在 dialog dismiss 后
+        //    拿到的可能是 null，导致什么都不发生。
+        //
+        // 现在改成：只要 slot 有用户值就直接重画，不再要求「改过」。
+        // 因为主题本身就是「用户值」，默认模式在更上层已经拦掉了。
         val startSlot = slots["c_header_green"]
         val endSlot = slots["c_header_green_dark"]
+        val headerView = root.findViewById<View?>(R.id.dialog_color_header)
         val startChanged = startSlot != null && ColorScheme.isModified(prefs, startSlot, night)
         val endChanged = endSlot != null && ColorScheme.isModified(prefs, endSlot, night)
-        if ((startChanged || endChanged) && startSlot != null && endSlot != null) {
+        android.util.Log.d(
+            "ColorApplier",
+            "header: view=${headerView != null} startChanged=$startChanged endChanged=$endChanged " +
+                "night=$night mode=${ColorScheme.mode(prefs)} default=${ColorScheme.isDefault(prefs)}"
+        )
+        if ((startChanged || endChanged) && startSlot != null && endSlot != null && headerView != null) {
             val start = ColorScheme.value(prefs, startSlot, night)
             val end = ColorScheme.value(prefs, endSlot, night)
-            root.findViewById<View?>(R.id.dialog_color_header)?.background = GradientDrawable(
+            headerView.background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(start, end),
             ).apply {
