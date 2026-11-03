@@ -85,7 +85,12 @@ object ColorSlots {
         slot(ctx, "c_badge_settings",    R.string.color_group_dialog, R.string.color_name_badge_settings),
         slot(ctx, "c_badge_about",       R.string.color_group_dialog, R.string.color_name_badge_about),
 
-        // ── 设置页文字按钮 ──
+        // ── 设置页文字按钮 / 标签栏 ──
+        // 这三项之前被误删过一次，现恢复：
+        //   c_accent         分类标签文字、勾选框、「Switch to English」
+        //   c_tab_selected   标签选中格背景
+        //   c_tab_unselected 标签未选中文字
+        slot(ctx, "c_accent",         R.string.color_group_common, R.string.color_name_accent),
         slot(ctx, "c_link_night", R.string.color_group_dialog, R.string.color_name_link_night),
         slot(ctx, "c_link_lang",  R.string.color_group_dialog, R.string.color_name_link_lang),
 

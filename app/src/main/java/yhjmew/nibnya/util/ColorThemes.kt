@@ -172,8 +172,10 @@ object ColorThemes {
             "c_header_green_dark" to darken(h, 0.18f),
             "c_badge_settings" to p,
             "c_badge_about" to ok,
-            // 设置页两个文字按钮：保持各自的功能色，不跟着主色跑
-            "c_link_night" to "#FF9800",
+            // 设置页两个文字按钮
+            // 「切换语言」跟主色；「切换夜间」用主色的暖调变体，
+            // 两者都随主题走，也都能在逐项微调里单独改。
+            "c_link_night" to warmVariant(p),
             "c_link_lang" to p,
 
             // ── 通用强调色 / 选中态 ──
@@ -199,6 +201,26 @@ object ColorThemes {
 
     private fun desaturate(hex: String, satScale: Float, lumShift: Float): String =
         tune(hex) { h, s, l -> Triple(h, (s * satScale).coerceIn(0f, 1f), (l + lumShift).coerceIn(0f, 1f)) }
+
+    /**
+     * 主色的「暖调变体」：色相往橙黄方向偏 25°、饱和略降。
+     *
+     * 用于「切换到夜间模式」这类需要和主色区分、又不能跳出主题的按钮。
+     * 原来写死 #FF9800，换主题时它纹丝不动，和整体脱节。
+     */
+    private fun warmVariant(hex: String): String {
+        val c = Color.parseColor(hex)
+        val hsl = FloatArray(3)
+        ColorUtils.colorToHSL(c, hsl)
+        // 往 32°（橙）方向靠 35%，避免粉色主题下变成不伦不类的橙粉
+        val target = 32f
+        var h = hsl[0] + (target - hsl[0]) * 0.35f
+        if (h < 0) h += 360f
+        if (h >= 360f) h -= 360f
+        return ColorScheme.toHex(
+            ColorUtils.HSLToColor(floatArrayOf(h, (hsl[1] * 0.92f).coerceIn(0f, 1f), hsl[2]))
+        )
+    }
 
     private fun lighten(hex: String, amount: Float): String =
         tune(hex) { h, s, l -> Triple(h, s * 0.55f, (l + amount).coerceIn(0f, 1f)) }
