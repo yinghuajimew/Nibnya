@@ -576,7 +576,7 @@
                 <Button
                     android:id="@+id/btn_online_players"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:text="@string/btn_edit_online_players"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
@@ -587,7 +587,7 @@
                 <Button
                     android:id="@+id/btn_map_nbt"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:text="@string/btn_edit_map_data"
                     android:textAllCaps="false"
                     android:backgroundTint="@color/c_btn_map"
@@ -597,7 +597,7 @@
                 <Button
                     android:id="@+id/btn_village_nbt"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:text="@string/btn_edit_village_data"
                     android:textAllCaps="false"
                     android:backgroundTint="@color/c_btn_village"
@@ -607,7 +607,7 @@
                 <Button
                     android:id="@+id/btn_open_any_key"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:text="@string/btn_open_nbt_by_name_dvanced"
                     android:textAllCaps="false"
                     android:backgroundTint="@color/c_btn_any_key"
@@ -617,7 +617,7 @@
                 <Button
                     android:id="@+id/btn_global_nbt"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="56dp"
                     android:text="@string/btn_global_system_data"
                     android:textAllCaps="false"
                     android:backgroundTint="@color/c_btn_global"

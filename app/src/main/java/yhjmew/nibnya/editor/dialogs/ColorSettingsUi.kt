@@ -82,26 +82,56 @@ object ColorSettingsUi {
             // ⚠️ RadioButton 在 Theme.Material 下需要显式给尺寸和 tintMode，
             //    否则圆钮可能完全不绘制（2026-11-02 用户反馈「圆钮丢失」）。
             //    这里最小化依赖：直接自己画一个圆，不依赖控件主题。
-            // 自绘单选圆，不依赖 RadioButton 的控件主题。
+            // 自绘单选圆，不依赖 RadioButton 的控件主题
+            // （它在 Theme.Material 下可能完全不绘制，2026-11-02 踩过）。
             //
-            // 样式按用户要求：**白色实心圆 + 彩色圆环**（不是反过来的实心环）。
-            //   选中 = 白色填充 + 主题色粗环
-            //   未选 = 白色填充 + 灰色细环
-            // 白底上白色填充看不见 —— 但圆环把形状框住了，看起来就是
-            // 「空心圆里有一点白」，和系统单选按钮的观感一致。
+            // 结构按用户示意图，三层同心圆：
+            //   ① 最外：主题色圆环（描边）
+            //   ② 中间：白色间隙（填充层）
+            //   ③ 中心：实心小圆（主题色）—— 仅选中时出现
+            //
+            // 未选中只有 ① ②，即一个空心圆环。
             val selected = ColorScheme.mode(prefs) == value
             val size = dp(ctx, 18)
-            val ringDp = if (selected) 2.0f else 1.5f
+
+            val layers = mutableListOf<android.graphics.drawable.Drawable>()
+
+            // ② 白色间隙层（铺满整个圆）
+            layers.add(GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xFFFFFFFF.toInt())
+                setBounds(0, 0, size, size)
+            })
+
+            // ① 最外圆环
+            layers.add(GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(android.graphics.Color.TRANSPARENT)
+                setStroke(dpF(ctx, 2.0f), if (selected) accent else dim)
+                setBounds(0, 0, size, size)
+            })
+
+            // ③ 中心实心圆（选中才有）
+            //   用 InsetDrawable 从四边等距内缩，自动居中，不用手算偏移
+            if (selected) {
+                val inset = dp(ctx, 4)
+                layers.add(android.graphics.drawable.InsetDrawable(
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(accent)
+                    },
+                    inset, inset, inset, inset,
+                ).apply { setBounds(0, 0, size, size) })
+            }
+
             val radio = View(ctx).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    // 白色填充 + 主题色圆环
-                    setColor(0xFFFFFFFF.toInt())
-                    setStroke(dpF(ctx, ringDp), if (selected) accent else dim)
-                }
+                background = android.graphics.drawable.LayerDrawable(
+                    layers.toTypedArray()
+                )
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     topMargin = dp(ctx, 3)
                 }
+                isClickable = false
             }
             val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(ctx).apply {
