@@ -82,49 +82,27 @@ object ColorSettingsUi {
             // ⚠️ RadioButton 在 Theme.Material 下需要显式给尺寸和 tintMode，
             //    否则圆钮可能完全不绘制（2026-11-02 用户反馈「圆钮丢失」）。
             //    这里最小化依赖：直接自己画一个圆，不依赖控件主题。
-            // 自绘单选圆，不依赖 RadioButton 的控件主题
-            // （RadioButton 在 Theme.Material 下可能完全不绘制，2026-11-02 踩过）。
-            //   选中 = 实心圆 + 中间小白点（同心圆，白底上也清楚）
-            //   未选 = 空心圆 + 灰色描边
+            // 自绘单选圆，不依赖 RadioButton 的控件主题。
+            //
+            // 样式按用户要求：**白色实心圆 + 彩色圆环**（不是反过来的实心环）。
+            //   选中 = 白色填充 + 主题色粗环
+            //   未选 = 白色填充 + 灰色细环
+            // 白底上白色填充看不见 —— 但圆环把形状框住了，看起来就是
+            // 「空心圆里有一点白」，和系统单选按钮的观感一致。
             val selected = ColorScheme.mode(prefs) == value
             val size = dp(ctx, 18)
+            val ringDp = if (selected) 2.0f else 1.5f
             val radio = View(ctx).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(accent)
-                    if (selected) {
-                        // 实心：外圈 accent，中间留白点 —— 用 LayerDrawable 更准，
-                        // 这里用描边宽度模拟「环 + 心」，简单且在任意底色上都可见
-                        setStroke(dp(ctx, 1), accent)
-                    } else {
-                        setColor(android.graphics.Color.TRANSPARENT)
-                        setStroke(dp(ctx, 2), dim)
-                    }
+                    // 白色填充 + 主题色圆环
+                    setColor(0xFFFFFFFF.toInt())
+                    setStroke(dpF(ctx, ringDp), if (selected) accent else dim)
                 }
-                isClickable = false
-            }
-            // 选中的中间小白点
-            val dotWrap = android.widget.FrameLayout(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     topMargin = dp(ctx, 3)
                 }
-                addView(radio, android.widget.FrameLayout.LayoutParams(size, size))
-                if (selected) {
-                    addView(View(ctx).apply {
-                        background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(0xFFFFFFFF.toInt())
-                        }
-                        layoutParams = android.widget.FrameLayout.LayoutParams(
-                            dp(ctx, 6), dp(ctx, 6), Gravity.CENTER
-                        )
-                    })
-                }
             }
-            // 注意：radio 有自己的 layoutParams，放进 dotWrap 前要重置，
-            // 否则 FrameLayout 会用 LinearLayout 的参数导致尺寸为 0
-            radio.layoutParams = android.widget.FrameLayout.LayoutParams(size, size)
-
             val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(ctx).apply {
                 text = label
@@ -138,7 +116,7 @@ object ColorSettingsUi {
                 setTextColor(dim)
                 setPadding(0, dp(ctx, 2), 0, 0)
             })
-            row.addView(dotWrap)
+            row.addView(radio)
             row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             container.addView(row)
         }
@@ -172,7 +150,7 @@ object ColorSettingsUi {
             ctx.getString(R.string.color_simple_mode),
             ctx.getString(R.string.color_simple_mode_desc),
             simple,
-            primary, dim,
+            primary, dim, accent,
         ) { on ->
             prefs.edit().putBoolean(PREF_SIMPLE, on).apply()
             onChange()
@@ -184,7 +162,7 @@ object ColorSettingsUi {
             ctx.getString(R.string.color_night_separate),
             ctx.getString(R.string.color_night_separate_desc),
             nightSep,
-            primary, dim,
+            primary, dim, accent,
         ) { on ->
             // 打开时把日间当前值复制到夜间作为起点（见 ColorScheme.setNightSeparate）
             ColorScheme.setNightSeparate(prefs, on, slots)
@@ -518,6 +496,7 @@ object ColorSettingsUi {
         checked: Boolean,
         primary: Int,
         dim: Int,
+        accent: Int,
         onToggle: (Boolean) -> Unit,
     ): View {
         // ⚠️ 用 TOP 而不是 CENTER_VERTICAL：
@@ -531,6 +510,8 @@ object ColorSettingsUi {
         val cb = CheckBox(ctx).apply {
             isChecked = checked
             setOnCheckedChangeListener { _, v -> onToggle(v) }
+            // 勾选框跟随主题强调色（2026-11-02 用户要求）
+            buttonTintList = android.content.res.ColorStateList.valueOf(accent)
         }
         row.addView(cb, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -675,6 +656,10 @@ object ColorSettingsUi {
         }
         return row
     }
+
+    /** dp 的 Float 版本（描边宽度需要小数） */
+    private fun dpF(ctx: Context, v: Float): Int =
+        (v * ctx.resources.displayMetrics.density).toInt()
 
     private fun dp(ctx: Context, v: Int): Int =
         (v * ctx.resources.displayMetrics.density).toInt()

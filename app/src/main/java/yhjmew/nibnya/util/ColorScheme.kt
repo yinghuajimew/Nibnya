@@ -56,8 +56,13 @@ object ColorScheme {
 
     /** 简单模式：只暴露最常调的几个主色 */
     val SIMPLE_KEYS = setOf(
+        // 主页最显眼的几块
         "c_btn_player", "c_btn_map", "c_btn_save", "c_bar_sidebar",
         "c_icon_tree", "c_icon_view",
+        // 通用强调色：一处改、多个界面跟着变，值得放进简单模式
+        "c_accent", "c_nav_selected",
+        // 弹窗头部：设置页一打开最显眼的就是它
+        "c_header_green",
     )
 
     // ── 模式 ────────────────────────────────────────────────

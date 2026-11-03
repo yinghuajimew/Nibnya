@@ -132,55 +132,95 @@ object ColorApplier {
         val ctx = root.context
         val slots = ColorSlots.build(ctx).associateBy { it.key }
 
-        // 同样只在用户改过该项时才覆盖，否则保留 drawable 里的原始观感
-        fun changed(key: String): Int? {
-            val slot = slots[key] ?: return null
-            return if (ColorScheme.isModified(prefs, slot, night))
-                ColorScheme.value(prefs, slot, night) else null
-        }
+        // ⚠️ 这里必须区分「有自定义值」和「没有」两种情况，两种都要处理：
+        //    有值  -> 画成自定义颜色
+        //    没值  -> 还原成布局里的默认资源
+        //
+        //    早期只做了前者，代码是 `changed(key)?.let { ... }`，
+        //    切回「默认颜色」时 changed 返回 null，整段直接跳过 ——
+        //    于是上一次留下的自定义背景永远留在控件上。
+        //    用户反馈「切回默认后顶部渐变不变」就是这个原因（2026-11-02）。
 
-        changed("c_badge_settings")?.let { c ->
-            root.findViewById<View?>(settingsBadgeRes)?.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(c)
+        // ── 设置徽章 ──
+        slots["c_badge_settings"]?.let { slot ->
+            root.findViewById<View?>(settingsBadgeRes)?.let { v ->
+                v.background = if (ColorScheme.isModified(prefs, slot, night)) {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(ColorScheme.value(prefs, slot, night))
+                    }
+                } else {
+                    // 还原：用布局里写的那个 drawable
+                    androidx.core.content.ContextCompat.getDrawable(
+                        ctx, R.drawable.bg_circle_settings,
+                    )
+                }
             }
         }
-        changed("c_badge_about")?.let { c ->
-            root.findViewById<View?>(aboutBadgeRes)?.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(c)
+
+        // ── 关于徽章 ──
+        slots["c_badge_about"]?.let { slot ->
+            root.findViewById<View?>(aboutBadgeRes)?.let { v ->
+                v.background = if (ColorScheme.isModified(prefs, slot, night)) {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(ColorScheme.value(prefs, slot, night))
+                    }
+                } else {
+                    androidx.core.content.ContextCompat.getDrawable(
+                        ctx, R.drawable.bg_circle_about,
+                    )
+                }
             }
         }
 
-        // 顶部渐变头。
-        //
-        // ⚠️ 早期只判断 isModified，这里有个坑：
-        //    如果用户先套了主题（写入 c_header_green），再点「换一个主题」，
-        //    isModified 一直是 true，但 findViewById 在 dialog dismiss 后
-        //    拿到的可能是 null，导致什么都不发生。
-        //
-        // 现在改成：只要 slot 有用户值就直接重画，不再要求「改过」。
-        // 因为主题本身就是「用户值」，默认模式在更上层已经拦掉了。
+        // ── 对话框里的文字按钮（切换夜间 / 切换语言）──
+        // 它们的文字色就是唯一可见的颜色，跟着主题走。
+        root.findViewById<TextView?>(R.id.btn_dialog_theme)?.let { v ->
+            slots["c_icon_view"]?.let { slot ->
+                v.setTextColor(
+                    if (ColorScheme.isModified(prefs, slot, night))
+                        ColorScheme.value(prefs, slot, night)
+                    else slot.defaultResId
+                )
+            }
+        }
+        root.findViewById<TextView?>(R.id.btn_dialog_lang)?.let { v ->
+            slots["c_accent"]?.let { slot ->
+                v.setTextColor(
+                    if (ColorScheme.isModified(prefs, slot, night))
+                        ColorScheme.value(prefs, slot, night)
+                    else slot.defaultResId
+                )
+            }
+        }
+
+        // ── 顶部渐变头 ──
+        // 同样两种都要处理：有自定义值画渐变，没有就还原成布局里的 bg_gradient_header。
+        val headerView = root.findViewById<View?>(R.id.dialog_color_header)
         val startSlot = slots["c_header_green"]
         val endSlot = slots["c_header_green_dark"]
-        val headerView = root.findViewById<View?>(R.id.dialog_color_header)
-        val startChanged = startSlot != null && ColorScheme.isModified(prefs, startSlot, night)
-        val endChanged = endSlot != null && ColorScheme.isModified(prefs, endSlot, night)
-        android.util.Log.d(
-            "ColorApplier",
-            "header: view=${headerView != null} startChanged=$startChanged endChanged=$endChanged " +
-                "night=$night mode=${ColorScheme.mode(prefs)} default=${ColorScheme.isDefault(prefs)}"
-        )
-        if ((startChanged || endChanged) && startSlot != null && endSlot != null && headerView != null) {
-            val start = ColorScheme.value(prefs, startSlot, night)
-            val end = ColorScheme.value(prefs, endSlot, night)
-            headerView.background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(start, end),
-            ).apply {
-                cornerRadii = floatArrayOf(
-                    dp(ctx, 8f), dp(ctx, 8f), dp(ctx, 8f), dp(ctx, 8f),
-                    0f, 0f, 0f, 0f,
+        if (headerView != null && startSlot != null && endSlot != null) {
+            val custom = ColorScheme.isModified(prefs, startSlot, night) ||
+                ColorScheme.isModified(prefs, endSlot, night)
+            headerView.background = if (custom) {
+                GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(
+                        ColorScheme.value(prefs, startSlot, night),
+                        ColorScheme.value(prefs, endSlot, night),
+                    ),
+                ).apply {
+                    cornerRadii = floatArrayOf(
+                        dp(ctx, 8f), dp(ctx, 8f),   // 左上
+                        dp(ctx, 8f), dp(ctx, 8f),   // 右上
+                        0f, 0f,                      // 右下
+                        0f, 0f,                      // 左下
+                    )
+                }
+            } else {
+                androidx.core.content.ContextCompat.getDrawable(
+                    ctx, R.drawable.bg_gradient_header,
                 )
             }
         }
