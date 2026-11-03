@@ -177,7 +177,7 @@ object ColorApplier {
         // ── 对话框里的文字按钮（切换夜间 / 切换语言）──
         // 它们的文字色就是唯一可见的颜色，跟着主题走。
         root.findViewById<TextView?>(R.id.btn_dialog_theme)?.let { v ->
-            slots["c_icon_view"]?.let { slot ->
+            slots["c_link_night"]?.let { slot ->
                 v.setTextColor(
                     if (ColorScheme.isModified(prefs, slot, night))
                         ColorScheme.value(prefs, slot, night)
@@ -186,7 +186,7 @@ object ColorApplier {
             }
         }
         root.findViewById<TextView?>(R.id.btn_dialog_lang)?.let { v ->
-            slots["c_accent"]?.let { slot ->
+            slots["c_link_lang"]?.let { slot ->
                 v.setTextColor(
                     if (ColorScheme.isModified(prefs, slot, night))
                         ColorScheme.value(prefs, slot, night)
@@ -233,8 +233,13 @@ object ColorApplier {
      * 而 `background="@color/x"` 是纯色 ColorDrawable，没有 tint。
      * 依赖 tint 的控件，改 background 会丢掉圆角状态，必须改 tint。
      */
-    private fun usesBackgroundTint(v: View): Boolean =
-        v.backgroundTintList != null
+    private fun usesBackgroundTint(v: View): Boolean {
+        // 布局写 background="@color/x" 时，background 是纯色 ColorDrawable，
+        // 此时 backgroundTintList 可能非 null（Material 的默认 tint），
+        // 光看 tint 不够，要先排除「纯色背景」这一种。
+        if (v.background is android.graphics.drawable.ColorDrawable) return false
+        return v.backgroundTintList != null
+    }
 
     /**
      * 把控件还原成「布局里写的那个颜色」。

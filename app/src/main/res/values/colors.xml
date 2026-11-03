@@ -98,4 +98,8 @@
     <!-- 危险操作 · 通用 · 危险操作 -->
     <color name="c_danger">#F44336</color>
 
+    <!-- 设置页文字按钮（2026-11-02 新增，不再借用其他色槽） -->
+    <color name="c_link_night">#FF9800</color>
+    <color name="c_link_lang">#2196F3</color>
+
 </resources>

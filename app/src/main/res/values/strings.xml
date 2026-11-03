@@ -938,4 +938,6 @@ Make sure the path belongs to an installed app.</string>
     <string name="color_name_tab_unselected">Unselected tab text</string>
     <string name="color_name_nav_selected">Bottom nav selected</string>
     <string name="color_name_danger">Danger (save / delete)</string>
+    <string name="color_name_link_night">Switch-to-night text</string>
+    <string name="color_name_link_lang">Switch-language text</string>
 </resources>

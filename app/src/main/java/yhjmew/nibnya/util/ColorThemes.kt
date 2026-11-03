@@ -172,6 +172,9 @@ object ColorThemes {
             "c_header_green_dark" to darken(h, 0.18f),
             "c_badge_settings" to p,
             "c_badge_about" to ok,
+            // 设置页两个文字按钮：保持各自的功能色，不跟着主色跑
+            "c_link_night" to "#FF9800",
+            "c_link_lang" to p,
 
             // ── 通用强调色 / 选中态 ──
             // 这些是「一类元素」的颜色，跟着主题走才能整体统一。

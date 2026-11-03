@@ -69,7 +69,8 @@ object ColorSettingsUi {
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.TOP
-                setPadding(0, dp(ctx, 6), 0, dp(ctx, 6))
+                // 上下各 9dp：两行挨着时不至于粘成一坨
+                setPadding(0, dp(ctx, 9), 0, dp(ctx, 9))
                 isClickable = true
                 setOnClickListener {
                     ColorScheme.setMode(prefs, value)
@@ -130,6 +131,8 @@ object ColorSettingsUi {
                 )
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     topMargin = dp(ctx, 3)
+                    // 和右边文字之间留一口气，别贴在一起（2026-11-02 反馈）
+                    marginEnd = dp(ctx, 10)
                 }
                 isClickable = false
             }
@@ -535,7 +538,7 @@ object ColorSettingsUi {
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
-            setPadding(0, dp(ctx, 4), 0, dp(ctx, 4))
+            setPadding(0, dp(ctx, 7), 0, dp(ctx, 7))
         }
         val cb = CheckBox(ctx).apply {
             isChecked = checked
@@ -546,7 +549,11 @@ object ColorSettingsUi {
         row.addView(cb, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(ctx, 2) })
+        ).apply {
+            topMargin = dp(ctx, 2)
+            // 勾选框和文字之间留白，勾选框是 20dp 见方，8dp 间距刚好
+            marginEnd = dp(ctx, 8)
+        })
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(TextView(ctx).apply {
             text = label

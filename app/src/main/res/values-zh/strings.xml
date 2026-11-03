@@ -940,4 +940,6 @@ ID：%3$s
     <string name="color_name_tab_unselected">标签未选中文字</string>
     <string name="color_name_nav_selected">底部导航选中</string>
     <string name="color_name_danger">危险操作（保存 / 删除）</string>
+    <string name="color_name_link_night">「切换到夜间模式」文字</string>
+    <string name="color_name_link_lang">「切换语言」文字</string>
 </resources>

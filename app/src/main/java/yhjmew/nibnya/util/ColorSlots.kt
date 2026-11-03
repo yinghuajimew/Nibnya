@@ -85,6 +85,10 @@ object ColorSlots {
         slot(ctx, "c_badge_settings",    R.string.color_group_dialog, R.string.color_name_badge_settings),
         slot(ctx, "c_badge_about",       R.string.color_group_dialog, R.string.color_name_badge_about),
 
+        // ── 设置页文字按钮 ──
+        slot(ctx, "c_link_night", R.string.color_group_dialog, R.string.color_name_link_night),
+        slot(ctx, "c_link_lang",  R.string.color_group_dialog, R.string.color_name_link_lang),
+
         // ── 通用强调色 / 选中态 ──
         // 这些不是某个具体按钮，而是「一类界面元素」的统一色，
         // 改了会影响多处（标签栏、勾选框、链接、底部导航等）。
