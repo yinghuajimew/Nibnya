@@ -76,13 +76,21 @@ object ColorSettingsUi {
                     onChange()
                 }
             }
-            val radio = TextView(ctx).apply {
-                text = if (ColorScheme.mode(prefs) == value) "◉" else "○"
-                textSize = 16f
-                setTextColor(if (ColorScheme.mode(prefs) == value) accent else dim)
-                width = dp(ctx, 28)
+            // ⚠️ 用真正的 RadioButton，而不是用 ◉ / ○ 这两个字符画：
+            //    字符在不同字体下宽度不一致，配 fixed width 会被裁切/错位，
+            //    看起来「大小不对、有东西影响了」（2026-11-02 反馈）。
+            val radio = android.widget.RadioButton(ctx).apply {
+                isChecked = ColorScheme.mode(prefs) == value
+                isClickable = false      // 整行可点，按钮自己不抢事件
+                isFocusable = false
+                buttonTintList = android.content.res.ColorStateList.valueOf(
+                    if (ColorScheme.mode(prefs) == value) accent else dim
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = dp(ctx, 2) }
             }
-            row.addView(radio)
 
             val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(ctx).apply {
@@ -308,11 +316,24 @@ object ColorSettingsUi {
 
         fun rebuildThemes() {
             themeBody.removeAllViews()
-            ColorThemes.THEMES.forEach { theme ->
-                themeBody.addView(themeRow(ctx, prefs, slots, theme, isNight, accent, dim) {
+
+            // 两列网格：每个格子是「色块在上、名字在下」
+            //    颜色      颜色二
+            //    颜色名    颜色名二
+            // 比一行一个省一半高度，一屏能看到更多主题（2026-11-02 用户要求）
+            val grid = android.widget.GridLayout(ctx).apply {
+                columnCount = 2
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+            }
+            ColorThemes.THEMES.forEachIndexed { idx, theme ->
+                grid.addView(themeCell(ctx, prefs, slots, theme, isNight, accent, dim, idx) {
                     onChange()
                 })
             }
+            themeBody.addView(grid)
         }
         rebuildThemes()
 
@@ -329,8 +350,17 @@ object ColorSettingsUi {
         tv.text = if (expanded) "▲" else "▼"
     }
 
-    /** 一行主题：五个预览色块 + 名字 + 选中勾 */
-    private fun themeRow(
+    /**
+     * 一个主题格子：上面五个预览色块，下面主题名。
+     *
+     * 两列布局下这样排最紧凑，也符合用户给的示意：
+     * ```
+     * 颜色      颜色二
+     * 颜色名    颜色名二
+     * ```
+     * 正在使用的主题：名字加粗变色，右侧补一个小勾。
+     */
+    private fun themeCell(
         ctx: Context,
         prefs: SharedPreferences,
         slots: List<ColorScheme.Slot>,
@@ -338,42 +368,63 @@ object ColorSettingsUi {
         isNight: Boolean,
         accent: Int,
         dim: Int,
+        index: Int,
         onApplied: () -> Unit,
     ): View {
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(ctx, 7), 0, dp(ctx, 7))
+        val isCurrent = ColorScheme.currentTheme(prefs) == theme.id
+
+        val cell = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
             isClickable = true
+
+            // 两列平分宽度
+            layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                width = 0
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+                columnSpec = android.widget.GridLayout.spec(index % 2, 1f)
+                rowSpec = android.widget.GridLayout.spec(index / 2)
+            }
         }
 
-        val name = TextView(ctx).apply {
+        // 上：五个色块（themeDots 返回 View，转成 LinearLayout 才能设 gravity）
+        val dots = themeDots(ctx, theme, sizeDp = 15)
+        (dots as? LinearLayout)?.gravity = Gravity.CENTER
+        cell.addView(dots)
+
+        // 下：名字（+ 选中勾）
+        val nameRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(ctx, 5), 0, 0)
+        }
+        nameRow.addView(TextView(ctx).apply {
             text = theme.name(ctx.resources.configuration.locales[0].language)
-            textSize = 13f
-            setTextColor(if (ColorScheme.currentTheme(prefs) == theme.id) accent
-                          else ContextCompat.getColor(ctx, R.color.app_text_primary))
-            setTypeface(null, if (ColorScheme.currentTheme(prefs) == theme.id) Typeface.BOLD
-            else Typeface.NORMAL)
-        }
-        row.addView(name, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        row.addView(themeDots(ctx, theme, sizeDp = 14))
-
-        if (ColorScheme.currentTheme(prefs) == theme.id) {
-            row.addView(TextView(ctx).apply {
+            textSize = 12f
+            setTextColor(
+                if (isCurrent) accent
+                else ContextCompat.getColor(ctx, R.color.app_text_primary)
+            )
+            setTypeface(null, if (isCurrent) Typeface.BOLD else Typeface.NORMAL)
+        })
+        if (isCurrent) {
+            nameRow.addView(TextView(ctx).apply {
                 text = "✓"
-                textSize = 14f
+                textSize = 12f
                 setTextColor(accent)
-                setPadding(dp(ctx, 8), 0, 0, 0)
+                setPadding(dp(ctx, 3), 0, 0, 0)
             })
         }
+        cell.addView(nameRow)
 
-        row.setOnClickListener {
+        cell.setOnClickListener {
             val colors = ColorThemes.build(theme)
             ColorScheme.applyTheme(prefs, slots, colors, night = isNight)
             ColorScheme.setCurrentTheme(prefs, theme.id)
             onApplied()
         }
-        return row
+        return cell
     }
 
     /** 五个小色块，横向排开作为主题预览 */

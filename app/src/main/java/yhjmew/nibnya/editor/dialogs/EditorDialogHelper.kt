@@ -751,9 +751,22 @@ fun MainActivity.showAppInfoDialog() {
             Tab(R.id.tab_settings_advanced, R.id.page_settings_advanced),
         )
 
-        val accent = ContextCompat.getColor(dialogView.context, R.color.nbt_key)
-        val dim = ContextCompat.getColor(dialogView.context, R.color.tab_bar_text)
-        val selectedBg = ContextCompat.getColor(dialogView.context, R.color.tab_bar_selected_bg)
+        // 标签栏配色走色槽，跟随主题（2026-11-02）
+        fun slotColor(key: String, fallback: Int): Int {
+            val p = prefs ?: return fallback
+            val ctx = dialogView.context
+            val slot = yhjmew.nibnya.util.ColorSlots.build(ctx).firstOrNull { it.key == key }
+                ?: return fallback
+            return yhjmew.nibnya.util.ColorScheme.value(
+                p, slot, yhjmew.nibnya.util.ColorScheme.isNight(ctx),
+            )
+        }
+        val accent = slotColor("c_accent",
+            ContextCompat.getColor(dialogView.context, R.color.nbt_key))
+        val dim = slotColor("c_tab_unselected",
+            ContextCompat.getColor(dialogView.context, R.color.tab_bar_text))
+        val selectedBg = slotColor("c_tab_selected",
+            ContextCompat.getColor(dialogView.context, R.color.tab_bar_selected_bg))
 
         fun selectTab(current: Tab) {
             tabs.forEach { tab ->

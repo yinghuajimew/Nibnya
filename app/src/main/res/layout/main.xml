@@ -83,7 +83,8 @@
                             android:id="@+id/view_bg_fullscreen_tree"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_tree_fs" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_tree_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_tree"
@@ -103,7 +104,8 @@
                             android:id="@+id/view_bg_fullscreen_view"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_view_fs" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_view_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_view"
@@ -123,7 +125,8 @@
                             android:id="@+id/view_bg_fullscreen_search"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_search_fs" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_search_fs" />
 
                         <ImageButton
                             android:id="@+id/btn_fullscreen_search"
@@ -400,7 +403,8 @@
                             android:id="@+id/view_bg_tree_mode"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_tree" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_tree" />
 
                         <ImageButton
                             android:id="@+id/btn_tree_mode"
@@ -420,7 +424,8 @@
                             android:id="@+id/view_bg_view_options"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_view" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_view" />
 
                         <ImageButton
                             android:id="@+id/btn_view_options"
@@ -439,7 +444,8 @@
                             android:id="@+id/view_bg_search_nbt"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@color/c_icon_search" />
+                            android:background="@drawable/bg_rounded_tint"
+                            android:backgroundTint="@color/c_icon_search" />
 
                         <ImageButton
                             android:id="@+id/btn_search_nbt"

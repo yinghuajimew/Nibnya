@@ -55,13 +55,21 @@ internal class BottomNavController(private val activity: MainActivity) {
 
         // 选中态：高亮 + 加粗；未选中：次级灰
         // 跟随配色方案：用户改过 c_nav_selected 就用他的，否则用默认值
-        val accent = activity.prefs?.let { p ->
+        // 选中态：高亮 + 加粗；未选中：次级灰
+        // 都走色槽，跟随主题（2026-11-02）。
+        // ⚠️ 之前只接了选中色，未选中的应用次级色，切换主题时底部字色不跟着变。
+        fun slotColor(key: String, fallbackRes: Int): Int {
+            val p = activity.prefs
             val ctx = activity.applicationContext
-            val slot = yhjmew.nibnya.util.ColorSlots.build(ctx)
-                .first { it.key == "c_nav_selected" }
-            yhjmew.nibnya.util.ColorScheme.value(p, slot, yhjmew.nibnya.util.ColorScheme.isNight(ctx))
-        } ?: ContextCompat.getColor(activity, R.color.nav_selected)
-        val dim = ContextCompat.getColor(activity, R.color.app_text_secondary)
+            if (p == null) return ContextCompat.getColor(ctx, fallbackRes)
+            val slot = yhjmew.nibnya.util.ColorSlots.build(ctx).firstOrNull { it.key == key }
+                ?: return ContextCompat.getColor(ctx, fallbackRes)
+            return yhjmew.nibnya.util.ColorScheme.value(
+                p, slot, yhjmew.nibnya.util.ColorScheme.isNight(ctx),
+            )
+        }
+        val accent = slotColor("c_nav_selected", R.color.nav_selected)
+        val dim = slotColor("c_tab_unselected", R.color.app_text_secondary)
         Page.entries.forEach { p ->
             val tv = activity.findViewById<TextView>(p.textId) ?: return@forEach
             val on = p == page

@@ -52,8 +52,18 @@ object ColorApplier {
             rememberOriginal(v)
 
             if (v is Button) {
-                v.background = roundedDrawable(activity, color, cornerDp = 2f)
-                v.backgroundTintList = null
+                // ⚠️ 只改 backgroundTintList，**不要替换 background**。
+                //
+                //    之前用 `background = roundedDrawable(...)` + `backgroundTintList = null`，
+                //    有两个后果：
+                //      1. Material 按钮的圆角/ripple/阴影全被换掉，看起来成为方角
+                //         （roundedDrawable 只给 2dp，原样式约 4~6dp）
+                //      2. 切回「默认颜色」时 restoreOriginal 只还原了 background，
+                //         backgroundTintList 已经被设为 null，永远回不来 ——
+                //         按钮变全白、文字消失，必须杀进程重开（2026-11-02）
+                //
+                //    改成只设 tint，原 background（含圆角状态）完全不动。
+                v.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
                 v.setTextColor(ColorScheme.onColor(color))
             } else {
                 v.setBackgroundColor(color)
@@ -72,7 +82,16 @@ object ColorApplier {
                 return@forEach
             }
             rememberOriginal(v)
-            v.setBackgroundColor(ColorScheme.value(prefs, slot, night))
+            // 图标块用的是 shape + backgroundTint，不是纯色 background，
+            // 直接 setBackgroundColor 会把 drawable 换掉、圆角丢失。
+            // 有 tint 的就改 tint，没有的才改 background。
+            if (v.backgroundTintList != null || v.background is android.graphics.drawable.GradientDrawable) {
+                v.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ColorScheme.value(prefs, slot, night)
+                )
+            } else {
+                v.setBackgroundColor(ColorScheme.value(prefs, slot, night))
+            }
         }
 
         // ── 3) 圆形徽章：保留 oval，只换 solid ──
@@ -168,16 +187,28 @@ object ColorApplier {
      * 用 WeakHashMap 记录原始背景，第一次覆盖前记下，还原时取回。
      * （不能用 View.setTag(String, ...) —— 那个 key 必须是资源 id（Int），传字符串编译不过）
      */
-    private val originals = java.util.WeakHashMap<View, android.graphics.drawable.Drawable?>()
+    /**
+     * 记录控件的原始背景与 tint。
+     *
+     * 两个都要存 —— 只存 background 的话，我们设过的 backgroundTintList
+     * 在还原时不会恢复，按钮会变成全白（2026-11-02 踩过）。
+     */
+    private class OriginalBg(
+        val background: android.graphics.drawable.Drawable?,
+        val tint: android.content.res.ColorStateList?,
+    )
+
+    private val originals = java.util.WeakHashMap<View, OriginalBg>()
 
     private fun rememberOriginal(v: View) {
         if (originals.containsKey(v)) return
-        originals[v] = v.background
+        originals[v] = OriginalBg(v.background, v.backgroundTintList)
     }
 
     private fun restoreOriginal(v: View) {
-        if (!originals.containsKey(v)) return
-        v.background = originals.remove(v)
+        val orig = originals.remove(v) ?: return
+        v.background = orig.background
+        v.backgroundTintList = orig.tint
     }
 
     /** 圆角纯色 drawable —— 用于替代 Material 按钮背景时保住圆角 */
