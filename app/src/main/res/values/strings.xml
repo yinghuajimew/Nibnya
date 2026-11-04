@@ -940,4 +940,12 @@ Make sure the path belongs to an installed app.</string>
     <string name="color_name_danger">Danger (save / delete)</string>
     <string name="color_name_link_night">Switch-to-night text</string>
     <string name="color_name_link_lang">Switch-language text</string>
+    <string name="btn_dev_tools">Developer tools</string>
+    <string name="settings_tab_debug">Debug</string>
+    <string name="debug_section_logs">Logs</string>
+    <string name="debug_logs_desc">Logs are kept per day and survive restarts. Last 14 days retained.</string>
+    <string name="debug_clear_logs">Clear today logs</string>
+    <string name="debug_section_test">Testing</string>
+    <string name="debug_clear_logs_confirm">This deletes all logs recorded today and cannot be undone. Logs from previous days are kept.</string>
+    <string name="debug_logs_cleared">Today logs cleared</string>
 </resources>

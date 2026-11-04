@@ -184,6 +184,21 @@
                     android:focusable="true"
                     android:background="?android:attr/selectableItemBackground" />
 
+                <TextView
+                    android:id="@+id/tab_settings_debug"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="@string/settings_tab_debug"
+                    android:textSize="14sp"
+                    android:textColor="@color/tab_bar_text"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground" />
+
             </LinearLayout>
 
         </HorizontalScrollView>
@@ -1097,6 +1112,116 @@
             <!-- 6. 日夜模式 -->
 
         </LinearLayout>
+        <!-- ===== 分类：调试 =====
+             2026-11-02 新增。原本这些入口藏在「点应用图标 10 次」，
+             用户找不到。现在独立成标签，图标彩蛋保留（两种方式都能进）。 -->
+        <LinearLayout
+            android:id="@+id/page_settings_debug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:paddingTop="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_section_logs"
+                android:textColor="@color/app_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_logs_desc"
+                android:textColor="@color/app_text_secondary"
+                android:textSize="12sp"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/btn_debug_show_logs"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/debug_show_logs"
+                android:textAllCaps="false"
+                android:textColor="@color/c_link_lang"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_debug_export_logs"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/debug_export_logs"
+                android:textAllCaps="false"
+                android:textColor="@color/c_link_lang"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_debug_copy_logs"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/debug_copy_logs"
+                android:textAllCaps="false"
+                android:textColor="@color/c_link_lang"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_debug_clear_logs"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/debug_clear_logs"
+                android:textAllCaps="false"
+                android:textColor="@color/c_danger"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp"
+                android:layout_marginBottom="14dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/app_divider"
+                android:layout_marginBottom="14dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/debug_section_test"
+                android:textColor="@color/app_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_debug_crash"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/debug_crash_test"
+                android:textAllCaps="false"
+                android:textColor="@color/c_danger"
+                android:textSize="14sp"
+                android:gravity="start|center_vertical"
+                android:paddingStart="4dp" />
+
+        </LinearLayout>
+
         </LinearLayout>
     </LinearLayout>
     <!-- 关于项（点击展开） -->

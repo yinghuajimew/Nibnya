@@ -942,4 +942,12 @@ ID：%3$s
     <string name="color_name_danger">危险操作（保存 / 删除）</string>
     <string name="color_name_link_night">「切换到夜间模式」文字</string>
     <string name="color_name_link_lang">「切换语言」文字</string>
+    <string name="btn_dev_tools">开发者调试</string>
+    <string name="settings_tab_debug">调试</string>
+    <string name="debug_section_logs">日志</string>
+    <string name="debug_logs_desc">日志按天保存，重启后仍在。只保留最近 14 天。</string>
+    <string name="debug_clear_logs">清空今天的日志</string>
+    <string name="debug_section_test">测试</string>
+    <string name="debug_clear_logs_confirm">将删除今天记录的全部日志，无法恢复。历史日期的日志不受影响。</string>
+    <string name="debug_logs_cleared">已清空今天的日志</string>
 </resources>

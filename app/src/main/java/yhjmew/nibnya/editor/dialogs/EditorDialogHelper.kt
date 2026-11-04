@@ -752,6 +752,7 @@ fun MainActivity.showAppInfoDialog() {
             Tab(R.id.tab_settings_editor, R.id.page_settings_editor),
             Tab(R.id.tab_settings_data, R.id.page_settings_data),
             Tab(R.id.tab_settings_advanced, R.id.page_settings_advanced),
+            Tab(R.id.tab_settings_debug, R.id.page_settings_debug),
         )
 
         // 标签栏配色走色槽，跟随主题（2026-11-02）
@@ -1108,6 +1109,40 @@ fun MainActivity.showAppInfoDialog() {
         dialog.dismiss()
         startDataMigration(manual = true)
     }
+    // ---- 调试页（2026-11-02 新增）----
+    // 原本这些入口藏在「点应用图标 10 次」，用户找不到。
+    // 现在独立成标签页，图标彩蛋保留（两种方式都能进）。
+    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
+        showLogDialog(
+            title = getString(R.string.title_logs),
+            detail = AppLogger.getLogs().ifEmpty { getString(R.string.label_sub_no_logs) },
+            cancelText = getString(R.string.btn_close)
+        )
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
+        exportLogsToFile()
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_copy_logs)?.setOnClickListener {
+        copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs())
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_clear_logs)?.setOnClickListener {
+        // 清空是不可逆的，先问一次
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.debug_clear_logs))
+            .setMessage(getString(R.string.debug_clear_logs_confirm))
+            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
+                AppLogger.clear()
+                Toast.makeText(this, R.string.debug_logs_cleared, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_crash)?.setOnClickListener {
+        Handler(Looper.getMainLooper()).postDelayed(
+            { throw RuntimeException("Manual crash test") }, 1000
+        )
+    }
+
 
     dialogView.findViewById<Button?>(R.id.btn_dialog_theme)?.let {
         it.text = if (isNightMode) getString(R.string.action_switch_day) else getString(R.string.action_switch_night)
