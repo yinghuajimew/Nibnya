@@ -1137,10 +1137,32 @@ fun MainActivity.showAppInfoDialog() {
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
+    // 测试区折叠：默认收起，点标题行展开
+    val debugTestHeader = dialogView.findViewById<LinearLayout?>(R.id.layout_debug_test_header)
+    val debugTestContent = dialogView.findViewById<LinearLayout?>(R.id.layout_debug_test_content)
+    val debugTestExpand = dialogView.findViewById<TextView?>(R.id.tv_debug_test_expand)
+    debugTestHeader?.setOnClickListener {
+        debugTestContent?.let { c ->
+            c.isVisible = !c.isVisible
+            debugTestExpand?.text = if (c.isVisible) "▲" else "▼"
+            remeasure()
+        }
+    }
+
     dialogView.findViewById<Button?>(R.id.btn_debug_crash)?.setOnClickListener {
-        Handler(Looper.getMainLooper()).postDelayed(
-            { throw RuntimeException("Manual crash test") }, 1000
-        )
+        // 崩溃测试是真的把进程弄崩，必须二次确认。
+        // 文案要明确说清楚「点了会发生什么」，不能只写「确定吗」。
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.debug_crash_confirm_title))
+            .setMessage(getString(R.string.debug_crash_confirm_msg))
+            .setPositiveButton(getString(R.string.debug_crash_confirm_ok)) { _, _ ->
+                AppLogger.warn("Debug", getString(R.string.debug_crash_log_marker))
+                Handler(Looper.getMainLooper()).postDelayed(
+                    { throw RuntimeException("Manual crash test") }, 1000
+                )
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
     }
 
 

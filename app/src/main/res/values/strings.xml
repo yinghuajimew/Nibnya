@@ -862,8 +862,8 @@ Source %5$d×%6$d → %7$d×%8$d each</string>
 Please delete it manually and retry.</string>
     <string name="msg_cannot_restore_owner">Cannot determine the owner of the world folder (%1$s). Aborted to avoid corrupting the save.
 Make sure the path belongs to an installed app.</string>
-    <string name="msg_root_cannot_write">Cannot write to: \n%1$s\\n\nROOT is connected but cannot write to this folder.\n\nCheck:\n1. Is Nibnya authorized in your superuser app?\n2. Is the folder locked by another app (Minecraft must be fully closed)?</string>
-    <string name="msg_write_denied_root">Cannot write to: \n%1$s\\n\nROOT works, but the write step failed. Please export the debug log.</string>
+    <string name="msg_root_cannot_write">Cannot write to: \n%1$s\n\nROOT is connected but cannot write to this folder.\n\nCheck:\n1. Is Nibnya authorized in your superuser app?\n2. Is the folder locked by another app (Minecraft must be fully closed)?</string>
+    <string name="msg_write_denied_root">Cannot write to: \n%1$s\n\nROOT works, but the write step failed. Please export the debug log.</string>
     <!-- ══ 自定义配色 ══ -->
     <string name="color_section_title">Colors</string>
     <string name="color_mode_label">Color mode</string>
@@ -948,4 +948,9 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_section_test">Testing</string>
     <string name="debug_clear_logs_confirm">This deletes all logs recorded today and cannot be undone. Logs from previous days are kept.</string>
     <string name="debug_logs_cleared">Today logs cleared</string>
+    <string name="debug_test_desc">These actions will actually crash the app. For verifying crash logging only.</string>
+    <string name="debug_crash_confirm_title">About to run crash test</string>
+    <string name="debug_crash_confirm_msg">After tapping &quot;Test now&quot;, the app will force-crash in 1 second.\n\nThis is expected behaviour, not a bug. Just reopen the app afterwards; the logs will still be here.\n\nContinue?</string>
+    <string name="debug_crash_confirm_ok">Test now</string>
+    <string name="debug_crash_log_marker">User manually triggered crash test</string>
 </resources>

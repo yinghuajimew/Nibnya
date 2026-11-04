@@ -1199,26 +1199,65 @@
                 android:background="@color/app_divider"
                 android:layout_marginBottom="14dp" />
 
-            <TextView
+            <!-- 测试区：整块折叠。默认收起 ——
+                 崩溃测试会真的把 App 弄崩，放在外面容易被误触。 -->
+            <LinearLayout
+                android:id="@+id/layout_debug_test_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/debug_section_test"
-                android:textColor="@color/app_text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
 
-            <Button
-                android:id="@+id/btn_debug_crash"
-                style="?android:attr/borderlessButtonStyle"
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/debug_section_test"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_debug_test_expand"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▼"
+                    android:textColor="@color/app_text_tertiary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_debug_test_content"
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="@string/debug_crash_test"
-                android:textAllCaps="false"
-                android:textColor="@color/c_danger"
-                android:textSize="14sp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="4dp" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/debug_test_desc"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="6dp" />
+
+                <Button
+                    android:id="@+id/btn_debug_crash"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="@string/debug_crash_test"
+                    android:textAllCaps="false"
+                    android:textColor="@color/c_danger"
+                    android:textSize="14sp"
+                    android:gravity="start|center_vertical"
+                    android:paddingStart="4dp" />
+            </LinearLayout>
 
         </LinearLayout>
 
