@@ -43,6 +43,18 @@ class ChunkReader(private val db: DB) {
         const val KEY_SUBCHUNK_TERRAIN = 47
         const val KEY_VERSION_OLD = 118
 
+        /** 诊断用：构造区块键，便于在运行时验证格式是否正确。 */
+        fun debugKey(cx: Int, cz: Int, type: Int, dim: Int, yIndex: Int? = null): ByteArray {
+            val size = 9 + (if (dim != 0) 4 else 0) + (if (yIndex != null) 1 else 0)
+            val buf = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)
+            buf.putInt(cx)
+            buf.putInt(cz)
+            if (dim != 0) buf.putInt(dim)
+            buf.put(type.toByte())
+            if (yIndex != null) buf.put(yIndex.toByte())
+            return buf.array()
+        }
+
         /** 一个子区块 16³。 */
         const val SUB_CHUNK_VOLUME = 4096
 

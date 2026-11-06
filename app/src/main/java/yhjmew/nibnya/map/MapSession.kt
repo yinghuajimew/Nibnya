@@ -206,6 +206,40 @@ class MapSession private constructor(
         val r = radiusChunks?.coerceIn(0, MAX_CHUNKS_PER_SIDE / 2)
             ?: DEFAULT_RADIUS_CHUNKS
 
+        // ---- 一次性诊断：把 DB 里真实存在的键打几条出来 ----
+        // 全黑时靠这个判断是「键不对」还是「库没读到」。
+        try {
+            val sample = ArrayList<String>(8)
+            var total = 0
+            dbRef.iterator().use { it ->
+                it.seekToFirst()
+                while (it.isValid() && total < 200000) {
+                    val k = it.key
+                    if (k != null) {
+                        total++
+                        if (sample.size < 6) {
+                            sample.add(k.joinToString("") { b -> "%02x".format(b) })
+                        }
+                    }
+                    it.next()
+                }
+            }
+            AppLogger.info("MapDiag", "DB 键总数≈$total，样本: ${sample.joinToString(" | ")}")
+
+            // 直接试探「出生点区块 + 几个 Y」能不能取到值 ——
+            // 这是最终裁判：有键但取不到值 = JNI/压缩层问题；取到值 = 解析问题。
+            val probe = spawn
+            val probeLog = StringBuilder()
+            for (y in intArrayOf(-4, -1, 0, 1, 4)) {
+                val k = ChunkReader.debugKey(probe.first, probe.second, 47, dim, y)
+                val v = try { dbRef.get(k) } catch (e: Exception) { null }
+                probeLog.append("y=$y:").append(v?.size ?: "null").append("  ")
+            }
+            AppLogger.info("MapDiag", "试探区块(${probe.first},${probe.second}) 子区块: $probeLog")
+        } catch (e: Exception) {
+            AppLogger.error("MapDiag", "遍历 DB 失败", e)
+        }
+
         val colors = BlockColorTable.get(ctx)
         val reader = ChunkReader(dbRef)
         val builder = TerrainMapBuilder(reader, colors)
