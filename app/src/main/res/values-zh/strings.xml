@@ -960,14 +960,18 @@ ID：%3$s
     <string name="debug_level_error">仅错误</string>
     <string name="log_none_at_level">当前筛选下没有日志（级别：%s 及以上）</string>
     <string name="map_no_world">未选择世界</string>
-    <string name="map_no_worlds_yet">还没有加载世界列表，请先回到主页刷新</string>
-    <string name="map_pick_world">选择世界</string>
-    <string name="map_render">生成地形</string>
-    <string name="map_radius_default">范围</string>
     <string name="map_radius_fmt">%d 区块</string>
     <string name="map_status_idle">选择世界后点「生成地形」</string>
     <string name="map_status_preparing">正在准备数据库…</string>
     <string name="map_status_rendering">正在渲染 %d%%</string>
     <string name="map_status_done">完成 %d×%d 方块，可拖动缩放</string>
     <string name="map_status_failed">渲染失败：%s</string>
+    <string name="map_radius_auto">自动</string>
+    <string name="map_radius_title">渲染范围</string>
+    <string name="map_radius_custom">自定义…</string>
+    <string name="map_radius_custom_title">每边区块数</string>
+    <string name="map_radius_custom_hint">例如 8 表示 17×17 区块</string>
+    <string name="map_radius_custom_invalid">请输入正整数</string>
+    <string name="map_status_waiting_world">请先在主页打开一个世界</string>
+    <string name="map_status_no_data">这个维度没有区块数据</string>
 </resources>

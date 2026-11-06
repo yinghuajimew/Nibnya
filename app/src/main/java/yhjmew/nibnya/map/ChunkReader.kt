@@ -58,7 +58,22 @@ class ChunkReader(private val db: DB) {
     // 键构造
     // ══════════════════════════════════════════════════════
 
-    private fun chunkKey(x: Int, z: Int, type: Int, dim: Int, yIndex: Int? = null): ByteArray {
+    /**
+     * 区块键的**前缀**（不含尾部）。
+     *
+     * ## 为什么是前缀而不是完整键
+     * 实测真实存档（`我的世界.mcworld`）发现，区块键在 `[x][z][type][dim]`
+     * 之后**还跟着不定长的尾部**：
+     *
+     * ```
+     * type=43/44/49/54/63…  长度 17  = 10 + 7 字节尾部
+     * type=47 (子区块)      长度 18  = 10 + 1 字节 Y 索引 + 7 字节尾部
+     * ```
+     *
+     * 尾部每个区块都不同（同一 (x,z) 相邻维度的值递增），
+     * 无法预先算出，所以**不能拼定长键去 get**，只能按前缀扫。
+     */
+    private fun keyPrefix(x: Int, z: Int, type: Int, dim: Int, yIndex: Int? = null): ByteArray {
         val size = if (yIndex == null) 10 else 11
         val buf = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)
         buf.putInt(x)
@@ -67,6 +82,26 @@ class ChunkReader(private val db: DB) {
         buf.put(dim.toByte())
         if (yIndex != null) buf.put(yIndex.toByte())
         return buf.array()
+    }
+
+    /**
+     * 按前缀精确查找**一条**记录。
+     *
+     * 键 = 前缀 + 尾部，尾部长度不定，所以用 seek 定位后用 startsWith 匹配。
+     * 同一前缀实测唯一（13084 个键无重复），所以取第一条即可。
+     */
+    private fun getByPrefix(prefix: ByteArray): ByteArray? {
+        return try {
+            db.iterator().use { it ->
+                it.seek(prefix)
+                if (!it.isValid()) return null
+                val key = it.key ?: return null
+                if (!startsWith(key, prefix)) return null
+                it.value
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // ══════════════════════════════════════════════════════
@@ -81,20 +116,55 @@ class ChunkReader(private val db: DB) {
     fun readChunk(cx: Int, cz: Int, dim: Int = 0): ParsedChunk? {
         val subChunks = HashMap<Int, SubChunk>(24)
 
-        // 子区块的 Y 索引范围：主世界 -4..19（-64..319），
-        // 但旧存档只有 0..15，所以从 -4 扫到 19 覆盖全部情况。
-        for (yIndex in -4..19) {
-            val raw = db.get(chunkKey(cx, cz, KEY_SUBCHUNK_TERRAIN, dim, yIndex)) ?: continue
-            val parsed = parseSubChunk(raw) ?: continue
-            // v9 的头部里带 Y 索引，优先信它；旧版没有，用循环变量
-            val actualIndex = parsed.first
-            subChunks[actualIndex] = parsed.second
-        }
+        // 一次前缀扫描拿全部子区块：前缀只到 dim，
+        // 后面每个 yIdx 各自的尾部都在同一条连续区间里。
+        scanSubChunks(cx, cz, dim, subChunks)
 
         val biomes = readBiomes(cx, cz, dim)
 
         if (subChunks.isEmpty() && biomes == null) return null
         return ParsedChunk(cx, cz, dim, subChunks, biomes)
+    }
+
+    /**
+     * 扫出该区块所有子区块。
+     *
+     * 前缀 = `[x][z][47][dim]`（10 字节）。真实键在这之后是
+     * `[yIdx 1 字节][7 字节尾部]`，所以按前缀连续读，
+     * 从第 11 字节取 yIdx。
+     */
+    private fun scanSubChunks(cx: Int, cz: Int, dim: Int, out: HashMap<Int, SubChunk>) {
+        val prefix = keyPrefix(cx, cz, KEY_SUBCHUNK_TERRAIN, dim)
+        try {
+            db.iterator().use { cursor ->
+                cursor.seek(prefix)
+                while (cursor.isValid()) {
+                    val key = cursor.key ?: break
+                    if (!startsWith(key, prefix)) break
+                    val value = cursor.value
+                    if (value != null) {
+                        // ⚠️ 键里 prefix 之后的那个字节**不是** Y 索引。
+                        // 实测 2632 个维度 0 子区块，键第 11 字节恒为 1，
+                        // 而数据头里的 yIdx 才是真实值（0..19）。
+                        // Y 索引只从数据头取，键只用来定位。
+                        parseSubChunk(value)?.let { (y, sub) ->
+                            out[y] = sub
+                        }
+                    }
+                    cursor.next()
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /** 字节数组前缀比较。 */
+    private fun startsWith(data: ByteArray, prefix: ByteArray): Boolean {
+        if (data.size < prefix.size) return false
+        for (i in prefix.indices) {
+            if (data[i] != prefix[i]) return false
+        }
+        return true
     }
 
     /**
@@ -105,10 +175,10 @@ class ChunkReader(private val db: DB) {
      * 这里统一转成「该列顶部群系」的 256 长数组，够 TerrainMapBuilder 用。
      */
     private fun readBiomes(cx: Int, cz: Int, dim: Int): BiomeColumn? {
-        db.get(chunkKey(cx, cz, KEY_DATA_3D, dim))?.let { raw ->
+        getByPrefix(keyPrefix(cx, cz, KEY_DATA_3D, dim))?.let { raw ->
             parseBiome3D(raw)?.let { return it }
         }
-        db.get(chunkKey(cx, cz, KEY_DATA_2D, dim))?.let { raw ->
+        getByPrefix(keyPrefix(cx, cz, KEY_DATA_2D, dim))?.let { raw ->
             parseBiome2D(raw)?.let { return it }
         }
         return null

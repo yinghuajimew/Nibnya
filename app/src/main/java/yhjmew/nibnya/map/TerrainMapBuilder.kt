@@ -7,6 +7,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import yhjmew.nibnya.util.AppLogger
 
 /**
  * 把一批区块渲染成一张位图。
@@ -106,17 +107,30 @@ class TerrainMapBuilder(
 
         val range = chunk.yIndexRange ?: return
 
+        // 记录「有区块但整列全空」的比例：这类区块会画成黑色，
+        // 与「根本没有区块」视觉上一样，但成因不同，值得记一笔。
+        var emptyColumns = 0
+
         for (x in 0 until 16) {
             for (z in 0 until 16) {
                 val biome = chunk.biomes?.at(x, z) ?: NO_BIOME
                 val entry = topBlockOf(chunk, range, x, z)
                 val color = if (entry == null) {
+                    emptyColumns++
                     EMPTY
                 } else {
                     colors.colorOf(entry.name, entry.tags, biome)
                 }
                 pixels[(oz + z) * stride + (ox + x)] = color
             }
+        }
+
+        // 整块 256 列全空才记日志 —— 单列空很常见（洞穴口），不值得刷屏
+        if (emptyColumns == 256) {
+            AppLogger.warn(
+                "MapRender",
+                "区块 ($cx,$cz) 有子区块但整列无实体方块，渲染为黑色"
+            )
         }
     }
 

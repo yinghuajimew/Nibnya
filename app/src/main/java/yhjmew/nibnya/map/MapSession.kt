@@ -26,6 +26,8 @@ import java.io.File
 class MapSession private constructor(
     val workDir: File,
     val worldFolder: String,
+    /** 原世界目录，用来读 level.dat 的出生点。 */
+    private val worldDir: File,
 ) {
     private var db: PlayerDbManager? = null
 
@@ -35,6 +37,32 @@ class MapSession private constructor(
 
         /** 单个方向的区块数上限，防止一次画太大 OOM。 */
         const val MAX_CHUNKS_PER_SIDE = 64
+
+        /**
+         * 读世界出生点对应的区块坐标。
+         *
+         * 实测「我的世界.mcworld」：出生点方块 (-113,-99) → 区块 (-8,-7)，
+         * 它周围 5×5 区块是满的；而原点 (0,0) 周围 5×5 只有 8 个区块有数据。
+         * 所以中心必须跟出生点，不能写死原点 —— 否则大半是黑块。
+         *
+         * @return 区块坐标；读不到返回 null
+         */
+        private fun spawnChunkOf(worldDir: File): Pair<Int, Int>? = try {
+            val json = yhjmew.nibnya.nbt.BedrockParser.parse(File(worldDir, "level.dat").absolutePath)
+                ?: return null
+            // BedrockParser 返回的结构里，数值字段是 {"t":3,"v":值}
+            fun intOf(key: String): Int? = json.get(key)?.let { el ->
+                if (!el.isJsonObject) return@let null
+                val v = el.asJsonObject.get("v") ?: return@let null
+                if (v.isJsonPrimitive) runCatching { v.asInt }.getOrNull() else null
+            }
+            val sx = intOf("SpawnX") ?: return null
+            val sz = intOf("SpawnZ") ?: return null
+            // 方块坐标 → 区块坐标（向下取整，负数不能直接整除）
+            Pair(Math.floorDiv(sx, 16), Math.floorDiv(sz, 16))
+        } catch (_: Throwable) {
+            null
+        }
 
         /**
          * 复制世界 db 到工作目录。
@@ -71,7 +99,7 @@ class MapSession private constructor(
             if (workDir.listFiles().isNullOrEmpty()) {
                 throw IllegalStateException("数据库目录为空，无法读取地形：${srcDb.absolutePath}")
             }
-            return MapSession(workDir, worldFolder)
+            return MapSession(workDir, worldFolder, worldDir)
         }
 
         /** 普通目录复制。保留子目录（LevelDB 可能有 .sst 分片）。 */
@@ -148,29 +176,45 @@ class MapSession private constructor(
     /**
      * 渲染一块地形。
      *
-     * @param radiusChunks 半径（区块）。0 表示只画当前位置那一个区块。
+     * 中心优先用**出生点**，读不到才退回包围盒中心 ——
+     * 实测存档的原点周围常常是空的，用包围盒中心也会偏。
+     *
+     * @param radiusChunks 半径（区块）。null = 自动取存档包围盒的一半
+     *                     （上限 [MAX_CHUNKS_PER_SIDE]/2）。
      */
     suspend fun render(
         ctx: Context,
-        centerCx: Int = 0,
-        centerCz: Int = 0,
-        radiusChunks: Int = DEFAULT_RADIUS_CHUNKS,
         dim: Int = 0,
+        radiusChunks: Int? = null,
         onProgress: (Int, Int) -> Unit = { _, _ -> },
     ): Bitmap {
-        val r = radiusChunks.coerceIn(0, MAX_CHUNKS_PER_SIDE / 2)
-        val countX = r * 2 + 1
-        val countZ = r * 2 + 1
+        val dbRef = database().rawDb()
+
+        // ① 出生点优先
+        val spawn = spawnChunkOf(worldDir)
+            ?: run {
+                // 读不到 level.dat 时用包围盒中心
+                val b = ChunkIndex(dbRef).scan(dim)
+                if (b.isEmpty) null else Pair(b.centerCx, b.centerCz)
+            }
+
+        if (spawn == null) {
+            throw IllegalStateException("这个维度没有任何区块数据")
+        }
+
+        // ② 半径
+        val r = radiusChunks?.coerceIn(0, MAX_CHUNKS_PER_SIDE / 2)
+            ?: DEFAULT_RADIUS_CHUNKS
 
         val colors = BlockColorTable.get(ctx)
-        val reader = ChunkReader(database().rawDb())
+        val reader = ChunkReader(dbRef)
         val builder = TerrainMapBuilder(reader, colors)
 
         return builder.render(
-            minCx = centerCx - r,
-            minCz = centerCz - r,
-            chunkCountX = countX,
-            chunkCountZ = countZ,
+            minCx = spawn.first - r,
+            minCz = spawn.second - r,
+            chunkCountX = r * 2 + 1,
+            chunkCountZ = r * 2 + 1,
             dim = dim,
             onProgress = onProgress,
         )

@@ -53,6 +53,9 @@ internal class BottomNavController(private val activity: MainActivity) {
             activity.findViewById<android.view.View>(viewId)?.isVisible = (p == page)
         }
 
+        // 通知地图页可见性：可见时才自动渲染，切走就停
+        if (page == Page.MAP) activity.mapPage?.onShown() else activity.mapPage?.onHidden()
+
         // 选中态：高亮 + 加粗；未选中：次级灰
         // 跟随配色方案：用户改过 c_nav_selected 就用他的，否则用默认值
         // 选中态：高亮 + 加粗；未选中：次级灰

@@ -1,11 +1,11 @@
 package yhjmew.nibnya.map
 
-import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import yhjmew.nibnya.MainActivity
@@ -14,15 +14,16 @@ import yhjmew.nibnya.util.AppLogger
 import yhjmew.nibnya.world.WorldViewModel
 
 /**
- * 「地图」页的控制器。
+ * 「地图」页控制器。
  *
- * 职责边界：只做 UI 编排（选世界、点渲染、显示进度），
- * 解析与渲染都在 [TerrainMapBuilder]，文件与权限在 [MapSession]。
+ * ## 交互（2026-11-02 按用户反馈重做）
+ * 1. **不再单独选世界**：跟随主页的 [WorldViewModel.currentWorldFolder]。
+ *    主页换世界，地图页自动跟着换并重新渲染。
+ * 2. **没有「生成地形」按钮**：切到地图页就自动加载。
+ * 3. **范围用下拉**：点顶部「范围」弹出列表（自动 / 预设 / 自定义）。
  *
- * ## 状态
- * - [mapView] 持有位图，切到别的页再切回来不会丢（View 没被销毁）
- * - [session] 持有打开的数据库，切页也不关，避免重复拷贝 db
- * - 退出 Activity 时才 [release]
+ * 三条反馈都来自同一个原则：用户已经在主页选过世界了，
+ * 这里再选一次是重复劳动；渲染也该是自动的，不该再点一次。
  */
 class MapPageController(
     private val activity: MainActivity,
@@ -32,115 +33,171 @@ class MapPageController(
     private val mapView: MapView? = activity.findViewById(R.id.map_view)
     private val tvWorld: TextView? = activity.findViewById(R.id.tv_map_world)
     private val tvStatus: TextView? = activity.findViewById(R.id.tv_map_status)
-    private val btnPick: Button? = activity.findViewById(R.id.btn_map_pick_world)
-    private val btnRender: Button? = activity.findViewById(R.id.btn_map_render)
-    private val btnRadius: Button? = activity.findViewById(R.id.btn_map_radius)
+    private val tvRadius: TextView? = activity.findViewById(R.id.tv_map_radius)
 
-    /** 当前选中的世界目录名。null = 还没选。 */
-    private var selectedFolder: String? = null
+    /** 当前渲染的世界目录。null = 主页还没打开世界。 */
+    private var folder: String? = null
 
-    /** 渲染半径（区块）。0 / 1 / 2 / 4 / 8 / 16 循环切换。 */
-    private var radiusChunks: Int = MapSession.DEFAULT_RADIUS_CHUNKS
+    /** 用户选的范围。null = 自动。 */
+    private var radiusChunks: Int? = null
 
     private var session: MapSession? = null
-    private var busy = false
+    private var renderJob: Job? = null
+
+    /** 最近一次渲染的世界，用于避免重复渲染同一个。 */
+    private var renderedFolder: String? = null
+    private var renderedRadius: Int? = null
+
+    /** 页面当前是否可见。底部导航切走时不渲染。 */
+    private var visible = false
 
     init {
-        btnPick?.setOnClickListener { pickWorld() }
-        btnRender?.setOnClickListener { render() }
-        btnRadius?.setOnClickListener { cycleRadius() }
+        tvRadius?.setOnClickListener { showRadiusMenu() }
         updateRadiusLabel()
-        updateWorldLabel()
 
-        // 世界列表加载完后，如果还没选过，自动选第一个，省一次点击
+        // 跟随主页世界
         activity.lifecycleScope.launch {
-            vm.worldList.collect { list ->
-                if (selectedFolder == null) {
-                    list.firstOrNull()?.let {
-                        selectedFolder = it.folderName
-                        updateWorldLabel()
-                    }
+            vm.currentWorldFolder.collect { f ->
+                folder = f
+                updateWorldLabel()
+                if (visible && f != null && (f != renderedFolder || radiusChunks != renderedRadius)) {
+                    renderNow()
                 }
             }
         }
+
+        // 世界列表变化时更新显示名
+        activity.lifecycleScope.launch {
+            vm.worldList.collect { updateWorldLabel() }
+        }
     }
 
-    // ── 世界选择 ──
-
-    private fun pickWorld() {
-        val list = vm.worldList.value
-        if (list.isEmpty()) {
-            toast(activity.getString(R.string.map_no_worlds_yet))
+    /** 底部导航切到地图页时调用。 */
+    fun onShown() {
+        visible = true
+        // 只在没渲染过、或世界变了时渲染
+        if (folder == null) {
+            setStatus(activity.getString(R.string.map_status_waiting_world))
             return
         }
-        val names = list.map { it.displayName }.toTypedArray()
-        val checked = list.indexOfFirst { it.folderName == selectedFolder }.coerceAtLeast(0)
+        if (folder != renderedFolder || radiusChunks != renderedRadius) {
+            renderNow()
+        }
+    }
 
+    /** 切走时调用。不断渲染，下次回来按需继续。 */
+    fun onHidden() {
+        visible = false
+    }
+
+    // ── 范围下拉 ──
+
+    private fun showRadiusMenu() {
+        // 第一项是自动，其余是固定半径
+        val presets = intArrayOf(2, 4, 8, 16, 32, 64)
+        val labels = ArrayList<String>(presets.size + 2)
+        labels.add(activity.getString(R.string.map_radius_auto))
+
+        val values = ArrayList<Int?>(presets.size + 1)
+        values.add(null)
+        presets.forEach {
+            labels.add(activity.getString(R.string.map_radius_fmt, it * 2 + 1))
+            values.add(it)
+        }
+        // 自定义
+        labels.add(activity.getString(R.string.map_radius_custom))
+        values.add(null)   // 占位，单独处理
+
+        val cur = radiusChunks
+        val checked = if (cur == null) 0
+        else presets.indexOf(cur).let { if (it < 0) 0 else it + 1 }
+
+        val items = labels.toTypedArray()
         android.app.AlertDialog.Builder(activity)
-            .setTitle(activity.getString(R.string.map_pick_world))
-            .setSingleChoiceItems(names, checked) { dialog, which ->
-                selectedFolder = list[which].folderName
-                updateWorldLabel()
-                // 换世界要关掉旧会话，否则还连着上一个 db
-                releaseSession()
-                mapView?.setMap(null)
-                setStatus(activity.getString(R.string.map_status_idle))
+            .setTitle(activity.getString(R.string.map_radius_title))
+            .setSingleChoiceItems(items, checked) { dialog, which ->
                 dialog.dismiss()
+                if (which == items.size - 1) {
+                    askCustomRadius()
+                } else {
+                    radiusChunks = values[which]
+                    updateRadiusLabel()
+                    if (visible) renderNow()
+                }
             }
             .setNegativeButton(activity.getString(R.string.btn_cancel), null)
             .show()
     }
 
-    private fun updateWorldLabel() {
-        val folder = selectedFolder
-        if (folder == null) {
-            tvWorld?.text = activity.getString(R.string.map_no_world)
-            return
+    /** 自定义半径：弹输入框。 */
+    private fun askCustomRadius() {
+        val edit = android.widget.EditText(activity).apply {
+            hint = activity.getString(R.string.map_radius_custom_hint)
+            setText((radiusChunks ?: MapSession.DEFAULT_RADIUS_CHUNKS).toString())
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setPadding(48, 32, 48, 32)
         }
-        val name = vm.worldList.value.firstOrNull { it.folderName == folder }?.displayName ?: folder
-        tvWorld?.text = name
-    }
-
-    // ── 半径 ──
-
-    private fun cycleRadius() {
-        val steps = intArrayOf(1, 2, 4, 8, 16, 32)
-        val i = steps.indexOf(radiusChunks)
-        radiusChunks = steps[(i + 1).mod(steps.size)]
-        updateRadiusLabel()
+        android.app.AlertDialog.Builder(activity)
+            .setTitle(activity.getString(R.string.map_radius_custom_title))
+            .setView(edit)
+            .setPositiveButton(activity.getString(R.string.btn_confirm)) { _, _ ->
+                val v = edit.text.toString().toIntOrNull()
+                if (v == null || v <= 0) {
+                    toast(activity.getString(R.string.map_radius_custom_invalid))
+                    return@setPositiveButton
+                }
+                radiusChunks = v.coerceAtMost(MapSession.MAX_CHUNKS_PER_SIDE / 2)
+                updateRadiusLabel()
+                if (visible) renderNow()
+            }
+            .setNegativeButton(activity.getString(R.string.btn_cancel), null)
+            .show()
     }
 
     private fun updateRadiusLabel() {
-        val side = radiusChunks * 2 + 1
-        btnRadius?.text = activity.getString(R.string.map_radius_fmt, side)
+        val r = radiusChunks
+        tvRadius?.text = if (r == null) {
+            activity.getString(R.string.map_radius_auto)
+        } else {
+            activity.getString(R.string.map_radius_fmt, r * 2 + 1)
+        }
+    }
+
+    private fun updateWorldLabel() {
+        val f = folder
+        if (f == null) {
+            tvWorld?.text = activity.getString(R.string.map_no_world)
+        } else {
+            val name = vm.worldList.value.firstOrNull { it.folderName == f }?.displayName ?: f
+            tvWorld?.text = name
+        }
     }
 
     // ── 渲染 ──
 
-    private fun render() {
-        if (busy) return
-        val folder = selectedFolder
-        if (folder == null) {
-            toast(activity.getString(R.string.map_no_worlds_yet))
+    /**
+     * 开始渲染。同一时间只跑一个任务，新任务会取消旧的
+     * （换世界或改范围时旧任务的结果已经没意义）。
+     */
+    private fun renderNow() {
+        val f = folder ?: run {
+            setStatus(activity.getString(R.string.map_status_waiting_world))
             return
         }
 
-        busy = true
-        setButtonsEnabled(false)
-        activity.lifecycleScope.launch {
+        renderJob?.cancel()
+        renderJob = activity.lifecycleScope.launch {
             try {
                 setStatus(activity.getString(R.string.map_status_preparing))
-                val s = session ?: MapSession.open(activity, vm, folder).also { session = it }
+                AppLogger.info("MapPage", "开始在 $f 上渲染地形")
 
-                setStatus(activity.getString(R.string.map_status_rendering, 0))
+                val s = session ?: MapSession.open(activity, vm, f).also { session = it }
+
                 val bmp = s.render(
                     ctx = activity,
-                    centerCx = 0,
-                    centerCz = 0,
-                    radiusChunks = radiusChunks,
                     dim = 0,
+                    radiusChunks = radiusChunks,
                 ) { done, total ->
-                    // 回调在后台线程，切回主线程更新文字
                     activity.runOnUiThread {
                         setStatus(activity.getString(R.string.map_status_rendering, done * 100 / total))
                     }
@@ -148,33 +205,21 @@ class MapPageController(
 
                 withContext(Dispatchers.Main) {
                     mapView?.setMap(bmp)
-                    setStatus(
-                        activity.getString(
-                            R.string.map_status_done,
-                            bmp.width, bmp.height,
-                        )
-                    )
+                    renderedFolder = f
+                    renderedRadius = radiusChunks
+                    setStatus(activity.getString(R.string.map_status_done, bmp.width, bmp.height))
+                    AppLogger.info("MapPage", "渲染完成 ${bmp.width}x${bmp.height}")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.error("MapPage", "渲染失败", e)
-                setStatus(
-                    activity.getString(R.string.map_status_failed, e.message ?: "unknown")
-                )
-                toast(e.message ?: activity.getString(R.string.map_status_failed, "unknown"))
-            } finally {
-                busy = false
-                setButtonsEnabled(true)
+                setStatus(activity.getString(R.string.map_status_failed, e.message ?: "unknown"))
             }
         }
     }
 
     // ── 杂项 ──
-
-    private fun setButtonsEnabled(on: Boolean) {
-        btnPick?.isEnabled = on
-        btnRender?.isEnabled = on
-        btnRadius?.isEnabled = on
-    }
 
     private fun setStatus(text: String) {
         tvStatus?.text = text
@@ -184,14 +229,8 @@ class MapPageController(
         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    private fun releaseSession() {
-        session?.close()
-        session = null
-        // 清掉这次复制出来的工作目录，避免 Works 里越堆越多
-    }
-
-    /** Activity 销毁时调用：关库并删除临时工作目录。 */
-    fun release() {
+    /** 换世界时丢掉旧会话（连同临时目录）。 */
+    private fun dropSession() {
         session?.let { s ->
             s.close()
             try {
@@ -200,5 +239,12 @@ class MapPageController(
             }
         }
         session = null
+    }
+
+    /** Activity 销毁：关库、删临时目录、取消任务。 */
+    fun release() {
+        renderJob?.cancel()
+        renderJob = null
+        dropSession()
     }
 }
