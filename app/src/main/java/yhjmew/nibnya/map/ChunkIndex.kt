@@ -57,19 +57,29 @@ class ChunkIndex(private val db: DB) {
                 it.seekToFirst()
                 while (it.isValid()) {
                     val key = it.key
-                    if (key != null && key.size >= 10 &&
-                        (key[8].toInt() and 0xFF) == 47 &&
-                        (key[9].toInt() and 0xFF) == dim
-                    ) {
-                        val buf = ByteBuffer.wrap(key).order(ByteOrder.LITTLE_ENDIAN)
-                        val x = buf.getInt(0)
-                        val z = buf.getInt(4)
-                        if (x in -SANE_LIMIT..SANE_LIMIT && z in -SANE_LIMIT..SANE_LIMIT) {
-                            if (x < minX) minX = x
-                            if (x > maxX) maxX = x
-                            if (z < minZ) minZ = z
-                            if (z > maxZ) maxZ = z
-                            count++
+                    if (key != null) {
+                        // 键格式见 ChunkReader.chunkKey：
+                        //   dim == 0 : [x][z][type][y]     10 字节
+                        //   dim != 0 : [x][z][dim:i32][type][y]  14 字节
+                        val typeOffset = if (dim == 0) 8 else 12
+                        val subChunkLen = if (dim == 0) 10 else 14
+                        if (key.size == subChunkLen &&
+                            (key[typeOffset].toInt() and 0xFF) == 47
+                        ) {
+                            val buf = ByteBuffer.wrap(key).order(ByteOrder.LITTLE_ENDIAN)
+                            val x = buf.getInt(0)
+                            val z = buf.getInt(4)
+                            val keyDim = if (dim == 0) 0 else buf.getInt(8)
+                            if (keyDim == dim &&
+                                x in -SANE_LIMIT..SANE_LIMIT &&
+                                z in -SANE_LIMIT..SANE_LIMIT
+                            ) {
+                                if (x < minX) minX = x
+                                if (x > maxX) maxX = x
+                                if (z < minZ) minZ = z
+                                if (z > maxZ) maxZ = z
+                                count++
+                            }
                         }
                     }
                     it.next()
