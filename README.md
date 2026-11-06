@@ -18,7 +18,7 @@
 [![QQ Group][qq-shield]][qq-link]
 [![Telegram][tg-shield]][tg-link]
 
-English · [Chinese](./README.zh-CN.md) · [Change log](./CHANGELOG.md)
+English · [简体中文](./README.zh-CN.md) · [Change log](./CHANGELOG.md)
 
 </div>
 
