@@ -396,7 +396,7 @@ class MainActivity : ComponentActivity() {
             if (saved.startsWith("content://")) {
                 try {
                     worldVM.safTreeUri = saved.trimEnd('/').toUri()
-                } catch (_: Exception) {}
+                } catch (e: Exception) { AppLogger.warn("Path", "恢复上次路径失败: ${e.message}") }
             }
         }
 

@@ -1112,18 +1112,69 @@ fun MainActivity.showAppInfoDialog() {
     // ---- 调试页（2026-11-02 新增）----
     // 原本这些入口藏在「点应用图标 10 次」，用户找不到。
     // 现在独立成标签页，图标彩蛋保留（两种方式都能进）。
-    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
+    // ---- 日志级别筛选（2026-11-02）----
+    // 补齐 catch 之后 INFO 会很多，日常只想看「哪里不对」。
+    // 记住用户的选择，下次进来还是同一个筛选。
+    val prefLevel = prefs?.getString("debug_log_level", "ALL") ?: "ALL"
+
+    fun applyLevelColors(sel: String) {
+        val accent = ContextCompat.getColor(this, R.color.c_accent)
+        val dim = ContextCompat.getColor(this, R.color.app_text_secondary)
+        listOf(
+            Triple(R.id.tv_debug_level_all, "ALL", R.string.debug_level_all),
+            Triple(R.id.tv_debug_level_warn, "WARN", R.string.debug_level_warn),
+            Triple(R.id.tv_debug_level_error, "ERROR", R.string.debug_level_error),
+        ).forEach { (id, key, _) ->
+            dialogView.findViewById<TextView?>(id)?.let { tv ->
+                val on = key == sel
+                tv.setTextColor(if (on) accent else dim)
+                tv.setTypeface(null, if (on) android.graphics.Typeface.BOLD
+                else android.graphics.Typeface.NORMAL)
+            }
+        }
+    }
+
+    /** 设置里的级别字符串 -> AppLogger.Level（null = 全部） */
+    fun levelOf(sel: String): AppLogger.Level? = when (sel) {
+        "WARN" -> AppLogger.Level.WARN
+        "ERROR" -> AppLogger.Level.ERROR
+        else -> null
+    }
+
+    fun openLogs(sel: String) {
+        val level = levelOf(sel)
         showLogDialog(
             title = getString(R.string.title_logs),
-            detail = AppLogger.getLogs().ifEmpty { getString(R.string.label_sub_no_logs) },
-            cancelText = getString(R.string.btn_close)
+            detail = AppLogger.getLogs(level).ifEmpty {
+                getString(R.string.label_sub_no_logs)
+            },
+            cancelText = getString(R.string.btn_close),
         )
+    }
+
+    var currentLevel = prefLevel
+    applyLevelColors(currentLevel)
+
+    listOf(
+        Triple(R.id.tv_debug_level_all, "ALL", 0),
+        Triple(R.id.tv_debug_level_warn, "WARN", 0),
+        Triple(R.id.tv_debug_level_error, "ERROR", 0),
+    ).forEach { (id, key, _) ->
+        dialogView.findViewById<TextView?>(id)?.setOnClickListener {
+            currentLevel = key
+            prefs?.edit()?.putString("debug_log_level", key)?.apply()
+            applyLevelColors(key)
+        }
+    }
+
+    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
+        openLogs(currentLevel)
     }
     dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
         exportLogsToFile()
     }
     dialogView.findViewById<Button?>(R.id.btn_debug_copy_logs)?.setOnClickListener {
-        copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs())
+        copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs(levelOf(currentLevel)))
     }
     dialogView.findViewById<Button?>(R.id.btn_debug_clear_logs)?.setOnClickListener {
         // 清空是不可逆的，先问一次

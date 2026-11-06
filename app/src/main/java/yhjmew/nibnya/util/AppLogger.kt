@@ -247,7 +247,34 @@ object AppLogger {
      * 组装完整日志：标题 + 时间 + **设备信息** + 全部日志条目。
      * 标题、设备信息标签、**以及每条日志正文**都按应用语言渲染。
      */
-    fun getLogs(): String {
+    /**
+     * 日志级别门槛：只输出 >= 该级别的条目。
+     *
+     * 为什么需要它：
+     *   补齐 catch 块之后，INFO 会非常多（正常流程也会记）。
+     *   用户日常看日志只想看「哪里不对」，所以要能只看 WARN 以上。
+     *
+     * 顺序：DEBUG < INFO < WARN < ERROR
+     */
+    enum class Level(val rank: Int, val label: String) {
+        DEBUG(0, "DEBUG"),
+        INFO(1, "INFO"),
+        WARN(2, "WARN"),
+        ERROR(3, "ERROR"),
+    }
+
+    private fun rankOf(level: String): Int = when (level.uppercase(Locale.US)) {
+        "DEBUG" -> 0
+        "INFO" -> 1
+        "WARN" -> 2
+        "ERROR" -> 3
+        else -> 1
+    }
+
+    /**
+     * @param minLevel 只输出该级别及以上的条目；传 null 表示全部
+     */
+    fun getLogs(minLevel: Level? = null): String {
         val ctx = appContext?.let { DeviceInfo.localizedContext(it) }
         val sb = StringBuilder()
 
@@ -262,14 +289,37 @@ object AppLogger {
             sb.appendLine("==============================")
         }
 
-        if (entries.isNotEmpty()) {
+        val shown = entries.filter { e ->
+            minLevel == null || rankOf(e.level) >= minLevel.rank
+        }
+        if (shown.isNotEmpty()) {
             sb.appendLine("${ctx?.getString(R.string.log_entries) ?: "Logs"}:")
-            entries.forEach { e ->
+            shown.forEach { e ->
                 val body = e.raw ?: format(e.resId, e.args) ?: ""
                 sb.appendLine("[${e.time}][${e.level}][${e.tag}] $body")
             }
+        } else if (entries.isNotEmpty() && minLevel != null) {
+            // 有日志但都被过滤掉了 —— 明确告诉用户，不然会以为没记
+            sb.appendLine(
+                (ctx?.getString(R.string.log_none_at_level) ?: "No entries at level %s or above")
+                    .format(minLevel.label)
+            )
         }
         return sb.toString()
+    }
+
+    /** 当前级别过滤下有没有内容（给按钮态用） */
+    fun hasEntries(minLevel: Level? = null): Boolean =
+        entries.any { minLevel == null || rankOf(it.level) >= minLevel.rank }
+
+    /** 各级别条数，用于在筛选行上显示「WARN 3 / ERROR 1」 */
+    fun counts(): Map<Level, Int> {
+        val m = mutableMapOf<Level, Int>()
+        entries.forEach { e ->
+            val lv = Level.entries[rankOf(e.level).coerceIn(0, 3)]
+            m[lv] = (m[lv] ?: 0) + 1
+        }
+        return m
     }
 
     /**

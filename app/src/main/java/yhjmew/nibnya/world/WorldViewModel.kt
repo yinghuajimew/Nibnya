@@ -1187,7 +1187,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                         allKeys.addAll(db.listMapKeys())
                         allKeys.addAll(db.listVillageKeys())
                         allKeys.addAll(db.listPlayerKeys())
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { AppLogger.warn("World", "列举 DB 键失败，列表可能缺项: ${e.message}") }
 
 // 遍历写入
                     for (key in allKeys) {
@@ -1955,7 +1955,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             if (!okSaf) return Pair(false, errSaf ?: getString(R.string.msg_restore_failed))
             deleteRecursive(src)
             restoreBackupsIfAny(context, item)
-            try { deleteRecursive(item.dir) } catch (_: Exception) {}
+            try { deleteRecursive(item.dir) } catch (e: Exception) { AppLogger.warn("World", "删除存档目录失败: ${e.message}") }
             AppLogger.info("World", R.string.log_world_restored_saf, item.originalFolder)
             return Pair(true, null)
         }

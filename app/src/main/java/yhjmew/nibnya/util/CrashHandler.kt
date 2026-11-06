@@ -141,6 +141,19 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
         sb.append(result)
         sb.append("\n=======================\n")
 
+        // 同时并入 AppLogger —— 崩溃后重开 App，在「调试 → 显示日志」里
+        // 就能直接看到，不用跑去文件夹翻 crash-*.log。
+        // 只放堆栈前几行，避免把整份日志再抄一遍（文件里已经是完整的）。
+        try {
+            val brief = result.lineSequence()
+                .filter { it.isNotBlank() }
+                .take(6)
+                .joinToString(" | ")
+            AppLogger.error("Crash", "未捕获异常: $brief")
+        } catch (_: Throwable) {
+            // 崩溃现场不能再出岔子
+        }
+
         // 准备文件名和内容
         val logContent = sb.toString()
         val fileName =

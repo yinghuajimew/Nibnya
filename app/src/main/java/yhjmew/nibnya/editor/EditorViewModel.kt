@@ -309,7 +309,7 @@ class EditorViewModel : ViewModel() {
             ) {
                 return listEl.asJsonObject.getAsJsonArray("v")
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { AppLogger.warn("Editor", "同步 List 数据失败: ${e.message}") }
         return null
     }
 
@@ -407,7 +407,7 @@ class EditorViewModel : ViewModel() {
                 } else break
             }
             currentListData = currentPtr
-        } catch (_: Exception) {}
+        } catch (e: Exception) { AppLogger.warn("Editor", "重建 List 视图失败: ${e.message}") }
     }
 
     // ============================================

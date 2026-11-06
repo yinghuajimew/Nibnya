@@ -317,7 +317,7 @@ fun generatePuzzleMap(
                                 if (count <= 0) isRealItem = false
                             }
                             if (isRealItem) occupiedSlots[slot.toInt()] = true
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) { AppLogger.warn("MapArt", "扫描背包占用槽位失败: ${e.message}") }
                     }
                 }
 
@@ -336,7 +336,7 @@ fun generatePuzzleMap(
                 var maxMapId: Long = -1
                 for (key in mapKeys) {
                     try { val id = key.replace("map_", "").toLong(); if (id > maxMapId) maxMapId = id }
-                    catch (_: Exception) {}
+                    catch (e: Exception) { AppLogger.warn("MapArt", "读取已有地图 ID 失败: ${e.message}") }
                 }
                 val startMapId = if (maxMapId < 0) 0 else (maxMapId + 1)
 

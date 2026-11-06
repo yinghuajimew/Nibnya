@@ -953,4 +953,8 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_crash_confirm_msg">After tapping &quot;Test now&quot;, the app will force-crash in 1 second.\n\nThis is expected behaviour, not a bug. Just reopen the app afterwards; the logs will still be here.\n\nContinue?</string>
     <string name="debug_crash_confirm_ok">Test now</string>
     <string name="debug_crash_log_marker">User manually triggered crash test</string>
+    <string name="debug_level_all">All</string>
+    <string name="debug_level_warn">Warnings</string>
+    <string name="debug_level_error">Errors only</string>
+    <string name="log_none_at_level">No entries at this level (%s or above)</string>
 </resources>
