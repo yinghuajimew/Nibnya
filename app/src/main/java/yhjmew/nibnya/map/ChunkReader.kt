@@ -284,10 +284,13 @@ class ChunkReader(private val db: DB) {
         val length = end - start
 
         val slice = ByteArray(length)
-        val mark = buf.position()
         buf.position(start)
         buf.get(slice)
-        buf.position(mark)
+        // ⚠️ 必须前进到条目末尾（end），不是回到读头部之后的位置。
+        // 之前写成了「恢复到 buf.position()」，结果指针原地不动，
+        // 第二条从第一条中间开始读 → type != 10 → 整个调色板解析失败
+        // → 区块被判为空 → 整张图全黑。
+        buf.position(end)
 
         val json = try {
             yhjmew.nibnya.nbt.BedrockParser.parseBytes(slice)
