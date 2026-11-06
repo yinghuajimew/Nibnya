@@ -238,4 +238,4 @@ This project uses **[AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0)** protocol
 
 <!-- Telegram频道: 电报蓝 #26A5E4 -->
 [tg-shield]: https://img.shields.io/badge/Telegram-26A5E4?style=flat-square&labelColor=black&logo=telegram&logoColor=white
-[tg-link]: https://t.me/yhjmew_minecraft_nbteditor
+[tg-link]: https://t.me/Nibnya
