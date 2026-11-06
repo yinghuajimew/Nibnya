@@ -161,6 +161,15 @@ class PlayerDbManager(dbFolderPath: String) {
         return players
     }
 
+    /**
+     * 底层 DB 句柄，供只读扫描使用（地形图逐区块读取）。
+     *
+     * **不要**拿它做写操作 —— 写请走本类的方法，
+     * 这样以后加事务或前置校验时不用满仓库找调用点。
+     */
+    fun rawDb(): DB =
+        db ?: throw Exception(getString(R.string.label_sub_database_is_not_open))
+
     fun close() {
         db?.close()
         db = null

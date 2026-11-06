@@ -1,0 +1,577 @@
+{
+  "default": {
+    "id": 1,
+    "rgb": "#8DB360",
+    "grass": "#8EB971",
+    "leaves": "#71A74D",
+    "water": "#3F76E4"
+  },
+  "ocean": {
+    "id": 0,
+    "rgb": "#000070",
+    "grass": "#8EB971",
+    "water": "#1787D4"
+  },
+  "plains": {
+    "id": 1,
+    "rgb": "#8DB360",
+    "grass": "#91BD59",
+    "leaves": "#77AB2F",
+    "water": "#44AFF5"
+  },
+  "desert": {
+    "id": 2,
+    "rgb": "#FA9418",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#32A598"
+  },
+  "extreme_hills": {
+    "id": 3,
+    "rgb": "#606060",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B",
+    "water": "#007BF7"
+  },
+  "forest": {
+    "id": 4,
+    "rgb": "#056621",
+    "grass": "#79C05A",
+    "leaves": "#59AE30",
+    "water": "#1E97F2"
+  },
+  "taiga": {
+    "id": 5,
+    "rgb": "#0B6A5F",
+    "grass": "#86B783",
+    "leaves": "#68A464",
+    "water": "#287082"
+  },
+  "swampland": {
+    "id": 6,
+    "rgb": "#07F9B2",
+    "grass": "#6A7039",
+    "leaves": "#6A7039",
+    "water": "#617B64"
+  },
+  "river": {
+    "id": 7,
+    "rgb": "#0000FF",
+    "grass": "#8EB971",
+    "water": "#0084FF"
+  },
+  "hell": {
+    "id": 8,
+    "rgb": "#572526",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#905957"
+  },
+  "the_end": {
+    "id": 9,
+    "rgb": "#8080FF",
+    "grass": "#8EB971",
+    "water": "#62529E"
+  },
+  "legacy_frozen_ocean": {
+    "id": 10,
+    "rgb": "#7070D6",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#3938C9"
+  },
+  "frozen_river": {
+    "id": 11,
+    "rgb": "#A0A0FF",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#185390"
+  },
+  "ice_plains": {
+    "id": 12,
+    "rgb": "#FFFFFF",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#14559B"
+  },
+  "ice_mountains": {
+    "id": 13,
+    "rgb": "#A0A0A0",
+    "grass": "#80B497",
+    "leaves": "#60A17B"
+  },
+  "mushroom_island": {
+    "id": 14,
+    "rgb": "#FF00FF",
+    "grass": "#55C93F",
+    "leaves": "#2BBB0F",
+    "water": "#8A8997"
+  },
+  "mushroom_island_shore": {
+    "id": 15,
+    "rgb": "#A000FF",
+    "grass": "#55C93F",
+    "leaves": "#2BBB0F"
+  },
+  "beach": {
+    "id": 16,
+    "rgb": "#FADE55",
+    "grass": "#91BD59",
+    "leaves": "#77AB2F",
+    "water": "#157CAB"
+  },
+  "desert_hills": {
+    "id": 17,
+    "rgb": "#D25F12",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A"
+  },
+  "forest_hills": {
+    "id": 18,
+    "rgb": "#22551C",
+    "grass": "#79C05A",
+    "leaves": "#59AE30"
+  },
+  "taiga_hills": {
+    "id": 19,
+    "rgb": "#163933",
+    "grass": "#86B783",
+    "leaves": "#68A464"
+  },
+  "extreme_hills_edge": {
+    "id": 20,
+    "rgb": "#72789A",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B"
+  },
+  "jungle": {
+    "id": 21,
+    "rgb": "#507B0A",
+    "grass": "#59C93C",
+    "leaves": "#30BB0B",
+    "water": "#14A2C5"
+  },
+  "jungle_hills": {
+    "id": 22,
+    "rgb": "#2C4205",
+    "grass": "#59C93C",
+    "leaves": "#30BB0B"
+  },
+  "jungle_edge": {
+    "id": 23,
+    "rgb": "#60930F",
+    "grass": "#64C73F",
+    "leaves": "#3EB80F"
+  },
+  "deep_ocean": {
+    "id": 24,
+    "rgb": "#000030",
+    "grass": "#8EB971",
+    "water": "#1787D4"
+  },
+  "stone_beach": {
+    "id": 25,
+    "rgb": "#A2A284",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B",
+    "water": "#0D67BB"
+  },
+  "cold_beach": {
+    "id": 26,
+    "rgb": "#FAF0C0",
+    "grass": "#83B593",
+    "leaves": "#64A278",
+    "water": "#1463A5"
+  },
+  "birch_forest": {
+    "id": 27,
+    "rgb": "#307444",
+    "grass": "#88BB67",
+    "leaves": "#6BA941",
+    "water": "#0677CE"
+  },
+  "birch_forest_hills": {
+    "id": 28,
+    "rgb": "#1F5F32",
+    "grass": "#88BB67",
+    "leaves": "#6BA941"
+  },
+  "roofed_forest": {
+    "id": 29,
+    "rgb": "#40511A",
+    "grass": "#507A32",
+    "leaves": "#59AE30",
+    "water": "#3B6CD1"
+  },
+  "cold_taiga": {
+    "id": 30,
+    "rgb": "#31554A",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#205E83"
+  },
+  "cold_taiga_hills": {
+    "id": 31,
+    "rgb": "#243F36",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#3D57D6"
+  },
+  "mega_taiga": {
+    "id": 32,
+    "rgb": "#596651",
+    "grass": "#86B783",
+    "leaves": "#68A464"
+  },
+  "mega_taiga_hills": {
+    "id": 33,
+    "rgb": "#454F3E",
+    "grass": "#86B783",
+    "leaves": "#68A464"
+  },
+  "extreme_hills_plus_trees": {
+    "id": 34,
+    "rgb": "#5B7352",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B"
+  },
+  "savanna": {
+    "id": 35,
+    "rgb": "#BDB25F",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#2C8B9C"
+  },
+  "savanna_plateau": {
+    "id": 36,
+    "rgb": "#A79D64",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#2590A8"
+  },
+  "mesa": {
+    "id": 37,
+    "rgb": "#D94515",
+    "grass": "#90814D",
+    "leaves": "#9E814D",
+    "water": "#4E7F81"
+  },
+  "mesa_plateau_stone": {
+    "id": 38,
+    "rgb": "#B09765",
+    "grass": "#90814D",
+    "leaves": "#9E814D",
+    "water": "#55809E"
+  },
+  "mesa_plateau": {
+    "id": 39,
+    "rgb": "#CA8C65",
+    "grass": "#90814D",
+    "leaves": "#9E814D",
+    "water": "#497F99"
+  },
+  "warm_ocean": {
+    "id": 40,
+    "rgb": "#0000AC",
+    "water": "#02B0E5",
+    "grass": "#8EB971"
+  },
+  "deep_warm_ocean": {
+    "id": 41,
+    "rgb": "#000050",
+    "water": "#43D5EE"
+  },
+  "lukewarm_ocean": {
+    "id": 42,
+    "rgb": "#000090",
+    "water": "#0D96DB",
+    "grass": "#8EB971"
+  },
+  "deep_lukewarm_ocean": {
+    "id": 43,
+    "rgb": "#000040",
+    "water": "#0D96DB",
+    "grass": "#8EB971"
+  },
+  "cold_ocean": {
+    "id": 44,
+    "rgb": "#202070",
+    "water": "#2080C9",
+    "grass": "#8EB971"
+  },
+  "deep_cold_ocean": {
+    "id": 45,
+    "rgb": "#202038",
+    "water": "#2080C9",
+    "grass": "#8EB971"
+  },
+  "frozen_ocean": {
+    "id": 46,
+    "rgb": "#7070D6",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#2570B5"
+  },
+  "deep_frozen_ocean": {
+    "id": 47,
+    "rgb": "#404090",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#2570B5"
+  },
+  "bamboo_jungle": {
+    "id": 48,
+    "rgb": "#849500",
+    "grass": "#59C93C",
+    "leaves": "#30BB0B",
+    "water": "#14A2C5"
+  },
+  "bamboo_jungle_hills": {
+    "id": 49,
+    "rgb": "#5C6C04",
+    "grass": "#64C73F",
+    "leaves": "#30BB0B",
+    "water": "#0D8AE3"
+  },
+  "sunflower_plains": {
+    "id": 129,
+    "rgb": "#B5DB88",
+    "grass": "#91BD59",
+    "leaves": "#77AB2F",
+    "water": "#44AFF5"
+  },
+  "desert_mutated": {
+    "id": 130,
+    "rgb": "#FFBC40",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A"
+  },
+  "extreme_hills_mutated": {
+    "id": 131,
+    "rgb": "#888888",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B"
+  },
+  "flower_forest": {
+    "id": 132,
+    "rgb": "#2D8E49",
+    "grass": "#79C05A",
+    "leaves": "#59AE30",
+    "water": "#20A3CC"
+  },
+  "taiga_mutated": {
+    "id": 133,
+    "rgb": "#339287",
+    "grass": "#86B783",
+    "leaves": "#68A464"
+  },
+  "swampland_mutated": {
+    "id": 134,
+    "rgb": "#2FFFDA",
+    "grass": "#6A7039",
+    "leaves": "#6A7039",
+    "water": "#617B64"
+  },
+  "ice_plains_spikes": {
+    "id": 140,
+    "rgb": "#B4DCDC",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#14559B"
+  },
+  "jungle_mutated": {
+    "id": 149,
+    "rgb": "#78A332",
+    "grass": "#59C93C",
+    "leaves": "#30BB0B"
+  },
+  "jungle_edge_mutated": {
+    "id": 151,
+    "rgb": "#88BB37",
+    "grass": "#64C73F",
+    "leaves": "#3EB80F"
+  },
+  "birch_forest_mutated": {
+    "id": 155,
+    "rgb": "#589C6C",
+    "grass": "#88BB67",
+    "leaves": "#6BA941",
+    "water": "#44AFF5"
+  },
+  "birch_forest_hills_mutated": {
+    "id": 156,
+    "rgb": "#47875A",
+    "grass": "#88BB67",
+    "leaves": "#6BA941"
+  },
+  "roofed_forest_mutated": {
+    "id": 157,
+    "rgb": "#687942",
+    "grass": "#507A32",
+    "leaves": "#59AE30"
+  },
+  "cold_taiga_mutated": {
+    "id": 158,
+    "rgb": "#597D72",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#3D57D6"
+  },
+  "redwood_taiga_mutated": {
+    "id": 160,
+    "rgb": "#818E79",
+    "grass": "#86B87F",
+    "leaves": "#68A464"
+  },
+  "redwood_taiga_hills_mutated": {
+    "id": 161,
+    "rgb": "#6D7766",
+    "grass": "#86B783",
+    "leaves": "#68A464"
+  },
+  "extreme_hills_plus_trees_mutated": {
+    "id": 162,
+    "rgb": "#839B7A",
+    "grass": "#8AB689",
+    "leaves": "#6DA36B"
+  },
+  "savanna_mutated": {
+    "id": 163,
+    "rgb": "#E5DA87",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A"
+  },
+  "savanna_plateau_mutated": {
+    "id": 164,
+    "rgb": "#CFC58C",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A"
+  },
+  "mesa_bryce": {
+    "id": 165,
+    "rgb": "#FF6D3D",
+    "grass": "#90814D",
+    "leaves": "#9E814D"
+  },
+  "mesa_plateau_stone_mutated": {
+    "id": 166,
+    "rgb": "#D8BF8D",
+    "grass": "#90814D",
+    "leaves": "#9E814D"
+  },
+  "mesa_plateau_mutated": {
+    "id": 167,
+    "rgb": "#F2B48D",
+    "grass": "#90814D",
+    "leaves": "#9E814D"
+  },
+  "soulsand_valley": {
+    "id": 178,
+    "rgb": "#4D3A2E",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#905957"
+  },
+  "crimson_forest": {
+    "id": 179,
+    "rgb": "#981A11",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#905957"
+  },
+  "warped_forest": {
+    "id": 180,
+    "rgb": "#49907B",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#905957"
+  },
+  "basalt_deltas": {
+    "id": 181,
+    "rgb": "#645F63",
+    "grass": "#BFB755",
+    "leaves": "#AEA42A",
+    "water": "#3F76E4"
+  },
+  "lofty_peaks": {
+    "id": 182,
+    "rgb": "#DCDCC8",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#44AFF5"
+  },
+  "snow_capped_peaks": {
+    "id": 183,
+    "rgb": "#B0B3CE",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#44AFF5"
+  },
+  "snowy_slopes": {
+    "id": 184,
+    "rgb": "#C4C4C4",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#44AFF5"
+  },
+  "mountain_grove": {
+    "id": 185,
+    "rgb": "#47726C",
+    "grass": "#80B497",
+    "leaves": "#60A17B",
+    "water": "#44AFF5"
+  },
+  "mountain_meadow": {
+    "id": 186,
+    "rgb": "#60A445",
+    "grass": "#86B87F",
+    "leaves": "#63A948",
+    "water": "#44AFF5"
+  },
+  "lush_caves": {
+    "id": 187,
+    "rgb": "#283C00",
+    "grass": "#B9B75B",
+    "leaves": "#77AB2F",
+    "water": "#44AFF5"
+  },
+  "dripstone_caves": {
+    "id": 188,
+    "rgb": "#4E3012",
+    "grass": "#8DB58A",
+    "leaves": "#77AB2F",
+    "water": "#44AFF5"
+  },
+  "stony_peaks": {
+    "id": 189,
+    "rgb": "#7B8F74",
+    "grass": "#9ABE4B",
+    "leaves": "#82AC1E",
+    "water": "#44AFF5"
+  },
+  "deep_dark": {
+    "id": 190,
+    "rgb": "#031F29",
+    "grass": "#91BD59",
+    "water": "#44AFF5"
+  },
+  "mangrove_swamp": {
+    "id": 191,
+    "rgb": "#2CCC8E",
+    "grass": "#6A7039",
+    "leaves": "#4C763C",
+    "water": "#3A7A6A"
+  },
+  "cherry_groves": {
+    "id": 192,
+    "rgb": "#FF91C8",
+    "water": "#5DB7EF",
+    "grass": "#B6DB61"
+  },
+  "pale_garden": {
+    "id": 193,
+    "rgb": "#696D95",
+    "grass": "#778272",
+    "water": "#76889D"
+  }
+}

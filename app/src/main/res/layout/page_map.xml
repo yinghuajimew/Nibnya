@@ -1,38 +1,115 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  「地图」页 —— 当前为占位页（2026-11-02 随底部导航一起加入）。
+  「地图」页 —— 只读地形预览（2026-11-02 起从占位页换成真实视图）。
 
-  规划：真正可编辑玩家地图的界面（地图画 / 已探索区块 / 地图物品）。
-  现在只放一段说明文字，用来验证底部导航的切换与状态保持是否正常。
-  真正实现时把下面的占位内容整体替换成地图视图即可，外部 id 不用改。
+  布局分三层：
+    1. 顶部工具条：世界选择 + 渲染按钮 + 半径
+    2. 中间：MapView（自绘，可拖可缩）
+    3. 底部：状态/进度文字
+
+  顶部不遮挡地图，所以用纵向 LinearLayout 而不是浮层，
+  这样小屏也不会挡住地形。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/page_map"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp"
     android:background="@color/app_bg"
     android:visibility="gone">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- ── 工具条 ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/page_map_placeholder_title"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="@color/app_text_primary"
-        android:gravity="center" />
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="6dp"
+        android:background="@color/app_surface">
 
+        <TextView
+            android:id="@+id/tv_map_world"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/map_no_world"
+            android:textColor="@color/app_text_primary"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="middle"
+            android:paddingTop="4dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <Button
+                android:id="@+id/btn_map_pick_world"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="12dp"
+                android:text="@string/map_pick_world"
+                android:textAllCaps="false"
+                android:textColor="@color/c_link_lang"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_map_render"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="12dp"
+                android:text="@string/map_render"
+                android:textAllCaps="false"
+                android:textColor="@color/c_icon_view"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_map_radius"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="12dp"
+                android:text="@string/map_radius_default"
+                android:textAllCaps="false"
+                android:textColor="@color/app_text_secondary"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/app_divider" />
+
+    <!-- ── 地形图 ── -->
+    <yhjmew.nibnya.map.MapView
+        android:id="@+id/map_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- ── 状态行 ── -->
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/tv_map_status"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/page_map_placeholder_body"
-        android:textSize="14sp"
-        android:lineSpacingExtra="4dp"
+        android:padding="10dp"
+        android:text="@string/map_status_idle"
         android:textColor="@color/app_text_secondary"
-        android:gravity="center" />
+        android:textSize="12sp"
+        android:background="@color/app_surface" />
 
 </LinearLayout>

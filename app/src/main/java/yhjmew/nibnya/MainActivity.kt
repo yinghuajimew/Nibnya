@@ -96,6 +96,9 @@ class MainActivity : ComponentActivity() {
 
     /** 底部三格导航（主页 / 地图 / 其他）。在 initViews() 里创建。 */
     internal var bottomNav: BottomNavController? = null
+
+    /** 地图页控制器（只读地形预览）。在 initViews() 里创建，onDestroy 释放。 */
+    internal var mapPage: yhjmew.nibnya.map.MapPageController? = null
     internal var currentLang: String? = null
     internal var prefs: SharedPreferences? = null
 
@@ -505,6 +508,14 @@ class MainActivity : ComponentActivity() {
         worldVM.persistSessionNow(this)
     }
 
+    override fun onDestroy() {
+        // 地图页持有 LevelDB 连接和一份 db 副本，必须在这里关掉并删除，
+        // 否则 Works 目录会随每次开图累积，且 db 句柄泄漏。
+        mapPage?.release()
+        mapPage = null
+        super.onDestroy()
+    }
+
     private fun initViews() {
         viewSidebar = findViewById(R.id.sidebar_content)
         etWorldName = findViewById<EditText>(R.id.et_world_name)?.also { et ->
@@ -524,6 +535,9 @@ class MainActivity : ComponentActivity() {
         tvFullscreenPath = findViewById(R.id.tv_fullscreen_path)
 
         bottomNav = BottomNavController(this)
+
+        // 地图页（只读地形预览，2026-11-02）
+        mapPage = yhjmew.nibnya.map.MapPageController(this, worldVM)
 
         // 按用户配色刷一遍主页（默认颜色模式时走 colors.xml 原值，等于没刷）
         prefs?.let { ColorApplier.apply(this, it) }

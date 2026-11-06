@@ -957,4 +957,15 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_level_warn">Warnings</string>
     <string name="debug_level_error">Errors only</string>
     <string name="log_none_at_level">No entries at this level (%s or above)</string>
+    <string name="map_no_world">No world selected</string>
+    <string name="map_no_worlds_yet">World list is empty. Go back to Home and refresh first.</string>
+    <string name="map_pick_world">Pick world</string>
+    <string name="map_render">Render terrain</string>
+    <string name="map_radius_default">Range</string>
+    <string name="map_radius_fmt">%d chunks</string>
+    <string name="map_status_idle">Pick a world, then tap Render terrain</string>
+    <string name="map_status_preparing">Preparing database…</string>
+    <string name="map_status_rendering">Rendering %d%%</string>
+    <string name="map_status_done">Done %d×%d blocks. Drag and pinch to explore.</string>
+    <string name="map_status_failed">Render failed: %s</string>
 </resources>
