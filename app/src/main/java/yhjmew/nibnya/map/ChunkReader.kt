@@ -43,18 +43,6 @@ class ChunkReader(private val db: DB) {
         const val KEY_SUBCHUNK_TERRAIN = 47
         const val KEY_VERSION_OLD = 118
 
-        /** 诊断用：构造区块键，便于在运行时验证格式是否正确。 */
-        fun debugKey(cx: Int, cz: Int, type: Int, dim: Int, yIndex: Int? = null): ByteArray {
-            val size = 9 + (if (dim != 0) 4 else 0) + (if (yIndex != null) 1 else 0)
-            val buf = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)
-            buf.putInt(cx)
-            buf.putInt(cz)
-            if (dim != 0) buf.putInt(dim)
-            buf.put(type.toByte())
-            if (yIndex != null) buf.put(yIndex.toByte())
-            return buf.array()
-        }
-
         /** 一个子区块 16³。 */
         const val SUB_CHUNK_VOLUME = 4096
 
@@ -107,20 +95,6 @@ class ChunkReader(private val db: DB) {
             null
         }
 
-    /** 调色板失败只记一次，避免刷屏。 */
-    private var dbgPaletteLogged = false
-
-    /** 子区块解析结果只记一次。 */
-    private var dbgSubLogged = false
-    private var dbgSubOkLogged = false
-
-    /** 层解析失败只记一次。 */
-    private var dbgLayerLogged = false
-    private fun dbgLayer(msg: String) {
-        if (dbgLayerLogged) return
-        dbgLayerLogged = true
-        yhjmew.nibnya.util.AppLogger.warn("MapParse", "层解析失败: $msg")
-    }
 
     // ══════════════════════════════════════════════════════
     // 读取
@@ -143,25 +117,8 @@ class ChunkReader(private val db: DB) {
                 null
             } ?: continue
 
-            val parsed = parseSubChunk(raw)
-            if (parsed == null) {
-                if (!dbgSubLogged) {
-                    dbgSubLogged = true
-                    yhjmew.nibnya.util.AppLogger.warn(
-                        "MapParse", "子区块(cx=$cx,cz=$cz,y=$yIndex) 解析失败，rawLen=${raw.size}，" +
-                            "首12字节=" + raw.take(12).joinToString("") { "%02x".format(it) }
-                    )
-                }
-            } else {
-                if (!dbgSubOkLogged) {
-                    dbgSubOkLogged = true
-                    yhjmew.nibnya.util.AppLogger.info(
-                        "MapParse",
-                        "子区块(cx=$cx,cz=$cz,y=$yIndex) OK，调色板 ${parsed.second.layer.palette.size} 项，" +
-                            "首个=${parsed.second.layer.palette.firstOrNull()?.name}"
-                    )
-                }
-                subChunks[yIndex] = parsed.second
+            parseSubChunk(raw)?.let { (_, sub) ->
+                subChunks[yIndex] = sub
             }
         }
 
@@ -235,10 +192,7 @@ class ChunkReader(private val db: DB) {
     }
 
     private fun parseLayer(buf: ByteBuffer): BlockLayer? {
-        if (buf.remaining() < 1) {
-            dbgLayer("剩余 0 字节，读不到层头")
-            return null
-        }
+        if (buf.remaining() < 1) return null
         val header = buf.get().toInt() and 0xFF
         val bits = header ushr 1
 
@@ -260,10 +214,7 @@ class ChunkReader(private val db: DB) {
             if (SUB_CHUNK_VOLUME % perWord != 0) wordCount++
 
             val needBytes = wordCount * 4 + 4
-            if (buf.remaining() < needBytes) {
-                dbgLayer("索引区不足: 需 $needBytes 剩 ${buf.remaining()}")
-                return null
-            }
+            if (buf.remaining() < needBytes) return null
 
             indices = IntArray(SUB_CHUNK_VOLUME)
             val mask = if (bits == 32) -1 else (1 shl bits) - 1
@@ -285,22 +236,13 @@ class ChunkReader(private val db: DB) {
             }
             if (buf.remaining() < 4) return null
             paletteLen = buf.getInt()
-            if (paletteLen <= 0 || paletteLen > 4096) {
-                dbgLayer("调色板长度异常: $paletteLen")
-                return null
-            }
+            if (paletteLen <= 0 || paletteLen > 4096) return null
         }
 
         // 调色板：paletteLen 个连续 NBT Compound
         val palette = ArrayList<PaletteEntry>(paletteLen)
         for (i in 0 until paletteLen) {
-            val at = buf.position()
-            val entry = readPaletteEntry(buf)
-            if (entry == null) {
-                dbgLayer("调色板第 $i/$paletteLen 条失败，位置 $at，剩余 ${buf.remaining()}")
-                return null
-            }
-            palette.add(entry)
+            palette.add(readPaletteEntry(buf) ?: return null)
         }
 
         return BlockLayer(indices, palette)
@@ -338,8 +280,7 @@ class ChunkReader(private val db: DB) {
 
         val json = try {
             yhjmew.nibnya.nbt.BedrockParser.parseBytes(slice)
-        } catch (e: Exception) {
-            yhjmew.nibnya.util.AppLogger.warn("MapParse", "parseBytes 抛异常: ${e.message}")
+        } catch (_: Exception) {
             null
         } ?: return null
 
@@ -350,16 +291,7 @@ class ChunkReader(private val db: DB) {
         //           "version":{"t":3,"v":18153475}}
         // 所以不能直接 json.get("name").asString —— 那是对 JsonObject
         // 调 asString，会抛异常，然后被上面的 catch 吞掉，整条作废。
-        val name = unwrapString(json.get("name")) ?: run {
-            if (!dbgPaletteLogged) {
-                dbgPaletteLogged = true
-                yhjmew.nibnya.util.AppLogger.warn(
-                    "MapParse",
-                    "条目无 name，keys=${json.keySet()}, 原始=${json.get("name")}, sliceLen=$length"
-                )
-            }
-            return null
-        }
+        val name = unwrapString(json.get("name")) ?: return null
 
         // 状态值：同样要先解包
         val tags = ArrayList<String>(4)

@@ -37,12 +37,7 @@ class TerrainMapBuilder(
 ) {
 
     companion object {
-        /** 诊断用：几类情况各只记一次。 */
-    private var dbgChunkLogged = false
-    private var dbgEmptyLogged = false
-    private var dbgOkLogged = false
-
-    /** 找不到任何方块时的颜色（纯黑，与「没有区块」区分开）。 */
+        /** 找不到任何方块时的颜色（纯黑，与「没有区块」区分开）。 */
         private const val EMPTY = 0xFF000000.toInt()
 
         /** 未知群系回退。 */
@@ -104,28 +99,11 @@ class TerrainMapBuilder(
     ) {
         val chunk = try {
             reader.readChunk(cx, cz, dim)
-        } catch (e: Exception) {
-            if (!dbgChunkLogged) {
-                dbgChunkLogged = true
-                AppLogger.warn("MapRender", "readChunk($cx,$cz) 抛异常: ${e.message}")
-            }
+        } catch (_: Exception) {
             null
         } ?: return   // 空区块保持 EMPTY
 
-        if (!chunk.hasTerrain) {
-            if (!dbgEmptyLogged) {
-                dbgEmptyLogged = true
-                AppLogger.warn("MapRender", "区块($cx,$cz) 无地形数据（子区块 0 个）")
-            }
-            return
-        }
-        if (!dbgOkLogged) {
-            dbgOkLogged = true
-            AppLogger.info(
-                "MapRender",
-                "区块($cx,$cz) 子区块 ${chunk.subChunks.size} 个，Y 范围 ${chunk.yIndexRange}"
-            )
-        }
+        if (!chunk.hasTerrain) return
 
         val range = chunk.yIndexRange ?: return
 
