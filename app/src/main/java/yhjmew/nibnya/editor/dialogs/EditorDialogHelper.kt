@@ -1112,13 +1112,14 @@ fun MainActivity.showAppInfoDialog() {
     // ---- 调试页（2026-11-02 新增）----
     // 原本这些入口藏在「点应用图标 10 次」，用户找不到。
     // 现在独立成标签页，图标彩蛋保留（两种方式都能进）。
-    // ---- 显示日志（2026-11-08 重构）----
-    // 原来「全部 / 仅警告 / 仅错误」三个文字选项直接摊在页面上，
-    // 现在收进弹窗：点「显示日志」→ 先选级别 → 再选日期 → 看内容。
-    // 级别与日期都记住，下次进来还是上次的选择。
+    // ---- 显示日志（2026-11-08）----
+    // 交互定稿：点一次「显示日志」直接开日志弹窗，**不插任何中间弹窗**。
+    // 切换都放在弹窗标题栏右侧的下拉里：
+    //   「日志 · 全部 ▾」  ← 点开切级别
+    //   「今天 ▾」         ← 点开切日期
+    // 选完就地刷新正文，弹窗不关。
     val prefLevel = prefs?.getString("debug_log_level", "ALL") ?: "ALL"
 
-    /** 设置里的级别字符串 -> AppLogger.Level（null = 全部） */
     fun levelOf(sel: String): AppLogger.Level? = when (sel) {
         "WARN" -> AppLogger.Level.WARN
         "ERROR" -> AppLogger.Level.ERROR
@@ -1143,9 +1144,13 @@ fun MainActivity.showAppInfoDialog() {
         }
     }
 
-    fun showLogContent(levelSel: String, day: String? = null) {
+    val todayStr: String =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+
+    /** 日期对应的正文。null = 还没选过日期，走内存（跟随语言与级别实时格式化）。 */
+    fun bodyFor(levelSel: String, day: String?): String {
         val level = levelOf(levelSel)
-        val body = if (day == null) {
+        return if (day == null) {
             AppLogger.getLogs(level)
         } else {
             buildString {
@@ -1155,58 +1160,96 @@ fun MainActivity.showAppInfoDialog() {
                 append(AppLogger.readDay(day, level))
             }
         }.ifBlank { getString(R.string.label_sub_no_logs) }
+    }
+
+    // 这个 lambda 是单独的接收者作用域，读不到 MainActivity 的 this，
+    // 先存成局部变量，后面造 View / 弹子菜单都靠它。
+    val act = this
+    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
+        var curLevel = prefLevel
+        var curDay: String? = null   // null = 看内存里今天的
+
+        val density = act.resources.displayMetrics.density
+        val pad = (4 * density).toInt()
+
+        /**
+         * 标题栏上的一个下拉：文字 + ▾，整块可点。
+         *
+         * 为什么不用 Spinner：Spinner 放进 AlertDialog 的标题区后，
+         * 展开列表的定位会飘到屏幕别处，点起来很别扭。
+         */
+        fun makeChip(initial: String): Pair<LinearLayout, TextView> {
+            val ctx: android.content.Context = act
+            val label = TextView(ctx).apply {
+                text = initial
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(ctx, R.color.c_link_lang))
+                setPadding(0, pad, 0, pad)
+            }
+            val chip = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                addView(label)
+                addView(TextView(ctx).apply {
+                    text = " ▾"
+                    textSize = 14f
+                    setTextColor(ContextCompat.getColor(ctx, R.color.c_link_lang))
+                    setPadding(0, pad, 0, pad)
+                })
+            }
+            return chip to label
+        }
+
+        val (levelChip, levelText) = makeChip(levelLabel(curLevel))
+        val firstDay = AppLogger.logDays().firstOrNull()
+        val (dayChip, dayText) = makeChip(if (firstDay == null) todayStr else dayLabel(firstDay))
+
+        val trailing = LinearLayout(act).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.END
+            addView(levelChip)
+            addView(dayChip)
+        }
 
         showLogDialog(
-            title = "${getString(R.string.title_logs)} · ${levelLabel(levelSel)}",
-            detail = body,
+            title = getString(R.string.title_logs),
+            detail = bodyFor(curLevel, curDay),
             cancelText = getString(R.string.btn_close),
+            titleTrailing = trailing,
+            onContentTextView = { tv ->
+                levelChip.setOnClickListener {
+                    val all = arrayOf("ALL", "WARN", "ERROR")
+                    val labels = all.map { levelLabel(it) }.toTypedArray()
+                    AlertDialog.Builder(act)
+                        .setItems(labels) { d, which ->
+                            curLevel = all[which]
+                            prefs?.edit()?.putString("debug_log_level", curLevel)?.apply()
+                            levelText.text = levelLabel(curLevel)
+                            tv.text = bodyFor(curLevel, curDay)
+                            d.dismiss()
+                        }
+                        .show()
+                }
+                dayChip.setOnClickListener {
+                    val days = AppLogger.logDays()
+                    if (days.isNotEmpty()) {
+                        val labels = days.map { dayLabel(it) }.toTypedArray()
+                        AlertDialog.Builder(act)
+                            .setItems(labels) { d, which ->
+                                curDay = days[which]
+                                dayText.text = dayLabel(curDay!!)
+                                tv.text = bodyFor(curLevel, curDay)
+                                d.dismiss()
+                            }
+                            .show()
+                    }
+                }
+            },
         )
     }
 
-    fun pickDayThenShow(levelSel: String) {
-        val days = AppLogger.logDays()
-        if (days.isEmpty()) {
-            // 磁盘上没有历史文件时，退回看内存里今天的条目
-            showLogContent(levelSel)
-            return
-        }
-        val labels = days.map { dayLabel(it) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.log_days_title))
-            .setItems(labels) { _, which ->
-                showLogContent(levelSel, day = days[which])
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
-    }
-
-    /**
-     * 先选级别，再选日期，最后打开日志弹窗。
-     *
-     * 为什么分两步：日期可能有十几项，级别只有三项。
-     * 先选窄的那一层，用户少翻一层列表。
-     */
-    fun pickLevelThenDay() {
-        val levels = arrayOf("ALL", "WARN", "ERROR")
-        val labels = levels.map { levelLabel(it) }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.title_logs_level))
-            .setSingleChoiceItems(labels, levels.indexOf(prefLevel).coerceAtLeast(0)) { d, which ->
-                val sel = levels[which]
-                prefs?.edit()?.putString("debug_log_level", sel)?.apply()
-                d.dismiss()
-                pickDayThenShow(sel)
-            }
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show()
-    }
-
-    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
-        pickLevelThenDay()
-    }
-
-    // ---- 日志清理（2026-11-08）----
-    // 与「回收站自动清理」同一套交互：预设下拉 + 自定义。
+    // ---- 日志保留范围（2026-11-08）----
+    // 与「回收站自动清理」同一套交互：预设下拉 + 自定义按钮。
     // 0 = 不自动清理（程序完全不删，用户自己决定）。
     val logKeepSpinner = dialogView.findViewById<Spinner?>(R.id.sp_debug_log_keep)
     var keepDays = prefs?.getInt("debug_log_keep_days", AppLogger.KEEP_DAYS_DEFAULT)
@@ -1368,32 +1411,6 @@ fun MainActivity.showAppInfoDialog() {
             toast(getString(R.string.toast_debug_egg))
         }
     }
-}
-
-// ============================================
-// 调试菜单
-// ============================================
-fun MainActivity.showDebugMenu() {
-    AlertDialog.Builder(this).setTitle(getString(R.string.title_debug_menu))
-        .setItems(arrayOf(getString(R.string.debug_crash_test), getString(R.string.debug_show_logs), getString(R.string.debug_export_logs), getString(R.string.debug_copy_logs))) { _, w ->
-            when (w) {
-                0 -> Handler(Looper.getMainLooper()).postDelayed(
-                    { throw RuntimeException("Manual crash test") }, 1000
-                )
-                1 -> {
-                    // 与全局错误弹窗同一形态；「导出」是内置按钮，不用再传 actionText
-                    showLogDialog(
-                        title = getString(R.string.title_logs),
-                        detail = AppLogger.getLogs().ifEmpty { getString(R.string.label_sub_no_logs) },
-                        cancelText = getString(R.string.btn_close)
-                    )
-                }
-                // 索引 2 =「💾 导出日志到文件」——与日志弹窗里的导出走同一条路径
-                2 -> exportLogsToFile()
-                // 索引 3 =「📄 复制日志到剪贴板」
-                3 -> copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs())
-            }
-        }.setNegativeButton(getString(R.string.btn_cancel), null).show()
 }
 
 // ============================================

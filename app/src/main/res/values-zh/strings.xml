@@ -173,7 +173,6 @@
     <string name="title_choose">从列表选择</string>
     <string name="title_choose_type">选择%1$s</string>
     <string name="title_edit_type_key">编辑 (%1$s): %2$s</string>
-    <string name="title_debug_menu">开发者调试菜单</string>
     <string name="title_edit_range">编辑 [%1$d ~ %2$d]</string>
     <string name="title_logs">日志</string>
     <string name="title_label_data">%s 数据</string>
@@ -521,10 +520,6 @@
     <!-- ============================================ -->
     <!-- Debug Module -->
     <!-- ============================================ -->
-    <string name="debug_crash_test">崩溃测试（模拟应用崩溃）</string>
-    <string name="debug_show_logs">显示日志</string>
-    <string name="debug_copy_logs">复制日志到剪贴板</string>
-    <string name="debug_export_logs">导出日志到文件</string>
     <string name="msg_no_logs_to_copy">没有日志可复制</string>
     <string name="msg_no_logs_to_export">没有日志可导出</string>
     <string name="label_sub_no_logs">暂无操作日志</string>
@@ -979,11 +974,9 @@ ID：%3$s
     <string name="debug_logs_desc_days">日志按天保存，重启后仍在。当前保留最近 %1$d 天。</string>
     <string name="debug_logs_desc_forever">日志按天保存，重启后仍在。当前不自动清理。</string>
     <string name="title_show_logs">显示日志</string>
-    <string name="title_logs_level">显示哪些日志</string>
     <string name="log_day_today">今天</string>
     <string name="log_day_yesterday">昨天</string>
     <string name="log_day_fmt">%s</string>
-    <string name="log_days_title">选择日期</string>
     <string name="log_clear_days_title">保留范围</string>
     <string name="log_clear_days_none">不自动清理</string>
     <string name="log_clear_days_fmt">最近 %1$d 天</string>
@@ -996,4 +989,7 @@ ID：%3$s
     <string name="msg_log_clear_noop">没有需要清理的日志</string>
     <string name="toast_debug_egg">Ciallo～(∠・ω&lt; )⌒★</string>
 
+    <string name="debug_export_logs">导出日志到文件</string>
+    <string name="debug_copy_logs">复制日志到剪贴板</string>
+    <string name="debug_crash_test">崩溃测试（模拟应用崩溃）</string>
 </resources>

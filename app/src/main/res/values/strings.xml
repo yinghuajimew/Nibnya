@@ -173,7 +173,6 @@ Delete them as well?</string>
     <string name="title_choose">Pick from list</string>
     <string name="title_choose_type">Choose %1$s</string>
     <string name="title_edit_type_key">Edit [%1$s]: %2$s</string>
-    <string name="title_debug_menu">Developer Debug Menu</string>
     <string name="title_edit_range">Edit [%1$d ~ %2$d]</string>
     <string name="title_logs">Logs</string>
     <string name="title_label_data">%s Data</string>
@@ -520,10 +519,6 @@ Delete them as well?</string>
     <!-- ============================================ -->
     <!-- Debug Module -->
     <!-- ============================================ -->
-    <string name="debug_crash_test">Crash test (simulate crash)</string>
-    <string name="debug_show_logs">Show logs</string>
-    <string name="debug_copy_logs">Copy logs to clipboard</string>
-    <string name="debug_export_logs">Export logs to file</string>
     <string name="msg_no_logs_to_copy">No logs to copy</string>
     <string name="msg_no_logs_to_export">No logs to export</string>
     <string name="label_sub_no_logs">No operation logs yet</string>
@@ -976,11 +971,9 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days.</string>
     <string name="debug_logs_desc_forever">Logs are kept per day across restarts. Auto-cleanup is off.</string>
     <string name="title_show_logs">Show logs</string>
-    <string name="title_logs_level">Which logs to show</string>
     <string name="log_day_today">Today</string>
     <string name="log_day_yesterday">Yesterday</string>
     <string name="log_day_fmt">%s</string>
-    <string name="log_days_title">Pick a date</string>
     <string name="log_clear_days_title">Keep logs</string>
     <string name="log_clear_days_none">No auto-cleanup</string>
     <string name="log_clear_days_fmt">Last %1$d days</string>
@@ -993,4 +986,7 @@ Make sure the path belongs to an installed app.</string>
     <string name="msg_log_clear_noop">No logs to clean up</string>
     <string name="toast_debug_egg">Ciallo～(∠・ω&lt; )⌒★</string>
 
+    <string name="debug_export_logs">Export logs to file</string>
+    <string name="debug_copy_logs">Copy logs to clipboard</string>
+    <string name="debug_crash_test">Crash test (simulate app crash)</string>
 </resources>

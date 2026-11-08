@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Typeface
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
@@ -57,7 +58,9 @@ fun MainActivity.showLogDialog(
     onAction: (() -> Unit)? = null,
     cancelText: String? = null,
     onCancel: (() -> Unit)? = null,
-    cancelable: Boolean = true
+    cancelable: Boolean = true,
+    titleTrailing: View? = null,
+    onContentTextView: ((TextView) -> Unit)? = null
 ) {
     val body = detail.ifBlank { getString(R.string.label_sub_unknown) }
 
@@ -69,6 +72,8 @@ fun MainActivity.showLogDialog(
         setPadding(40, 32, 40, 32)
         setTextIsSelectable(true)
     }
+
+    onContentTextView?.invoke(tv)
 
     // 高度最多占屏幕一半：日志再长也不会把底部按钮挤出屏幕
     val scroll = object : ScrollView(this) {
@@ -113,6 +118,27 @@ fun MainActivity.showLogDialog(
 
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
+        // 标题栏右侧要挂下拉时，不能用 setTitle —— 平台的标题栏塞不下自定义 View，
+        // 只能自己画一行：标题占满剩余宽度，下拉靠右。
+        if (titleTrailing != null) {
+            val density = resources.displayMetrics.density
+            fun dp(v: Int) = (v * density).toInt()
+            val row = LinearLayout(this@showLogDialog).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(24), dp(20), dp(12), dp(2))
+            }
+            val titleTv = TextView(this@showLogDialog).apply {
+                text = title
+                textSize = 20f
+            }
+            row.addView(titleTv, LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(titleTrailing, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(row, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
         addView(scroll, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
@@ -121,10 +147,9 @@ fun MainActivity.showLogDialog(
         ))
     }
 
-    dialog = AlertDialog.Builder(this)
-        .setTitle(title)
-        .setView(root)
-        .create()
+    val builder = AlertDialog.Builder(this).setView(root)
+    if (titleTrailing == null) builder.setTitle(title)
+    dialog = builder.create()
     dialog.setCancelable(cancelable)
     dialog.show()
 }
