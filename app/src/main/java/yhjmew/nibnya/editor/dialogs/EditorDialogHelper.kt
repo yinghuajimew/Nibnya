@@ -1297,6 +1297,8 @@ fun MainActivity.showAppInfoDialog() {
             }
         },
         customBtn = dialogView.findViewById(R.id.btn_custom_debug_log_keep),
+        // 自定义行带上单位，和草稿「✎ 30 分」那种一致
+        customLabel = { d -> getString(R.string.log_keep_custom_fmt, d) },
     )
 
     dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
@@ -1557,7 +1559,12 @@ internal fun MainActivity.bindPresetSpinner(
     currentValue: () -> Int,
     applyValue: (Int) -> Unit,
     /** 「自定义」按钮：移出下拉，放在 Spinner 旁边独立成一个按钮 */
-    customBtn: android.widget.Button? = null
+    customBtn: android.widget.Button? = null,
+    /**
+     * 自定义行在**下拉里**怎么显示。
+     * 默认 `✎ 5`；日志保留范围传 `✎ 5 天`，和草稿那些带单位的保持一致。
+     */
+    customLabel: ((Int) -> String)? = null
 ) {
     if (sp == null) return
     val pen = getString(R.string.draft_interval_custom)
@@ -1577,38 +1584,69 @@ internal fun MainActivity.bindPresetSpinner(
      *
      * 若当前值是自定义值（不在预设里），额外追加一行 `✎ 5` 用于展示。
      */
+    fun customText(): String =
+        customLabel?.invoke(currentValue()) ?: "$pen ${currentValue()}"
+
     fun displayLabels(): MutableList<String> {
         val list = presetLabels.toMutableList()
-        if (hasCustomValue()) list.add("$pen ${currentValue()}")
+        if (hasCustomValue()) list.add(customText())
         return list
     }
 
+    /** 当前列表（adapter 每次重建，这里只用于取长度 / 反查）。 */
     var labels = displayLabels()
 
-    val adapter = object : ArrayAdapter<String>(
-        this, android.R.layout.simple_spinner_item, labels
-    ) {
-        override fun getDropDownView(
-            position: Int, convertView: View?, parent: android.view.ViewGroup
-        ): View {
-            val tv = super.getDropDownView(position, convertView, parent) as TextView
-            tv.text = labels[position]
-            // ⚠️ 列表行不能挂 OnClickListener：会抢掉 AdapterView.onItemClick，
-            //    导致其它行全部点不动（踩过这个坑）。
-            tv.setOnClickListener(null)
-            tv.isClickable = false
-            return tv
+    /**
+     * 建一个全新的 Adapter。
+     *
+     * ⚠️ 不能沿用旧的 adapter 再 `clear()` + `addAll()`：
+     * Spinner 的 `mOldSelectedPosition` 会停在旧的下标上，而
+     * `ArrayAdapter.getItem()` 读的是它自己的 mObjects。
+     * 一旦新列表比旧列表短（比如从「✎ 179 天」切回 4 个预设），
+     * 下一帧 layout 就会用旧下标去取 —— 直接
+     * `IndexOutOfBoundsException: Index: 4, Size: 4` 崩掉。
+     * 换新 adapter 会让 Spinner 自己把选中状态重置，不会留下脏下标。
+     */
+    fun buildAdapter(): ArrayAdapter<String> {
+        val data = displayLabels()
+        labels = data
+        return object : ArrayAdapter<String>(
+            this@bindPresetSpinner, android.R.layout.simple_spinner_item, data
+        ) {
+            override fun getView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                // 越界兜底：即使 Spinner 送来脏下标也只显示空行，不崩
+                if (position !in data.indices) {
+                    return super.getView(0, convertView, parent)
+                }
+                return super.getView(position, convertView, parent)
+            }
+
+            override fun getDropDownView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                if (position !in data.indices) {
+                    return super.getDropDownView(0, convertView, parent)
+                }
+                val tv = super.getDropDownView(position, convertView, parent) as TextView
+                tv.text = data[position]
+                // ⚠️ 列表行不能挂 OnClickListener：会抢掉 AdapterView.onItemClick，
+                //    导致其它行全部点不动（踩过这个坑）。
+                tv.setOnClickListener(null)
+                tv.isClickable = false
+                return tv
+            }
+        }.also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
     }
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-    sp.adapter = adapter
 
-    /** 值变化后刷新文案与选中项 */
+    sp.adapter = buildAdapter()
+
+    /** 值变化后刷新文案与选中项（整表重建，自定义项永远只有一行）。 */
     fun syncSelection() {
-        labels = displayLabels()
-        adapter.clear()
-        adapter.addAll(labels)
-        adapter.notifyDataSetChanged()
+        sp.adapter = buildAdapter()
         val hit = presetValues.indexOf(currentValue())
         sp.setSelection(if (hit >= 0) hit else labels.size - 1, false)
     }
@@ -1625,7 +1663,11 @@ internal fun MainActivity.bindPresetSpinner(
         override fun onItemSelected(p: AdapterView<*>?, v: View?, position: Int, id: Long) {
             if (!userPicked) return              // 程序回显不处理
             // 末位可能是「✎ 自定义值」，只有真正的预设才写回
-            presetValues.getOrNull(position)?.let { applyValue(it) }
+            val preset = presetValues.getOrNull(position) ?: return
+            applyValue(preset)
+            // 选完预设要重建列表：否则旧的「✎ N」还挂在里面，
+            // 用户随后再点自定义会看到两行，换个值又冒一行。
+            syncSelection()
         }
         override fun onNothingSelected(p: AdapterView<*>?) {}
     }
@@ -1679,28 +1721,46 @@ private fun MainActivity.bindPercentSpinner(
 
     var labels = displayLabels()
 
-    val adapter = object : ArrayAdapter<String>(
-        this, android.R.layout.simple_spinner_item, labels
-    ) {
-        override fun getDropDownView(
-            position: Int, convertView: View?, parent: android.view.ViewGroup
-        ): View {
-            val tv = super.getDropDownView(position, convertView, parent) as TextView
-            tv.text = labels[position]
-            // 同 bindPresetSpinner：列表行不能挂监听，否则会抢掉其它行的点击
-            tv.setOnClickListener(null)
-            tv.isClickable = false
-            return tv
+    /**
+     * 每次整表重建（原因同 [bindPresetSpinner]：
+     * 复用旧 adapter 会让 Spinner 留着指向更短列表的脏下标，
+     * 下一帧 layout 直接 IndexOutOfBoundsException）。
+     */
+    fun buildAdapter(): ArrayAdapter<String> {
+        val data = displayLabels()
+        labels = data
+        return object : ArrayAdapter<String>(
+            this@bindPercentSpinner, android.R.layout.simple_spinner_item, data
+        ) {
+            override fun getView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                if (position !in data.indices) return super.getView(0, convertView, parent)
+                return super.getView(position, convertView, parent)
+            }
+
+            override fun getDropDownView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                if (position !in data.indices) {
+                    return super.getDropDownView(0, convertView, parent)
+                }
+                val tv = super.getDropDownView(position, convertView, parent) as TextView
+                tv.text = data[position]
+                // 同 bindPresetSpinner：列表行不能挂监听，否则会抢掉其它行的点击
+                tv.setOnClickListener(null)
+                tv.isClickable = false
+                return tv
+            }
+        }.also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
     }
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-    sp.adapter = adapter
+
+    sp.adapter = buildAdapter()
 
     fun syncSelection() {
-        labels = displayLabels()
-        adapter.clear()
-        adapter.addAll(labels)
-        adapter.notifyDataSetChanged()
+        sp.adapter = buildAdapter()
         val hit = presetPercent.indexOf(value)
         sp.setSelection(if (hit >= 0) hit else labels.size - 1, false)
     }
@@ -1718,6 +1778,7 @@ private fun MainActivity.bindPercentSpinner(
             val preset = presetPercent.getOrNull(position) ?: return
             value = preset
             onApply(preset)
+            syncSelection()   // 选完重建，旧的自定义行不会残留
         }
         override fun onNothingSelected(p: AdapterView<*>?) {}
     }
