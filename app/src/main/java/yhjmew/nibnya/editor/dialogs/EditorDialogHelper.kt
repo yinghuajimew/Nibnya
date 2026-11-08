@@ -1112,27 +1112,11 @@ fun MainActivity.showAppInfoDialog() {
     // ---- 调试页（2026-11-02 新增）----
     // 原本这些入口藏在「点应用图标 10 次」，用户找不到。
     // 现在独立成标签页，图标彩蛋保留（两种方式都能进）。
-    // ---- 日志级别筛选（2026-11-02）----
-    // 补齐 catch 之后 INFO 会很多，日常只想看「哪里不对」。
-    // 记住用户的选择，下次进来还是同一个筛选。
+    // ---- 显示日志（2026-11-08 重构）----
+    // 原来「全部 / 仅警告 / 仅错误」三个文字选项直接摊在页面上，
+    // 现在收进弹窗：点「显示日志」→ 先选级别 → 再选日期 → 看内容。
+    // 级别与日期都记住，下次进来还是上次的选择。
     val prefLevel = prefs?.getString("debug_log_level", "ALL") ?: "ALL"
-
-    fun applyLevelColors(sel: String) {
-        val accent = ContextCompat.getColor(this, R.color.c_accent)
-        val dim = ContextCompat.getColor(this, R.color.app_text_secondary)
-        listOf(
-            Triple(R.id.tv_debug_level_all, "ALL", R.string.debug_level_all),
-            Triple(R.id.tv_debug_level_warn, "WARN", R.string.debug_level_warn),
-            Triple(R.id.tv_debug_level_error, "ERROR", R.string.debug_level_error),
-        ).forEach { (id, key, _) ->
-            dialogView.findViewById<TextView?>(id)?.let { tv ->
-                val on = key == sel
-                tv.setTextColor(if (on) accent else dim)
-                tv.setTypeface(null, if (on) android.graphics.Typeface.BOLD
-                else android.graphics.Typeface.NORMAL)
-            }
-        }
-    }
 
     /** 设置里的级别字符串 -> AppLogger.Level（null = 全部） */
     fun levelOf(sel: String): AppLogger.Level? = when (sel) {
@@ -1141,53 +1125,187 @@ fun MainActivity.showAppInfoDialog() {
         else -> null
     }
 
-    fun openLogs(sel: String) {
-        val level = levelOf(sel)
+    fun levelLabel(sel: String): String = when (sel) {
+        "WARN" -> getString(R.string.debug_level_warn)
+        "ERROR" -> getString(R.string.debug_level_error)
+        else -> getString(R.string.debug_level_all)
+    }
+
+    /** 日期显示：今天 / 昨天 / 2026-11-05 */
+    fun dayLabel(day: String): String {
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val today = fmt.format(java.util.Date())
+        val yesterday = fmt.format(java.util.Date(System.currentTimeMillis() - 24L * 3600_000L))
+        return when (day) {
+            today -> getString(R.string.log_day_today)
+            yesterday -> getString(R.string.log_day_yesterday)
+            else -> day
+        }
+    }
+
+    fun showLogContent(levelSel: String, day: String? = null) {
+        val level = levelOf(levelSel)
+        val body = if (day == null) {
+            AppLogger.getLogs(level)
+        } else {
+            buildString {
+                appendLine("====== ${getString(R.string.log_header)} ======")
+                appendLine(day)
+                appendLine("==============================")
+                append(AppLogger.readDay(day, level))
+            }
+        }.ifBlank { getString(R.string.label_sub_no_logs) }
+
         showLogDialog(
-            title = getString(R.string.title_logs),
-            detail = AppLogger.getLogs(level).ifEmpty {
-                getString(R.string.label_sub_no_logs)
-            },
+            title = "${getString(R.string.title_logs)} · ${levelLabel(levelSel)}",
+            detail = body,
             cancelText = getString(R.string.btn_close),
         )
     }
 
-    var currentLevel = prefLevel
-    applyLevelColors(currentLevel)
-
-    listOf(
-        Triple(R.id.tv_debug_level_all, "ALL", 0),
-        Triple(R.id.tv_debug_level_warn, "WARN", 0),
-        Triple(R.id.tv_debug_level_error, "ERROR", 0),
-    ).forEach { (id, key, _) ->
-        dialogView.findViewById<TextView?>(id)?.setOnClickListener {
-            currentLevel = key
-            prefs?.edit()?.putString("debug_log_level", key)?.apply()
-            applyLevelColors(key)
+    fun pickDayThenShow(levelSel: String) {
+        val days = AppLogger.logDays()
+        if (days.isEmpty()) {
+            // 磁盘上没有历史文件时，退回看内存里今天的条目
+            showLogContent(levelSel)
+            return
         }
-    }
-
-    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
-        openLogs(currentLevel)
-    }
-    dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
-        exportLogsToFile()
-    }
-    dialogView.findViewById<Button?>(R.id.btn_debug_copy_logs)?.setOnClickListener {
-        copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs(levelOf(currentLevel)))
-    }
-    dialogView.findViewById<Button?>(R.id.btn_debug_clear_logs)?.setOnClickListener {
-        // 清空是不可逆的，先问一次
+        val labels = days.map { dayLabel(it) }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.debug_clear_logs))
-            .setMessage(getString(R.string.debug_clear_logs_confirm))
-            .setPositiveButton(getString(R.string.btn_confirm)) { _, _ ->
-                AppLogger.clear()
-                Toast.makeText(this, R.string.debug_logs_cleared, Toast.LENGTH_SHORT).show()
+            .setTitle(getString(R.string.log_days_title))
+            .setItems(labels) { _, which ->
+                showLogContent(levelSel, day = days[which])
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
+
+    /**
+     * 先选级别，再选日期，最后打开日志弹窗。
+     *
+     * 为什么分两步：日期可能有十几项，级别只有三项。
+     * 先选窄的那一层，用户少翻一层列表。
+     */
+    fun pickLevelThenDay() {
+        val levels = arrayOf("ALL", "WARN", "ERROR")
+        val labels = levels.map { levelLabel(it) }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.title_logs_level))
+            .setSingleChoiceItems(labels, levels.indexOf(prefLevel).coerceAtLeast(0)) { d, which ->
+                val sel = levels[which]
+                prefs?.edit()?.putString("debug_log_level", sel)?.apply()
+                d.dismiss()
+                pickDayThenShow(sel)
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
+    }
+
+    dialogView.findViewById<Button?>(R.id.btn_debug_show_logs)?.setOnClickListener {
+        pickLevelThenDay()
+    }
+
+    // ---- 日志清理（2026-11-08）----
+    // 与「回收站自动清理」同一套交互：预设下拉 + 自定义。
+    // 0 = 不自动清理（程序完全不删，用户自己决定）。
+    val logKeepSpinner = dialogView.findViewById<Spinner?>(R.id.sp_debug_log_keep)
+    var keepDays = prefs?.getInt("debug_log_keep_days", AppLogger.KEEP_DAYS_DEFAULT)
+        ?: AppLogger.KEEP_DAYS_DEFAULT
+
+    // 描述文字跟随当前设置（0 时明确写「不自动清理」，
+    // 免得用户以为还在偷偷删）
+    fun refreshDesc() {
+        dialogView.findViewById<TextView?>(R.id.tv_debug_logs_desc)?.text =
+            if (keepDays <= 0) getString(R.string.debug_logs_desc_forever)
+            else getString(R.string.debug_logs_desc_days, keepDays)
+    }
+    refreshDesc()
+
+    if (logKeepSpinner != null) {
+        val presets = intArrayOf(0, 3, 7, 14, 30)
+
+        fun labelFor(d: Int): String = if (d <= 0) {
+            getString(R.string.log_clear_days_none)
+        } else {
+            getString(R.string.log_clear_days_fmt, d)
+        }
+
+        val labels = presets.map { labelFor(it) }.toMutableList()
+        if (keepDays > 0 && presets.indexOf(keepDays) < 0) labels.add(labelFor(keepDays))
+        val adapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, labels
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        logKeepSpinner.adapter = adapter
+
+        // 回显
+        run {
+            val idx = presets.indexOf(keepDays)
+            logKeepSpinner.setSelection(if (idx >= 0) idx else labels.size - 1)
+        }
+
+        // 与回收站同样处理时序陷阱：只响应用户真的触摸过的选择
+        var userPicked = false
+        logKeepSpinner.setOnTouchListener { _, _ -> userPicked = true; false }
+        logKeepSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                p: AdapterView<*>?, v: android.view.View?, position: Int, id: Long
+            ) {
+                if (!userPicked) return
+                keepDays = presets.getOrNull(position) ?: keepDays
+                prefs?.edit()?.putInt("debug_log_keep_days", keepDays)?.apply()
+                refreshDesc()
+                // 切换后立即按新范围清一次，让「保留几天」立刻生效
+                val n = AppLogger.deleteOlderThan(keepDays)
+                if (n > 0) toast(getString(R.string.debug_logs_cleared, n))
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+
+        // 自定义入口
+        dialogView.findViewById<Button?>(R.id.btn_custom_debug_log_keep)?.setOnClickListener {
+            showCustomNumberDialog(
+                getString(R.string.title_log_clear_custom), 0, CUSTOM_VALUE_MAX,
+                getString(R.string.msg_log_clear_custom_invalid),
+                if (keepDays > 0) keepDays else 14
+            ) { n ->
+                keepDays = n
+                prefs?.edit()?.putInt("debug_log_keep_days", n)?.apply()
+                val lbl = labelFor(n)
+                if (labels.none { it == lbl }) labels.add(lbl)
+                adapter.notifyDataSetChanged()
+                logKeepSpinner.setSelection(labels.size - 1, false)
+                refreshDesc()
+            }
+        }
+    }
+
+    dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
+        exportLogsToFile()
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_copy_logs)?.setOnClickListener {
+        copyToClipboard(getString(R.string.title_logs), AppLogger.getLogs(levelOf(prefLevel)))
+    }
+    dialogView.findViewById<Button?>(R.id.btn_debug_clear_logs)?.setOnClickListener {
+        // 手动清理是破坏性操作，说清楚范围再确认一次
+        val total = AppLogger.logDays().size
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.debug_clear_logs))
+            .setMessage(
+                if (total <= 0) getString(R.string.msg_log_clear_noop)
+                else getString(R.string.msg_log_clear_none_confirm)
+            )
+            .setPositiveButton(getString(R.string.log_clear_days_all)) { _, _ ->
+                val n = AppLogger.deleteOlderThan(0)
+                toast(
+                    if (n > 0) getString(R.string.debug_logs_cleared, n)
+                    else getString(R.string.msg_log_clear_noop)
+                )
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
+    }
+
     // 测试区折叠：默认收起，点标题行展开
     val debugTestHeader = dialogView.findViewById<LinearLayout?>(R.id.layout_debug_test_header)
     val debugTestContent = dialogView.findViewById<LinearLayout?>(R.id.layout_debug_test_content)
@@ -1237,12 +1355,18 @@ fun MainActivity.showAppInfoDialog() {
         }
     }
 
+    // 应用图标的彩蛋（2026-11-08 改）
+    // 调试入口已经有独立的「调试」标签页，这里不再弹调试菜单，
+    // 只回一句问候。连点窗口 5 秒，点满 5 次触发。
     var clicks = 0; var lastClick = 0L
     dialogView.findViewById<View?>(R.id.in_app_icon)?.setOnClickListener {
         val now = System.currentTimeMillis()
         if (now - lastClick > 5000) clicks = 0
         lastClick = now; clicks++
-        if (clicks >= 10) { clicks = 0; showDebugMenu() }
+        if (clicks >= 5) {
+            clicks = 0
+            toast(getString(R.string.toast_debug_egg))
+        }
     }
 }
 

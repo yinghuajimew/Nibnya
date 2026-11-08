@@ -1134,6 +1134,7 @@
                 android:layout_marginBottom="4dp" />
 
             <TextView
+                android:id="@+id/tv_debug_logs_desc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/debug_logs_desc"
@@ -1141,75 +1142,60 @@
                 android:textSize="12sp"
                 android:layout_marginBottom="10dp" />
 
-            <!-- 级别筛选（2026-11-02）
-                 补齐 catch 之后 INFO 会很多，日常只想看「哪里不对」。
-
-                  全部 | WARN | ERROR
-
-                 选中项用主题强调色，未选中用灰。 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="6dp">
-
-                <TextView
-                    android:id="@+id/tv_debug_level_all"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="14dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:text="@string/debug_level_all"
-                    android:textColor="@color/app_text_secondary"
-                    android:textSize="13sp"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-                <TextView
-                    android:id="@+id/tv_debug_level_warn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="14dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:text="@string/debug_level_warn"
-                    android:textColor="@color/app_text_secondary"
-                    android:textSize="13sp"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-                <TextView
-                    android:id="@+id/tv_debug_level_error"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="14dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:text="@string/debug_level_error"
-                    android:textColor="@color/app_text_secondary"
-                    android:textSize="13sp"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-            </LinearLayout>
-
+            <!-- 显示日志（2026-11-08）
+                 把「全部 / 仅警告 / 仅错误」三个选项收进弹窗里，
+                 页面上只留一个入口，点开先选级别再看内容。 -->
             <Button
                 android:id="@+id/btn_debug_show_logs"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
-                android:text="@string/debug_show_logs"
+                android:text="@string/title_show_logs"
                 android:textAllCaps="false"
                 android:textColor="@color/c_link_lang"
                 android:textSize="14sp"
                 android:gravity="start|center_vertical"
                 android:paddingStart="4dp"
                 android:layout_marginBottom="4dp" />
+
+            <!-- 日志清理（2026-11-08）
+                 与回收站自动清理同一套交互：下拉选预设 + 自定义按钮。
+                 选「不自动清理」时程序完全不删，全部交给用户手动决定。 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/log_clear_days_title"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_debug_log_keep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="120dp"
+                    android:gravity="end|center_vertical" />
+
+                <Button
+                    android:id="@+id/btn_custom_debug_log_keep"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:minWidth="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="4dp"
+                    android:text="@string/log_clear_days_custom"
+                    android:textAllCaps="false"
+                    android:textColor="@color/c_link_lang"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btn_debug_export_logs"

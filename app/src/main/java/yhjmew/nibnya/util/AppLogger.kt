@@ -61,6 +61,14 @@ object AppLogger {
     /** 保留最近多少天。超出的老文件在启动时清掉。 */
     private const val KEEP_DAYS = 14
 
+    /**
+     * 默认保留天数，供调试页下拉回显。
+     *
+     * 用户可在「调试 → 日志 → 保留范围」里改；改后写 prefs 的
+     * `debug_log_keep_days`，0 表示不自动清理。
+     */
+    const val KEEP_DAYS_DEFAULT: Int = 14
+
     private fun dayOf(d: Date): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(d)
 
@@ -156,7 +164,13 @@ object AppLogger {
         }
     }
 
-    /** 清理超过 KEEP_DAYS 天的文件 */
+    /**
+     * 清理超过保留天数的文件。
+     *
+     * 2026-11-08 起保留天数改由用户在「调试 → 日志」里决定
+     * （prefs: `debug_log_keep_days`，0 = 不自动清理）。
+     * 没设置过就沿用默认的 14 天，保持老行为。
+     */
     private fun pruneOldFiles() {
         val dir = try {
             AppDirs.crashLogs()
@@ -164,7 +178,16 @@ object AppLogger {
             return
         }
         if (!dir.exists()) return
-        val cutoff = System.currentTimeMillis() - KEEP_DAYS * 24L * 3600_000L
+
+        val keep = try {
+            appContext?.getSharedPreferences("nbt_config", Context.MODE_PRIVATE)
+                ?.getInt("debug_log_keep_days", KEEP_DAYS) ?: KEEP_DAYS
+        } catch (_: Throwable) {
+            KEEP_DAYS
+        }
+        if (keep <= 0) return   // 用户选择「不自动清理」
+
+        val cutoff = System.currentTimeMillis() - keep * 24L * 3600_000L
         dir.listFiles { f ->
             f.isFile && f.name.startsWith("nibnya-") && f.lastModified() < cutoff
         }?.forEach { it.delete() }
@@ -338,6 +361,107 @@ object AppLogger {
             f.isFile && f.name.startsWith("nibnya-$currentDay")
         }?.forEach { it.delete() }
     }
+
+    // ============================================
+    // 按天读取 / 按范围清理（2026-11-08）
+    // ============================================
+
+    /** 磁盘上已有的日志日期，新 -> 旧。形如 2026-11-08。 */
+    fun logDays(): List<String> {
+        val dir = try {
+            AppDirs.crashLogs()
+        } catch (_: Throwable) {
+            return emptyList()
+        }
+        if (!dir.exists()) return emptyList()
+        return dir.listFiles { f ->
+            f.isFile && f.name.startsWith("nibnya-") && f.name.endsWith(".log")
+        }?.mapNotNull { dayOfFile(it.name) }?.distinct()?.sortedDescending() ?: emptyList()
+    }
+
+    /** 从文件名 `nibnya-2026-11-08.log` / `nibnya-2026-11-08-2.log` 取出日期。 */
+    private fun dayOfFile(name: String): String? {
+        if (!name.startsWith("nibnya-")) return null
+        val rest = name.removePrefix("nibnya-")
+        if (rest.length < 10) return null
+        val d = rest.substring(0, 10)
+        return if (d.length == 10 && d[4] == '-' && d[7] == '-' &&
+            d.filterIndexed { i, _ -> i != 4 && i != 7 }.all { it.isDigit() }
+        ) d else null
+    }
+
+    /**
+     * 读某一天的日志文件。
+     *
+     * 历史文件里已经是 `[HH:mm:ss][LEVEL][tag] body` 的成品行，
+     * 所以这里可以直接按级别过滤，不需要重新格式化。
+     */
+    fun readDay(day: String, minLevel: Level? = null): String {
+        val dir = try {
+            AppDirs.crashLogs()
+        } catch (_: Throwable) {
+            return ""
+        }
+        val files = dir.listFiles { f ->
+            f.isFile && f.name.startsWith("nibnya-$day") && f.name.endsWith(".log")
+        }?.sortedBy { it.name } ?: return ""
+
+        val sb = StringBuilder()
+        files.forEach { f ->
+            try {
+                f.readLines().forEach { line ->
+                    if (minLevel == null) {
+                        sb.appendLine(line)
+                    } else {
+                        val lv = LEVEL_IN_LINE.find(line)?.groupValues?.get(1)
+                        if (lv != null && rankOf(lv) >= minLevel.rank) sb.appendLine(line)
+                    }
+                }
+            } catch (_: Throwable) {
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
+     * 删除若干天之前的日志文件。
+     *
+     * @param days 保留最近几天。0 = 全部删除（含今天）。
+     * @return 删除的文件数
+     */
+    fun deleteOlderThan(days: Int): Int {
+        val dir = try {
+            AppDirs.crashLogs()
+        } catch (_: Throwable) {
+            return 0
+        }
+        if (!dir.exists()) return 0
+
+        // 用「日期字符串比较」而不是 lastModified：
+        // 文件被复制/恢复过之后 mtime 不可信，日期在文件名里是最准的。
+        val cutoff = if (days <= 0) null else {
+            SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                .format(Date(System.currentTimeMillis() - days * 24L * 3600_000L))
+        }
+        var n = 0
+        dir.listFiles { f ->
+            f.isFile && f.name.startsWith("nibnya-") && f.name.endsWith(".log")
+        }?.forEach { f ->
+            val d = dayOfFile(f.name) ?: return@forEach
+            // cutoff 当天不删：用户说「最近 7 天」时，今天属于其中
+            if (cutoff == null || d < cutoff) {
+                if (f.delete()) n++
+            }
+        }
+
+        // 全删时内存里的也要清掉，否则界面还显示旧内容
+        if (days <= 0) entries.clear()
+        else if (cutoff != null && currentDay < cutoff) entries.clear()
+        return n
+    }
+
+    /** 日志行里的级别：`][WARN][` */
+    private val LEVEL_IN_LINE = Regex("""\]\[([A-Z]+)\]\[""")
 
     fun exportToFile(): File? {
         val logs = getLogs()

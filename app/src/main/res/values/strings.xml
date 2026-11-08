@@ -629,7 +629,7 @@ Delete them as well?</string>
         <string name="custom_tap_to_edit"> (tap to edit)</string>
     <string name="hint_number_range">%1$d - %2$d</string>
     <!-- Logs / crash logs: header, time, device info -->
-    <string name="log_header">Nibnya Logs</string>
+    <string name="log_header">Nibnya NBT Logs</string>
     <string name="log_time">Time</string>
     <string name="log_device_info">Device info</string>
     <string name="log_entries">Logs</string>
@@ -944,7 +944,7 @@ Make sure the path belongs to an installed app.</string>
     <string name="settings_tab_debug">Debug</string>
     <string name="debug_section_logs">Logs</string>
     <string name="debug_logs_desc">Logs are kept per day and survive restarts. Last 14 days retained.</string>
-    <string name="debug_clear_logs">Clear today logs</string>
+    <string name="debug_clear_logs">Clean up logs…</string>
     <string name="debug_section_test">Testing</string>
     <string name="debug_clear_logs_confirm">This deletes all logs recorded today and cannot be undone. Logs from previous days are kept.</string>
     <string name="debug_logs_cleared">Today logs cleared</string>
@@ -972,4 +972,25 @@ Make sure the path belongs to an installed app.</string>
     <string name="map_radius_custom_invalid">Enter a positive number</string>
     <string name="map_status_waiting_world">Open a world on the Home page first</string>
     <string name="map_status_no_data">No chunk data in this dimension</string>
+
+    <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days.</string>
+    <string name="debug_logs_desc_forever">Logs are kept per day across restarts. Auto-cleanup is off.</string>
+    <string name="title_show_logs">Show logs</string>
+    <string name="title_logs_level">Which logs to show</string>
+    <string name="log_day_today">Today</string>
+    <string name="log_day_yesterday">Yesterday</string>
+    <string name="log_day_fmt">%s</string>
+    <string name="log_days_title">Pick a date</string>
+    <string name="log_clear_days_title">Keep logs</string>
+    <string name="log_clear_days_none">No auto-cleanup</string>
+    <string name="log_clear_days_fmt">Last %1$d days</string>
+    <string name="log_clear_days_all">Delete all (including today)</string>
+    <string name="log_clear_days_custom">Custom…</string>
+    <string name="title_log_clear_custom">Keep how many days</string>
+    <string name="msg_log_clear_custom_invalid">Enter 0 or a positive number (0 = delete all)</string>
+    <string name="msg_log_clear_confirm">Logs older than %1$d days will be deleted (%2$d files including today). This cannot be undone.</string>
+    <string name="msg_log_clear_none_confirm">All log files including today’s will be deleted. This cannot be undone.</string>
+    <string name="msg_log_clear_noop">No logs to clean up</string>
+    <string name="toast_debug_egg">Ciallo～(∠・ω&lt; )⌒★</string>
+
 </resources>
