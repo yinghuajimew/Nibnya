@@ -1158,45 +1158,6 @@
                 android:paddingStart="4dp"
                 android:layout_marginBottom="4dp" />
 
-            <!-- 日志清理（2026-11-08）
-                 与回收站自动清理同一套交互：下拉选预设 + 自定义按钮。
-                 选「不自动清理」时程序完全不删，全部交给用户手动决定。 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="6dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/log_clear_days_title"
-                    android:textColor="@color/app_text_primary"
-                    android:textSize="14sp" />
-
-                <Spinner
-                    android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="120dp"
-                    android:gravity="end|center_vertical" />
-
-                <Button
-                    android:id="@+id/btn_custom_debug_log_keep"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:minWidth="0dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="4dp"
-                    android:text="@string/log_clear_days_custom"
-                    android:textAllCaps="false"
-                    android:textColor="@color/c_link_lang"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
             <Button
                 android:id="@+id/btn_debug_export_logs"
                 style="?android:attr/borderlessButtonStyle"
@@ -1235,6 +1196,47 @@
                 android:gravity="start|center_vertical"
                 android:paddingStart="4dp"
                 android:layout_marginBottom="14dp" />
+
+            <!-- 自动清理范围（2026-11-08）
+                 放在「清理日志…」下方：上面是「现在做什么」，
+                 这里是「以后怎么管」，语义顺序才对。
+                 选「不自动清理」时程序完全不删。 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/log_clear_days_title"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_debug_log_keep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="120dp"
+                    android:gravity="end|center_vertical" />
+
+                <Button
+                    android:id="@+id/btn_custom_debug_log_keep"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:minWidth="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="4dp"
+                    android:text="@string/log_clear_days_custom"
+                    android:textAllCaps="false"
+                    android:textColor="@color/c_link_lang"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
 
             <View
                 android:layout_width="match_parent"

@@ -1248,80 +1248,56 @@ fun MainActivity.showAppInfoDialog() {
         )
     }
 
-    // ---- 日志保留范围（2026-11-08）----
-    // 与「回收站自动清理」同一套交互：预设下拉 + 自定义按钮。
-    // 0 = 不自动清理（程序完全不删，用户自己决定）。
+    // ---- 自动清理范围（2026-11-08）----
+    // 复用 bindPresetSpinner（回收站 / 备份 / 草稿都在用它），
+    // 一套交互解决三件事：
+    //   ① 自定义值显示成「✎ N」，和别处一致，不会只显示裸数字
+    //   ② 自定义永远只有一行 —— syncSelection 每次重建列表，
+    //      不会像手写版本那样每改一次就往后追加一项
+    //   ③ 0 只表示「不自动清理」，绝不进入删除流程
     val logKeepSpinner = dialogView.findViewById<Spinner?>(R.id.sp_debug_log_keep)
-    var keepDays = prefs?.getInt("debug_log_keep_days", AppLogger.KEEP_DAYS_DEFAULT)
-        ?: AppLogger.KEEP_DAYS_DEFAULT
 
-    // 描述文字跟随当前设置（0 时明确写「不自动清理」，
-    // 免得用户以为还在偷偷删）
+    /** 0 = 不自动清理；>0 = 保留最近 N 天。 */
+    fun currentKeepDays(): Int =
+        prefs?.getInt("debug_log_keep_days", AppLogger.KEEP_DAYS_DEFAULT)
+            ?: AppLogger.KEEP_DAYS_DEFAULT
+
+    /** 描述文字跟随当前设置（0 时明确写「不自动清理」）。 */
     fun refreshDesc() {
+        val d = currentKeepDays()
         dialogView.findViewById<TextView?>(R.id.tv_debug_logs_desc)?.text =
-            if (keepDays <= 0) getString(R.string.debug_logs_desc_forever)
-            else getString(R.string.debug_logs_desc_days, keepDays)
+            if (d <= 0) getString(R.string.debug_logs_desc_forever)
+            else getString(R.string.debug_logs_desc_days, d)
     }
     refreshDesc()
 
-    if (logKeepSpinner != null) {
-        val presets = intArrayOf(0, 3, 7, 14, 30)
-
-        fun labelFor(d: Int): String = if (d <= 0) {
-            getString(R.string.log_clear_days_none)
-        } else {
-            getString(R.string.log_clear_days_fmt, d)
-        }
-
-        val labels = presets.map { labelFor(it) }.toMutableList()
-        if (keepDays > 0 && presets.indexOf(keepDays) < 0) labels.add(labelFor(keepDays))
-        val adapter = android.widget.ArrayAdapter(
-            this, android.R.layout.simple_spinner_item, labels
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        logKeepSpinner.adapter = adapter
-
-        // 回显
-        run {
-            val idx = presets.indexOf(keepDays)
-            logKeepSpinner.setSelection(if (idx >= 0) idx else labels.size - 1)
-        }
-
-        // 与回收站同样处理时序陷阱：只响应用户真的触摸过的选择
-        var userPicked = false
-        logKeepSpinner.setOnTouchListener { _, _ -> userPicked = true; false }
-        logKeepSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                p: AdapterView<*>?, v: android.view.View?, position: Int, id: Long
-            ) {
-                if (!userPicked) return
-                keepDays = presets.getOrNull(position) ?: keepDays
-                prefs?.edit()?.putInt("debug_log_keep_days", keepDays)?.apply()
-                refreshDesc()
-                // 切换后立即按新范围清一次，让「保留几天」立刻生效
-                val n = AppLogger.deleteOlderThan(keepDays)
+    bindPresetSpinner(
+        sp = logKeepSpinner,
+        presetLabels = listOf(
+            getString(R.string.log_clear_days_none),
+            getString(R.string.log_clear_days_fmt, 3),
+            getString(R.string.log_clear_days_fmt, 7),
+            getString(R.string.log_clear_days_fmt, 14),
+            getString(R.string.log_clear_days_fmt, 30),
+        ),
+        // 上表顺序对应 0 / 3 / 7 / 14 / 30
+        presetValues = listOf(0, 3, 7, 14, 30),
+        titleRes = R.string.title_log_clear_custom,
+        invalidMsgRes = R.string.msg_log_clear_custom_invalid,
+        currentValue = { currentKeepDays() },
+        applyValue = { days ->
+            prefs?.edit()?.putInt("debug_log_keep_days", days)?.apply()
+            refreshDesc()
+            // 0 = 不自动清理，什么都不做。
+            // （deleteOlderThan 自身也已对 <=0 做保护，这里再挡一次是双保险，
+            //   免得以后有人改函数语义又把日志删光。）
+            if (days > 0) {
+                val n = AppLogger.deleteOlderThan(days)
                 if (n > 0) toast(getString(R.string.debug_logs_cleared, n))
             }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
-        }
-
-        // 自定义入口
-        dialogView.findViewById<Button?>(R.id.btn_custom_debug_log_keep)?.setOnClickListener {
-            showCustomNumberDialog(
-                getString(R.string.title_log_clear_custom), 0, CUSTOM_VALUE_MAX,
-                getString(R.string.msg_log_clear_custom_invalid),
-                if (keepDays > 0) keepDays else 14
-            ) { n ->
-                keepDays = n
-                prefs?.edit()?.putInt("debug_log_keep_days", n)?.apply()
-                val lbl = labelFor(n)
-                if (labels.none { it == lbl }) labels.add(lbl)
-                adapter.notifyDataSetChanged()
-                logKeepSpinner.setSelection(labels.size - 1, false)
-                refreshDesc()
-            }
-        }
-    }
+        },
+        customBtn = dialogView.findViewById(R.id.btn_custom_debug_log_keep),
+    )
 
     dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
         exportLogsToFile()
@@ -1339,7 +1315,7 @@ fun MainActivity.showAppInfoDialog() {
                 else getString(R.string.msg_log_clear_none_confirm)
             )
             .setPositiveButton(getString(R.string.log_clear_days_all)) { _, _ ->
-                val n = AppLogger.deleteOlderThan(0)
+                val n = AppLogger.deleteAll()
                 toast(
                     if (n > 0) getString(R.string.debug_logs_cleared, n)
                     else getString(R.string.msg_log_clear_noop)

@@ -424,12 +424,30 @@ object AppLogger {
     }
 
     /**
-     * 删除若干天之前的日志文件。
+     * 保留最近 [days] 天，删掉更早的日志文件。
      *
-     * @param days 保留最近几天。0 = 全部删除（含今天）。
+     * 「最近 3 天」= 今天、昨天、前天，共 3 个自然日。
+     * 因此 cutoff 是 `今天 - (days-1)`，只在 `日期 < cutoff` 时删。
+     *
+     * ⚠️ [days] <= 0 时**直接返回 0，什么都不删**。
+     * 之前这里把 0 当成「全部删除」，结果设置页选「不自动清理」
+     * 走的是同一个函数，一选就把所有日志删光了。
+     * 要全删请显式调 [deleteAll]。
+     *
      * @return 删除的文件数
      */
     fun deleteOlderThan(days: Int): Int {
+        if (days <= 0) return 0
+        return pruneDays(keepDays = days)
+    }
+
+    /** 删除全部日志（含今天）。只给「清理日志…」这种用户明确确认过的入口用。 */
+    fun deleteAll(): Int = pruneDays(keepDays = 0)
+
+    /**
+     * @param keepDays 保留的天数；0 = 全删
+     */
+    private fun pruneDays(keepDays: Int): Int {
         val dir = try {
             AppDirs.crashLogs()
         } catch (_: Throwable) {
@@ -439,24 +457,22 @@ object AppLogger {
 
         // 用「日期字符串比较」而不是 lastModified：
         // 文件被复制/恢复过之后 mtime 不可信，日期在文件名里是最准的。
-        val cutoff = if (days <= 0) null else {
+        val cutoff = if (keepDays <= 0) null else {
             SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                .format(Date(System.currentTimeMillis() - days * 24L * 3600_000L))
+                .format(Date(System.currentTimeMillis() - (keepDays - 1) * 24L * 3600_000L))
         }
         var n = 0
         dir.listFiles { f ->
             f.isFile && f.name.startsWith("nibnya-") && f.name.endsWith(".log")
         }?.forEach { f ->
             val d = dayOfFile(f.name) ?: return@forEach
-            // cutoff 当天不删：用户说「最近 7 天」时，今天属于其中
             if (cutoff == null || d < cutoff) {
                 if (f.delete()) n++
             }
         }
 
-        // 全删时内存里的也要清掉，否则界面还显示旧内容
-        if (days <= 0) entries.clear()
-        else if (cutoff != null && currentDay < cutoff) entries.clear()
+        // 内存条目也跟着清：全删时清空；按天清时，超出范围的就没了
+        if (cutoff == null || currentDay < cutoff) entries.clear()
         return n
     }
 
