@@ -404,12 +404,13 @@
 
             <!-- 2.5 裁剪框最小尺寸 -->
 
-            <!-- 裁剪框最小尺寸 -->
+            <!-- 裁剪框最小尺寸：标签与下拉同一行 -->
             <LinearLayout
                 android:id="@+id/layout_puzzle_crop_min"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
                 android:paddingEnd="8dp"
                 android:layout_marginBottom="4dp">
@@ -418,34 +419,26 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_crop_min_size"
-                    android:textSize="13sp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+                <Spinner
+                    android:id="@+id/sp_puzzle_crop_min"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/sp_puzzle_crop_min"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btn_custom_puzzle_crop_min"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_custom"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:textColor="#2196F3"
-                        android:backgroundTint="#00000000" />
-                </LinearLayout>
+                    android:minWidth="80dp" />
+                <Button
+                    android:id="@+id/btn_custom_puzzle_crop_min"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
             <TextView
@@ -571,12 +564,14 @@
 
             <!-- 间隔 + 单位 -->
 
-            <!--   └ 间隔 -->
+            <!--   └ 间隔：标签与控件同一行，数值用 wrap_content
+                 不撑满，避免短值（5）被拉成一整行。 -->
             <LinearLayout
                 android:id="@+id/layout_backup_interval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
                 android:layout_marginBottom="6dp">
 
@@ -584,71 +579,60 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_backup_interval"
-                    android:textSize="13sp" />
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <Spinner
+                    android:id="@+id/sp_backup_interval"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/sp_backup_interval"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btn_custom_backup_interval"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_custom"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:textColor="#2196F3"
-                        android:backgroundTint="#00000000" />
-                </LinearLayout>
-
+                    android:minWidth="96dp" />
                 <Spinner
                     android:id="@+id/sp_backup_interval_unit"
                     android:layout_width="wrap_content"
-                    android:minWidth="72dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:minWidth="64dp" />
+
+                <Button
+                    android:id="@+id/btn_custom_backup_interval"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
             <!-- 备份上限 -->
 
-            <!--   └ 备份上限 -->
+            <!--   └ 备份上限：标签与下拉同一行 -->
             <LinearLayout
                 android:id="@+id/layout_backup_max"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
+                android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_backup_max"
-                    android:textSize="13sp" />
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <Spinner
+                    android:id="@+id/sp_backup_max"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/sp_backup_max"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
+                    android:minWidth="96dp" />
                     <Button
                         android:id="@+id/btn_custom_backup_max"
                         android:layout_width="wrap_content"
@@ -662,7 +646,6 @@
                         android:paddingEnd="8dp"
                         android:textColor="#2196F3"
                         android:backgroundTint="#00000000" />
-                </LinearLayout>
             </LinearLayout>
 
             <TextView
@@ -696,100 +679,86 @@
             <!-- 间隔 + 单位 -->
 
             <!--   └ 间隔 / 上限 -->
+            <!-- 间隔：标签 + 数值 + 单位 + 自定义，全部同一行 -->
             <LinearLayout
                 android:id="@+id/layout_draft_interval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
+                android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_draft_interval"
-                    android:textSize="13sp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+                <Spinner
+                    android:id="@+id/sp_draft_interval"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/sp_draft_interval"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btn_custom_draft_interval"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_custom"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:textColor="#2196F3"
-                        android:backgroundTint="#00000000" />
-                </LinearLayout>
-
+                    android:minWidth="96dp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval_unit"
                     android:layout_width="wrap_content"
-                    android:minWidth="72dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:minWidth="64dp" />
+                <Button
+                    android:id="@+id/btn_custom_draft_interval"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
             <!-- 草稿数量上限 -->
+            <!-- 草稿上限：标签与下拉同一行 -->
             <LinearLayout
                 android:id="@+id/layout_draft_max"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
+                android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_draft_max"
-                    android:textSize="13sp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+                <Spinner
+                    android:id="@+id/sp_draft_max"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <Spinner
-                        android:id="@+id/sp_draft_max"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btn_custom_draft_max"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_custom"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:textColor="#2196F3"
-                        android:backgroundTint="#00000000" />
-                </LinearLayout>
+                    android:minWidth="96dp" />
+                <Button
+                    android:id="@+id/btn_custom_draft_max"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
-            <!-- 同时保存改动前的原始数据（用于对比） -->
-
-            <!--   └ 同时保存原始数据 -->
             <CheckBox
                 android:id="@+id/cb_draft_keep_original"
                 android:layout_width="match_parent"
@@ -808,47 +777,43 @@
 
             <!-- 回收站自动清理 -->
 
-            <!-- 回收站保留 -->
+            <!-- 回收站保留：标签与下拉同一行 -->
             <LinearLayout
                 android:id="@+id/layout_trash_keep"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:paddingStart="32dp"
+                android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/label_trash_keep"
-                    android:textSize="13sp" />
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <Spinner
+                    android:id="@+id/sp_trash_keep"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:minWidth="96dp" />
 
-                    <Spinner
-                        android:id="@+id/sp_trash_keep"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <Button
-                        android:id="@+id/btn_custom_trash_keep"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_custom"
-                        android:textSize="12sp"
-                        android:textAllCaps="false"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:textColor="#2196F3"
-                        android:backgroundTint="#00000000" />
-                </LinearLayout>
+                <Button
+                    android:id="@+id/btn_custom_trash_keep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
             <TextView
@@ -1208,10 +1173,8 @@
                 android:gravity="center_vertical"
                 android:layout_marginTop="6dp">
 
-                <!-- 标签只占自己需要的宽度（wrap_content）。
-                     之前给标签 weight=1，等于和 Spinner 平分剩余空间，
-                     Spinner 只剩一半宽，「最近 14 天」被压成「最近…」。
-                     应当由 Spinner 吃掉剩余空间，标签不参与分配。 -->
+                <!-- 与「数据」页那几行保持一致：标签 wrap_content，
+                     下拉 wrap_content，不再把控件拉成一整行。 -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -1219,14 +1182,11 @@
                     android:textColor="@color/app_text_primary"
                     android:textSize="14sp" />
 
-                <!-- Spinner：weight=1 吃掉全部剩余宽度，文字右对齐，
-                     末尾天然贴近「自定义」按钮 -->
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="end|center_vertical"
+                    android:minWidth="96dp"
                     android:paddingStart="8dp" />
 
                 <!-- 与「数据」页的自定义按钮保持完全一致：
