@@ -345,6 +345,116 @@ object AppLogger {
         return m
     }
 
+    // ============================================
+    // 崩溃日志（crash-*.log）
+    //
+    // 崩溃日志由 [CrashHandler] 写，和 AppLogger 的 nibnya-*.log
+    // 放在同一个目录，但是两套独立文件。用户不该被告知
+    // 「崩溃日志要去文件夹里翻」，所以这里的日期 / 读取 / 清理
+    // 全部把两种文件一起算进来。
+    // ============================================
+
+    private const val CRASH_PREFIX = "crash-"
+
+    /** 从 `crash-2026-11-08_23-58-00.log` 取日期。 */
+    private fun dayOfCrashFile(name: String): String? {
+        if (!name.startsWith(CRASH_PREFIX)) return null
+        val rest = name.removePrefix(CRASH_PREFIX)
+        if (rest.length < 10) return null
+        val d = rest.substring(0, 10)
+        return if (d.length == 10 && d[4] == '-' && d[7] == '-' &&
+            d.filterIndexed { i, _ -> i != 4 && i != 7 }.all { it.isDigit() }
+        ) d else null
+    }
+
+    /** 某天的崩溃日志文件（新 -> 旧，同一秒可能有多份）。 */
+    private fun crashFilesOfDay(day: String): List<File> {
+        val dir = try {
+            AppDirs.crashLogs()
+        } catch (_: Throwable) {
+            return emptyList()
+        }
+        return dir.listFiles { f ->
+            f.isFile && f.name.startsWith("$CRASH_PREFIX$day") && f.name.endsWith(".log")
+        }?.sortedByDescending { it.name } ?: emptyList()
+    }
+
+    /** 某天有没有崩溃日志。给日期下拉做标记用（`2026-11-08 ⚠`）。 */
+    fun hasCrashOn(day: String): Boolean = crashFilesOfDay(day).isNotEmpty()
+
+    /** 今天崩溃过几次。 */
+    fun crashCountToday(): Int = crashFilesOfDay(currentDay).size
+
+    /**
+     * 读某天的崩溃日志。
+     *
+     * crash-*.log 里没有 `[LEVEL][TAG]` 那套前缀，是整份文本
+     * （含设备信息 + 完整堆栈）。所以 [minLevel] 对它只有
+     * 「要不要显示」的意义：
+     *   · null / INFO 及以上 → 全部显示（崩溃本身就是 ERROR 级别）
+     *   · 关闭               → 不显示
+     *
+     * @param minLevel 级别过滤；null 表示全部
+     * @param onlyCrash 只要崩溃部分（同一天既想看调试日志又只想看崩溃时用）
+     */
+    fun readDay(day: String, minLevel: Level? = null, onlyCrash: Boolean = false): String {
+        val dir = try {
+            AppDirs.crashLogs()
+        } catch (_: Throwable) {
+            return ""
+        }
+        val sb = StringBuilder()
+
+        // ---- 调试日志 nibnya-*.log ----
+        if (!onlyCrash) {
+            val files = dir.listFiles { f ->
+                f.isFile && f.name.startsWith("nibnya-$day") && f.name.endsWith(".log")
+            }?.sortedBy { it.name } ?: emptyList()
+            files.forEach { f ->
+                try {
+                    f.readLines().forEach { line ->
+                        if (minLevel == null) {
+                            sb.appendLine(line)
+                        } else {
+                            val lv = LEVEL_IN_LINE.find(line)?.groupValues?.get(1)
+                            if (lv != null && rankOf(lv) >= minLevel.rank) sb.appendLine(line)
+                        }
+                    }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+
+        // ---- 崩溃日志 crash-*.log ----
+        // 崩溃至少是 ERROR，只有「仅 INFO/WARN」这种更低的筛选才跳过
+        if (minLevel == null || minLevel.rank <= Level.ERROR.rank) {
+            val crashes = crashFilesOfDay(day)
+            crashes.forEach { f ->
+                try {
+                    sb.appendLine()
+                    sb.appendLine("########## ${f.name} ##########")
+                    f.readLines().forEach { sb.appendLine(it) }
+                } catch (_: Throwable) {
+                }
+            }
+        }
+        return sb.toString()
+    }
+
+    /** 读某天的崩溃日志原文（给弹窗里单独看堆栈用）。 */
+    fun readCrashes(day: String): String {
+        val sb = StringBuilder()
+        crashFilesOfDay(day).forEach { f ->
+            try {
+                sb.appendLine("########## ${f.name} ##########")
+                f.readLines().forEach { sb.appendLine(it) }
+                sb.appendLine()
+            } catch (_: Throwable) {
+            }
+        }
+        return sb.toString()
+    }
+
     /**
      * 清空日志：内存 + 磁盘上的当天文件。
      * 历史日期的文件不动 —— 用户要清的是「今天这一页」，
@@ -374,9 +484,11 @@ object AppLogger {
             return emptyList()
         }
         if (!dir.exists()) return emptyList()
-        return dir.listFiles { f ->
-            f.isFile && f.name.startsWith("nibnya-") && f.name.endsWith(".log")
-        }?.mapNotNull { dayOfFile(it.name) }?.distinct()?.sortedDescending() ?: emptyList()
+        // 调试日志 + 崩溃日志的日期一起算 —— 只有崩溃日志的那天
+        // 也要能选到，不然刚崩完却「找不到今天的日志」。
+        return dir.listFiles { f -> f.isFile && f.name.endsWith(".log") }
+            ?.mapNotNull { f -> dayOfFile(f.name) ?: dayOfCrashFile(f.name) }
+            ?.distinct()?.sortedDescending() ?: emptyList()
     }
 
     /** 从文件名 `nibnya-2026-11-08.log` / `nibnya-2026-11-08-2.log` 取出日期。 */
@@ -462,10 +574,10 @@ object AppLogger {
                 .format(Date(System.currentTimeMillis() - (keepDays - 1) * 24L * 3600_000L))
         }
         var n = 0
-        dir.listFiles { f ->
-            f.isFile && f.name.startsWith("nibnya-") && f.name.endsWith(".log")
-        }?.forEach { f ->
-            val d = dayOfFile(f.name) ?: return@forEach
+        dir.listFiles { f -> f.isFile && f.name.endsWith(".log") }?.forEach { f ->
+            // ⚠️ 崩溃日志同样受「保留范围」管：这个下拉叫
+            //    「日志 · 保留范围」，用户不会认为崩溃日志可以例外。
+            val d = dayOfFile(f.name) ?: dayOfCrashFile(f.name) ?: return@forEach
             if (cutoff == null || d < cutoff) {
                 if (f.delete()) n++
             }
@@ -480,7 +592,16 @@ object AppLogger {
     private val LEVEL_IN_LINE = Regex("""\]\[([A-Z]+)\]\[""")
 
     fun exportToFile(): File? {
-        val logs = getLogs()
+        val logs = buildString {
+            append(getLogs())
+            // 崩溃日志跟着一起导出：用户反馈问题时只想发一份文件
+            val crash = readCrashes(currentDay)
+            if (crash.isNotBlank()) {
+                appendLine()
+                appendLine("########## ${currentDay} 崩溃日志 ##########")
+                append(crash)
+            }
+        }
         if (logs.isEmpty()) return null
         return try {
             val dir = AppDirs.crashLogs()

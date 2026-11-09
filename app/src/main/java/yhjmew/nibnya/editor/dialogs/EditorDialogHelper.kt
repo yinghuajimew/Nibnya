@@ -1132,26 +1132,45 @@ fun MainActivity.showAppInfoDialog() {
         else -> getString(R.string.debug_level_all)
     }
 
-    /** 日期显示：今天 / 昨天 / 2026-11-05 */
+    /**
+     * 日期显示：今天 / 昨天 / 2026-11-05
+     *
+     * 那天崩溃过的再加个 ⚠ —— 用户找崩溃原因时第一眼就能定位到哪天。
+     */
     fun dayLabel(day: String): String {
         val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
         val today = fmt.format(java.util.Date())
         val yesterday = fmt.format(java.util.Date(System.currentTimeMillis() - 24L * 3600_000L))
-        return when (day) {
+        val base = when (day) {
             today -> getString(R.string.log_day_today)
             yesterday -> getString(R.string.log_day_yesterday)
             else -> day
         }
+        return if (AppLogger.hasCrashOn(day)) "$base ⚠" else base
     }
 
     val todayStr: String =
         java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
-    /** 日期对应的正文。null = 还没选过日期，走内存（跟随语言与级别实时格式化）。 */
+    /**
+     * 日期对应的正文。null = 还没选过日期，走内存（跟随语言与级别实时格式化）。
+     *
+     * 磁盘上的 crash-*.log 由 [AppLogger.readDay] 一并读出来，
+     * 所以「查看日志」里可以直接看到崩溃堆栈，不用去文件夹翻。
+     */
     fun bodyFor(levelSel: String, day: String?): String {
         val level = levelOf(levelSel)
         return if (day == null) {
-            AppLogger.getLogs(level)
+            // 今天：内存条目（跟随语言/级别实时格式化）+ 今天落盘的崩溃日志
+            buildString {
+                append(AppLogger.getLogs(level))
+                val crash = AppLogger.readCrashes(todayStr)
+                if (crash.isNotBlank()) {
+                    appendLine()
+                    appendLine("########## ${todayStr} 崩溃日志 ##########")
+                    append(crash)
+                }
+            }
         } else {
             buildString {
                 appendLine("====== ${getString(R.string.log_header)} ======")
@@ -1299,6 +1318,13 @@ fun MainActivity.showAppInfoDialog() {
         customBtn = dialogView.findViewById(R.id.btn_custom_debug_log_keep),
         // 自定义行带上单位，和草稿「✎ 30 分」那种一致
         customLabel = { d -> getString(R.string.log_keep_custom_fmt, d) },
+        // 记住自定义天数：切到预设后还能选回来，重启也不丢
+        rememberCustom = { d ->
+            prefs?.edit()?.putInt("debug_log_keep_custom", d)?.apply()
+        },
+        loadCustom = {
+            prefs?.getInt("debug_log_keep_custom", 0) ?: 0
+        },
     )
 
     dialogView.findViewById<Button?>(R.id.btn_debug_export_logs)?.setOnClickListener {
@@ -1482,7 +1508,10 @@ private fun MainActivity.setupDraftSettings(root: android.view.View) {
             if (n > 0) prefs?.edit()?.putInt("draft_interval_last", n)?.apply()
             applyAll()
         },
-        customBtn = root.findViewById(R.id.btn_custom_draft_interval)
+        customBtn = root.findViewById(R.id.btn_custom_draft_interval),
+        rememberCustom = { n ->
+            prefs?.edit()?.putInt("draft_interval_custom_last", n)?.apply()
+        }
     )
 
     // ③ 单位
@@ -1515,7 +1544,10 @@ private fun MainActivity.setupDraftSettings(root: android.view.View) {
         invalidMsgRes = R.string.msg_draft_interval_invalid,
         currentValue = { maxDrafts },
         applyValue = { n -> maxDrafts = n; applyAll() },
-        customBtn = root.findViewById(R.id.btn_custom_draft_max)
+        customBtn = root.findViewById(R.id.btn_custom_draft_max),
+        rememberCustom = { n ->
+            prefs?.edit()?.putInt("draft_max_custom_last", n)?.apply()
+        }
     )
 
     cbKeep?.isChecked = prefs?.getBoolean("draft_keep_original", false) ?: false
@@ -1564,15 +1596,49 @@ internal fun MainActivity.bindPresetSpinner(
      * 自定义行在**下拉里**怎么显示。
      * 默认 `✎ 5`；日志保留范围传 `✎ 5 天`，和草稿那些带单位的保持一致。
      */
-    customLabel: ((Int) -> String)? = null
+    customLabel: ((Int) -> String)? = null,
+    /**
+     * 把自定义值持久化下来。
+     *
+     * 不传的话，用户从「✎ 179」切到「最近 14 天」之后，
+     * 179 就彻底没了 —— 再点自定义得从头输一遍。
+     * 传了这个回调，值会存进 prefs，下次还能从下拉里直接选回来。
+     */
+    rememberCustom: ((Int) -> Unit)? = null,
+    /** 读回上次存的自定义值（可选）。返回到列表里，让用户能直接选。 */
+    loadCustom: (() -> Int)? = null
 ) {
     if (sp == null) return
     val pen = getString(R.string.draft_interval_custom)
+
+    /** 自定义值最多记 3 个，避免下拉被撑爆。 */
+    val MAX_REMEMBERED = 3
+
+    /** 记下来的自定义值（去重，最近的排最后）。 */
+    val rememberedCustom = linkedSetOf<Int>().apply {
+        loadCustom?.invoke()?.let { if (it > 0) add(it) }
+    }
 
     /** 当前值是否不在预设里（即用户设过自定义值） */
     fun hasCustomValue(): Boolean {
         val v = currentValue()
         return v > 0 && presetValues.indexOf(v) < 0
+    }
+
+    /**
+     * 最多记住几个自定义值。
+     *
+     * 用户反复改自定义（179 → 55 → 200）时，全留着会把下拉撑得很长。
+     * 只留最近 3 个，既能选回去，又不会无限增长。
+     */
+    fun remember(v: Int) {
+        if (v <= 0 || presetValues.indexOf(v) >= 0) return
+        rememberedCustom.remove(v)          // 已存在就挪到最新位置
+        rememberedCustom.add(v)
+        while (rememberedCustom.size > MAX_REMEMBERED) {
+            rememberedCustom.remove(rememberedCustom.first())
+        }
+        rememberCustom?.invoke(v)
     }
 
     /**
@@ -1584,12 +1650,26 @@ internal fun MainActivity.bindPresetSpinner(
      *
      * 若当前值是自定义值（不在预设里），额外追加一行 `✎ 5` 用于展示。
      */
-    fun customText(): String =
-        customLabel?.invoke(currentValue()) ?: "$pen ${currentValue()}"
+    fun customText(v: Int): String = customLabel?.invoke(v) ?: "$pen $v"
 
+    /** 最近一次构建出的自定义值，下标 = `presetValues.size + i`。 */
+    var customValues: List<Int> = emptyList()
+
+    /**
+     * 下拉列表 = 预设 + 记住的自定义值 + 当前值。
+     *
+     * 自定义值**不再随预设切换而消失**：切到「最近 14 天」之后，
+     * 列表里仍然留着「✎ 179」，想换回去直接选就行，不用重输。
+     */
     fun displayLabels(): MutableList<String> {
         val list = presetLabels.toMutableList()
-        if (hasCustomValue()) list.add(customText())
+        val seen = linkedSetOf<Int>()
+        rememberedCustom.forEach { v ->
+            if (v > 0 && presetValues.indexOf(v) < 0 && seen.add(v)) list.add(customText(v))
+        }
+        val cur = currentValue()
+        if (cur > 0 && presetValues.indexOf(cur) < 0 && seen.add(cur)) list.add(customText(cur))
+        customValues = seen.toList()
         return list
     }
 
@@ -1662,11 +1742,16 @@ internal fun MainActivity.bindPresetSpinner(
     sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(p: AdapterView<*>?, v: View?, position: Int, id: Long) {
             if (!userPicked) return              // 程序回显不处理
-            // 末位可能是「✎ 自定义值」，只有真正的预设才写回
-            val preset = presetValues.getOrNull(position) ?: return
-            applyValue(preset)
-            // 选完预设要重建列表：否则旧的「✎ N」还挂在里面，
-            // 用户随后再点自定义会看到两行，换个值又冒一行。
+            userPicked = false
+
+            // 预设位置直接写回；超出预设范围的是「✎ 自定义值」行，
+            // 把这个值选回来（以前这里直接 return，等于那些行点了没反应）。
+            val preset = presetValues.getOrNull(position)
+            if (preset != null) {
+                applyValue(preset)
+            } else {
+                customValues.getOrNull(position - presetValues.size)?.let { applyValue(it) }
+            }
             syncSelection()
         }
         override fun onNothingSelected(p: AdapterView<*>?) {}
@@ -1678,6 +1763,7 @@ internal fun MainActivity.bindPresetSpinner(
             getString(titleRes), 1, CUSTOM_VALUE_MAX, getString(invalidMsgRes),
             currentValue().takeIf { it > 0 } ?: 1
         ) { n ->
+            remember(n)
             applyValue(n)
             syncSelection()
         }
@@ -1855,7 +1941,10 @@ private fun MainActivity.setupBackupSettings(root: android.view.View) {
             if (n > 0) prefs?.edit()?.putInt(BackupSettings.PREF_INTERVAL_LAST, n)?.apply()
             writePrefs()
         },
-        customBtn = root.findViewById(R.id.btn_custom_backup_interval)
+        customBtn = root.findViewById(R.id.btn_custom_backup_interval),
+        rememberCustom = { n ->
+            prefs?.edit()?.putInt("backup_interval_custom_last", n)?.apply()
+        }
     )
 
     unitSp?.adapter = ArrayAdapter(
@@ -1890,7 +1979,10 @@ private fun MainActivity.setupBackupSettings(root: android.view.View) {
             maxKeep = n
             writePrefs()
         },
-        customBtn = root.findViewById(R.id.btn_custom_backup_max)
+        customBtn = root.findViewById(R.id.btn_custom_backup_max),
+        rememberCustom = { n ->
+            prefs?.edit()?.putInt("backup_max_custom_last", n)?.apply()
+        }
     )
 
     writePrefs()
@@ -2044,7 +2136,10 @@ private fun MainActivity.setupThreadCountSpinner(
             prefs?.edit()?.putInt(prefKey, n)?.apply()
             onChanged(n)
         },
-        customBtn = if (customBtnId != 0) root.findViewById(customBtnId) else null
+        customBtn = if (customBtnId != 0) root.findViewById(customBtnId) else null,
+        rememberCustom = { n ->
+            prefs?.edit()?.putInt("${prefKey}_custom_last", n)?.apply()
+        }
     )
 
     spinner.isEnabled = enabled
