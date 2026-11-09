@@ -292,7 +292,6 @@
                 android:text="@string/subtitle_io_multithread"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
             <!--   └ 并发线程数 -->
@@ -302,7 +301,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp">
 
                 <TextView
@@ -319,7 +317,8 @@
 
                     <Spinner
                         android:id="@+id/sp_io_thread_count"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
                         android:layout_height="wrap_content"
                     android:minWidth="0dp" />
 
@@ -356,7 +355,6 @@
                 android:text="@string/subtitle_puzzle_multithread"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
             <!--   └ 并发线程数 -->
@@ -366,7 +364,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp">
 
                 <TextView
@@ -383,7 +380,8 @@
 
                     <Spinner
                         android:id="@+id/sp_puzzle_thread_count"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
                         android:layout_height="wrap_content"
                     android:minWidth="0dp" />
 
@@ -413,7 +411,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:paddingEnd="8dp"
                 android:layout_marginBottom="4dp">
 
@@ -425,7 +422,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_puzzle_crop_min"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
                 <Button
@@ -450,7 +448,6 @@
                 android:text="@string/subtitle_crop_min_size"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="12dp" />
 
             <!-- 2.7 拼图命名前缀 -->
@@ -461,7 +458,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="4dp">
 
                 <TextView
@@ -487,7 +483,6 @@
                 android:text="@string/subtitle_puzzle_prefix"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="12dp" />
 
             <!-- 2.8 潜影盒颜色 -->
@@ -498,7 +493,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp">
 
                 <TextView
@@ -509,7 +503,8 @@
 
                 <Spinner
                     android:id="@+id/sp_shulker_color"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
             </LinearLayout>
@@ -530,7 +525,6 @@
                 android:text="@string/subtitle_puzzle_ask_crop"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp" />
 
 
@@ -562,7 +556,6 @@
                 android:text="@string/subtitle_backup_auto"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
             <!-- 间隔 + 单位 -->
@@ -575,7 +568,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="6dp">
 
                 <TextView
@@ -587,7 +579,8 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_interval"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
                 <Spinner
@@ -621,7 +614,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
@@ -634,7 +626,8 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_max"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
                     <Button
@@ -659,7 +652,6 @@
                 android:text="@string/subtitle_backup_max"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp" />
 
             <!-- 草稿箱：自动保存 -->
@@ -678,7 +670,6 @@
                 android:text="@string/subtitle_draft_autosave"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="6dp" />
 
             <!-- 间隔 + 单位 -->
@@ -691,7 +682,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
@@ -703,7 +693,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
                 <Spinner
@@ -735,7 +726,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
@@ -747,7 +737,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_max"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
                 <Button
@@ -779,7 +770,6 @@
                 android:text="@string/subtitle_draft_keep_original"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp" />
 
             <!-- 回收站自动清理 -->
@@ -791,7 +781,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="32dp"
                 android:paddingEnd="4dp"
                 android:layout_marginBottom="6dp">
 
@@ -804,7 +793,8 @@
 
                 <Spinner
                     android:id="@+id/sp_trash_keep"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp" />
 
@@ -830,7 +820,6 @@
                 android:text="@string/subtitle_trash_keep"
                 android:textSize="12sp"
                 android:textColor="@color/app_text_secondary"
-                android:paddingStart="32dp"
                 android:layout_marginBottom="14dp" />
 
             <!-- 3. Shizuku -->
@@ -1192,7 +1181,8 @@
 
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="0dp"
                     android:paddingStart="8dp" />
