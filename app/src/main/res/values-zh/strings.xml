@@ -992,4 +992,5 @@ ID：%3$s
     <string name="debug_copy_logs">复制日志到剪贴板</string>
     <string name="debug_crash_test">崩溃测试（模拟应用崩溃）</string>
     <string name="log_keep_custom_fmt">✎ %1$d 天</string>
+    <string name="debug_layout_probe">布局对比（诊断）</string>
 </resources>

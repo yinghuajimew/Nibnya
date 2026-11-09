@@ -1365,6 +1365,116 @@ fun MainActivity.showAppInfoDialog() {
         }
     }
 
+    // ---- 布局对比（诊断用）----
+    // 全部运行时构造，不依赖 XML，避免被 layout 里其他属性干扰。
+    // 五种写法只差控件类型/宽度策略，用来定位到底哪一环出错。
+    dialogView.findViewById<Button?>(R.id.btn_debug_layout_probe)?.setOnClickListener {
+        val act = this
+        val density = act.resources.displayMetrics.density
+        val dp: (Int) -> Int = { (it * density).toInt() }
+
+        val root = LinearLayout(act).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+        }
+
+        fun makeAdapter(items: List<String>): android.widget.ArrayAdapter<String> =
+            android.widget.ArrayAdapter(
+                act, android.R.layout.simple_spinner_item, ArrayList(items)
+            ).also {
+                it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            }
+
+        fun addCaption(text: String) {
+            root.addView(TextView(act).apply {
+                this.text = text
+                textSize = 12f
+                setTextColor(0xFF888888.toInt())
+                setPadding(0, dp(14), 0, dp(4))
+            })
+        }
+
+        fun addCustomBtn(line: LinearLayout) {
+            line.addView(android.widget.Button(act).apply {
+                text = getString(R.string.btn_custom)
+                textSize = 12f
+                isAllCaps = false
+                minWidth = 0
+                minHeight = 0
+                setPadding(dp(8), 0, dp(8), 0)
+                setTextColor(0xFF2196F3.toInt())
+                backgroundTintList = android.content.res.ColorStateList.valueOf(0)
+            }, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)))
+        }
+
+        fun baseRow(): LinearLayout {
+            val line = LinearLayout(act)
+            line.orientation = LinearLayout.HORIZONTAL
+            line.gravity = android.view.Gravity.CENTER_VERTICAL
+            line.setPadding(dp(16), 0, 0, 0)
+            line.addView(TextView(act).apply {
+                text = "间隔："
+                textSize = 14f
+                setTextColor(0xFF222222.toInt())
+            })
+            return line
+        }
+
+        fun addUnit(line: LinearLayout) {
+            line.addView(TextView(act).apply {
+                text = "分"
+                textSize = 14f
+                setTextColor(0xFF222222.toInt())
+                setPadding(dp(6), 0, dp(6), 0)
+            })
+        }
+
+        fun spinnerLine(widthPx: Int, weight: Float, caption: String) {
+            addCaption(caption)
+            val line = baseRow()
+            val sp = Spinner(act).apply {
+                id = android.view.View.generateViewId()
+                adapter = makeAdapter(listOf("5", "5 甲", "5 乙"))
+            }
+            val lp = if (weight > 0f) {
+                LinearLayout.LayoutParams(widthPx, dp(40), weight)
+            } else {
+                LinearLayout.LayoutParams(widthPx, dp(40))
+            }
+            line.addView(sp, lp)
+            addUnit(line)
+            addCustomBtn(line)
+            root.addView(line)
+        }
+
+        spinnerLine(dp(88), 0f, "A  Spinner 固定 88dp")
+        spinnerLine(dp(96), 0f, "B  Spinner 固定 96dp")
+        spinnerLine(LinearLayout.LayoutParams.WRAP_CONTENT, 0f, "C  Spinner wrap_content")
+        spinnerLine(0, 1f, "D  Spinner 0dp + weight=1")
+
+        addCaption("E  静态文本（对照，完全不参与测量竞争）")
+        val lineE = baseRow()
+        lineE.addView(TextView(act).apply {
+            text = "5"
+            textSize = 16f
+            setTextColor(0xFF222222.toInt())
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)))
+        addUnit(lineE)
+        addCustomBtn(lineE)
+        root.addView(lineE)
+
+        addCaption("· 五种里哪种能同时看见「5」「分」「自定义」，就用哪种")
+
+        android.app.AlertDialog.Builder(act)
+            .setTitle(getString(R.string.debug_layout_probe))
+            .setView(android.widget.ScrollView(act).apply { addView(root) })
+            .setPositiveButton(getString(R.string.btn_close), null)
+            .show()
+    }
+
     dialogView.findViewById<Button?>(R.id.btn_debug_crash)?.setOnClickListener {
         // 崩溃测试是真的把进程弄崩，必须二次确认。
         // 文案要明确说清楚「点了会发生什么」，不能只写「确定吗」。

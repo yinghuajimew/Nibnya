@@ -989,4 +989,5 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_copy_logs">Copy logs to clipboard</string>
     <string name="debug_crash_test">Crash test (simulate app crash)</string>
     <string name="log_keep_custom_fmt">✎ %1$d days</string>
+    <string name="debug_layout_probe">Layout comparison (diagnostic)</string>
 </resources>

@@ -319,9 +319,9 @@
 
                     <Spinner
                         android:id="@+id/sp_io_thread_count"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                    android:minWidth="0dp" />
 
                     <Button
                         android:id="@+id/btn_custom_io_thread_count"
@@ -383,9 +383,9 @@
 
                     <Spinner
                         android:id="@+id/sp_puzzle_thread_count"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                    android:minWidth="0dp" />
 
                     <Button
                         android:id="@+id/btn_custom_puzzle_thread_count"
@@ -425,8 +425,9 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_puzzle_crop_min"
-                    android:layout_width="96dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
                 <Button
                     android:id="@+id/btn_custom_puzzle_crop_min"
                     android:layout_width="wrap_content"
@@ -508,9 +509,9 @@
 
                 <Spinner
                     android:id="@+id/sp_shulker_color"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:minWidth="0dp" />
             </LinearLayout>
 
             <!-- 2.6 每次进入裁剪前询问 -->
@@ -586,12 +587,14 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_interval"
-                    android:layout_width="88dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
                 <Spinner
                     android:id="@+id/sp_backup_interval_unit"
-                    android:layout_width="56dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="44dp" />
 
                 <Button
                     android:id="@+id/btn_custom_backup_interval"
@@ -631,8 +634,9 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_max"
-                    android:layout_width="88dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
                     <Button
                         android:id="@+id/btn_custom_backup_max"
                         android:layout_width="wrap_content"
@@ -699,12 +703,14 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval"
-                    android:layout_width="88dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval_unit"
-                    android:layout_width="56dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="44dp" />
                 <Button
                     android:id="@+id/btn_custom_draft_interval"
                     android:layout_width="wrap_content"
@@ -741,8 +747,9 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_max"
-                    android:layout_width="88dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
                 <Button
                     android:id="@+id/btn_custom_draft_max"
                     android:layout_width="wrap_content"
@@ -797,8 +804,9 @@
 
                 <Spinner
                     android:id="@+id/sp_trash_keep"
-                    android:layout_width="96dp"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp" />
 
                 <Button
                     android:id="@+id/btn_custom_trash_keep"
@@ -1184,8 +1192,9 @@
 
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="96dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minWidth="0dp"
                     android:paddingStart="8dp" />
 
                 <!-- 与「数据」页的自定义按钮保持完全一致：
@@ -1271,6 +1280,19 @@
                     android:text="@string/debug_crash_test"
                     android:textAllCaps="false"
                     android:textColor="@color/c_danger"
+                    android:textSize="14sp"
+                    android:gravity="start|center_vertical"
+                    android:paddingStart="4dp" />
+
+                <!-- 布局诊断：对比几种下拉写法，确认哪种不会被压缩 -->
+                <Button
+                    android:id="@+id/btn_debug_layout_probe"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="@string/debug_layout_probe"
+                    android:textAllCaps="false"
+                    android:textColor="@color/c_link_lang"
                     android:textSize="14sp"
                     android:gravity="start|center_vertical"
                     android:paddingStart="4dp" />
