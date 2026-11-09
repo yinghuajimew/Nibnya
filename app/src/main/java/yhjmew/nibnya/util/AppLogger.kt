@@ -171,14 +171,14 @@ object AppLogger {
      * （prefs: `debug_log_keep_days`，0 = 不自动清理）。
      * 没设置过就沿用默认的 14 天，保持老行为。
      */
+    /**
+     * 启动时按「保留范围」清一次。
+     *
+     * 注意：这里只是**启动时的例行清理**，不是用户改设置的即时反馈。
+     * 改设置本身绝不删文件 —— 否则用户只是点开下拉看看选项、
+     * 顺手点了个「最近 3 天」，就会被告知「已清理 4 个日志文件」。
+     */
     private fun pruneOldFiles() {
-        val dir = try {
-            AppDirs.crashLogs()
-        } catch (_: Throwable) {
-            return
-        }
-        if (!dir.exists()) return
-
         val keep = try {
             appContext?.getSharedPreferences("nbt_config", Context.MODE_PRIVATE)
                 ?.getInt("debug_log_keep_days", KEEP_DAYS) ?: KEEP_DAYS
@@ -186,11 +186,7 @@ object AppLogger {
             KEEP_DAYS
         }
         if (keep <= 0) return   // 用户选择「不自动清理」
-
-        val cutoff = System.currentTimeMillis() - keep * 24L * 3600_000L
-        dir.listFiles { f ->
-            f.isFile && f.name.startsWith("nibnya-") && f.lastModified() < cutoff
-        }?.forEach { it.delete() }
+        pruneDays(keepDays = keep)
     }
 
     fun init(context: Context) {
@@ -426,8 +422,9 @@ object AppLogger {
         }
 
         // ---- 崩溃日志 crash-*.log ----
-        // 崩溃至少是 ERROR，只有「仅 INFO/WARN」这种更低的筛选才跳过
-        if (minLevel == null || minLevel.rank <= Level.ERROR.rank) {
+        // 崩溃属于 ERROR 级别，任何「仅 WARN」「仅 ERROR」筛选都该显示它；
+        // 只有更严格的（不存在的）级别才可能排除。
+        if (minLevel == null || rankOf(Level.ERROR.label) >= minLevel.rank) {
             val crashes = crashFilesOfDay(day)
             crashes.forEach { f ->
                 try {
@@ -533,24 +530,6 @@ object AppLogger {
             }
         }
         return sb.toString()
-    }
-
-    /**
-     * 保留最近 [days] 天，删掉更早的日志文件。
-     *
-     * 「最近 3 天」= 今天、昨天、前天，共 3 个自然日。
-     * 因此 cutoff 是 `今天 - (days-1)`，只在 `日期 < cutoff` 时删。
-     *
-     * ⚠️ [days] <= 0 时**直接返回 0，什么都不删**。
-     * 之前这里把 0 当成「全部删除」，结果设置页选「不自动清理」
-     * 走的是同一个函数，一选就把所有日志删光了。
-     * 要全删请显式调 [deleteAll]。
-     *
-     * @return 删除的文件数
-     */
-    fun deleteOlderThan(days: Int): Int {
-        if (days <= 0) return 0
-        return pruneDays(keepDays = days)
     }
 
     /** 删除全部日志（含今天）。只给「清理日志…」这种用户明确确认过的入口用。 */

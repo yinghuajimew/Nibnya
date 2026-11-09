@@ -942,7 +942,7 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_clear_logs">Clean up logs…</string>
     <string name="debug_section_test">Testing</string>
     <string name="debug_clear_logs_confirm">This deletes all logs recorded today and cannot be undone. Logs from previous days are kept.</string>
-    <string name="debug_logs_cleared">Today logs cleared</string>
+    <string name="debug_logs_cleared">Cleared %d log files</string>
     <string name="debug_test_desc">These actions will actually crash the app. For verifying crash logging only.</string>
     <string name="debug_crash_confirm_title">About to run crash test</string>
     <string name="debug_crash_confirm_msg">After tapping &quot;Test now&quot;, the app will force-crash in 1 second.\n\nThis is expected behaviour, not a bug. Just reopen the app afterwards; the logs will still be here.\n\nContinue?</string>
@@ -968,7 +968,7 @@ Make sure the path belongs to an installed app.</string>
     <string name="map_status_waiting_world">Open a world on the Home page first</string>
     <string name="map_status_no_data">No chunk data in this dimension</string>
 
-    <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days.</string>
+    <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days; older files are pruned on next launch.</string>
     <string name="debug_logs_desc_forever">Logs are kept per day across restarts. Auto-cleanup is off.</string>
     <string name="title_show_logs">Show logs</string>
     <string name="log_day_today">Today</string>

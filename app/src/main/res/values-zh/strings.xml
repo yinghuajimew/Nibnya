@@ -971,7 +971,7 @@ ID：%3$s
     <string name="map_status_no_data">这个维度没有区块数据</string>
 
     <!-- 日志查看 / 清理（2026-11-08） -->
-    <string name="debug_logs_desc_days">日志按天保存，重启后仍在。当前保留最近 %1$d 天。</string>
+    <string name="debug_logs_desc_days">日志按天保存，重启后仍在。当前保留最近 %1$d 天，超出部分在下次启动时清理。</string>
     <string name="debug_logs_desc_forever">日志按天保存，重启后仍在。当前不自动清理。</string>
     <string name="title_show_logs">显示日志</string>
     <string name="log_day_today">今天</string>

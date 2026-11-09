@@ -1307,13 +1307,13 @@ fun MainActivity.showAppInfoDialog() {
         applyValue = { days ->
             prefs?.edit()?.putInt("debug_log_keep_days", days)?.apply()
             refreshDesc()
-            // 0 = 不自动清理，什么都不做。
-            // （deleteOlderThan 自身也已对 <=0 做保护，这里再挡一次是双保险，
-            //   免得以后有人改函数语义又把日志删光。）
-            if (days > 0) {
-                val n = AppLogger.deleteOlderThan(days)
-                if (n > 0) toast(getString(R.string.debug_logs_cleared, n))
-            }
+            // ⚠️ 只存设置，不删文件。
+            //
+            // 「保留范围」是持久设置，下次启动由 AppLogger.pruneOldFiles()
+            // 统一执行。在这里顺手删一次看着"即时生效"，实际是灾害：
+            // 用户只是点开下拉看看、顺手选了「最近 3 天」，
+            // 就被告知「已清理 4 个日志文件」——设置项不该有副作用。
+            // 想立刻清理，用下面的「清理日志…」按钮。
         },
         customBtn = dialogView.findViewById(R.id.btn_custom_debug_log_keep),
         // 自定义行带上单位，和草稿「✎ 30 分」那种一致
