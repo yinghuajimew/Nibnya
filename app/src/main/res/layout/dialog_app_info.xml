@@ -330,7 +330,8 @@
                         android:text="@string/btn_custom"
                         android:textSize="12sp"
                         android:textAllCaps="false"
-                        android:minWidth="0dp"
+                        android:maxLines="1"
+                    android:minWidth="0dp"
                         android:minHeight="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
@@ -393,7 +394,8 @@
                         android:text="@string/btn_custom"
                         android:textSize="12sp"
                         android:textAllCaps="false"
-                        android:minWidth="0dp"
+                        android:maxLines="1"
+                    android:minWidth="0dp"
                         android:minHeight="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
@@ -423,7 +425,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_puzzle_crop_min"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="80dp" />
                 <Button
@@ -433,6 +436,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
@@ -584,9 +588,10 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_interval"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:minWidth="96dp" />
+                    android:minWidth="72dp" />
                 <Spinner
                     android:id="@+id/sp_backup_interval_unit"
                     android:layout_width="wrap_content"
@@ -600,6 +605,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
@@ -630,7 +636,8 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_max"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="96dp" />
                     <Button
@@ -640,7 +647,8 @@
                         android:text="@string/btn_custom"
                         android:textSize="12sp"
                         android:textAllCaps="false"
-                        android:minWidth="0dp"
+                        android:maxLines="1"
+                    android:minWidth="0dp"
                         android:minHeight="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
@@ -698,9 +706,10 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:minWidth="96dp" />
+                    android:minWidth="72dp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval_unit"
                     android:layout_width="wrap_content"
@@ -713,6 +722,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
@@ -741,7 +751,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_max"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="96dp" />
                 <Button
@@ -751,6 +762,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
@@ -797,7 +809,8 @@
 
                 <Spinner
                     android:id="@+id/sp_trash_keep"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="96dp" />
 
@@ -808,6 +821,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
@@ -1184,7 +1198,8 @@
 
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:minWidth="96dp"
                     android:paddingStart="8dp" />
@@ -1201,6 +1216,7 @@
                     android:text="@string/btn_custom"
                     android:textSize="12sp"
                     android:textAllCaps="false"
+                    android:maxLines="1"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
                     android:paddingStart="8dp"
