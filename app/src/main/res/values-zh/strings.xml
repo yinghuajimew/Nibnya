@@ -981,7 +981,6 @@ ID：%3$s
     <string name="log_clear_days_none">不自动清理</string>
     <string name="log_clear_days_fmt">最近 %1$d 天</string>
     <string name="log_clear_days_all">全部删除（含今天）</string>
-    <string name="log_clear_days_custom">自定义…</string>
     <string name="title_log_clear_custom">保留最近几天</string>
     <string name="msg_log_clear_custom_invalid">请输入 0 或正整数（0 = 全部删除）</string>
     <string name="msg_log_clear_confirm">将删除 %1$d 天之前的日志文件（含今天共 %2$d 个被删除），无法恢复。</string>

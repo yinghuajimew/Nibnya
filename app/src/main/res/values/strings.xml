@@ -978,7 +978,6 @@ Make sure the path belongs to an installed app.</string>
     <string name="log_clear_days_none">No auto-cleanup</string>
     <string name="log_clear_days_fmt">Last %1$d days</string>
     <string name="log_clear_days_all">Delete all (including today)</string>
-    <string name="log_clear_days_custom">Custom…</string>
     <string name="title_log_clear_custom">Keep how many days</string>
     <string name="msg_log_clear_custom_invalid">Enter 0 or a positive number (0 = delete all)</string>
     <string name="msg_log_clear_confirm">Logs older than %1$d days will be deleted (%2$d files including today). This cannot be undone.</string>

@@ -1216,25 +1216,32 @@
                     android:textColor="@color/app_text_primary"
                     android:textSize="14sp" />
 
+                <!-- Spinner 用 weight 占满剩余宽度，末尾天然对齐到按钮左侧 -->
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:minWidth="120dp"
+                    android:layout_weight="1"
                     android:gravity="end|center_vertical" />
 
+                <!-- 与「数据」页的自定义按钮保持完全一致：
+                     wrap_content 高度 + backgroundTint 透明，
+                     这样描边/按下反馈和高度的对齐方式都相同。
+                     （之前写死 36dp + borderlessButtonStyle，导致
+                      比 Spinner 矮一截，看着参差不齐） -->
                 <Button
                     android:id="@+id/btn_custom_debug_log_keep"
-                    style="?android:attr/borderlessButtonStyle"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:minWidth="0dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="4dp"
-                    android:text="@string/log_clear_days_custom"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
                     android:textAllCaps="false"
-                    android:textColor="@color/c_link_lang"
-                    android:textSize="13sp" />
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
             </LinearLayout>
 
 
