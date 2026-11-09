@@ -1208,21 +1208,26 @@
                 android:gravity="center_vertical"
                 android:layout_marginTop="6dp">
 
+                <!-- 标签只占自己需要的宽度（wrap_content）。
+                     之前给标签 weight=1，等于和 Spinner 平分剩余空间，
+                     Spinner 只剩一半宽，「最近 14 天」被压成「最近…」。
+                     应当由 Spinner 吃掉剩余空间，标签不参与分配。 -->
                 <TextView
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:text="@string/log_clear_days_title"
                     android:textColor="@color/app_text_primary"
                     android:textSize="14sp" />
 
-                <!-- Spinner 用 weight 占满剩余宽度，末尾天然对齐到按钮左侧 -->
+                <!-- Spinner：weight=1 吃掉全部剩余宽度，文字右对齐，
+                     末尾天然贴近「自定义」按钮 -->
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="end|center_vertical" />
+                    android:gravity="end|center_vertical"
+                    android:paddingStart="8dp" />
 
                 <!-- 与「数据」页的自定义按钮保持完全一致：
                      wrap_content 高度 + backgroundTint 透明，
