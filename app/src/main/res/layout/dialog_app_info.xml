@@ -425,10 +425,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_puzzle_crop_min"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="80dp" />
+                    android:layout_width="96dp"
+                    android:layout_height="wrap_content" />
                 <Button
                     android:id="@+id/btn_custom_puzzle_crop_min"
                     android:layout_width="wrap_content"
@@ -588,15 +586,12 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_interval"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="72dp" />
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content" />
                 <Spinner
                     android:id="@+id/sp_backup_interval_unit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="64dp" />
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content" />
 
                 <Button
                     android:id="@+id/btn_custom_backup_interval"
@@ -636,10 +631,8 @@
 
                 <Spinner
                     android:id="@+id/sp_backup_max"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="96dp" />
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content" />
                     <Button
                         android:id="@+id/btn_custom_backup_max"
                         android:layout_width="wrap_content"
@@ -706,15 +699,12 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_interval"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="72dp" />
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content" />
                 <Spinner
                     android:id="@+id/sp_draft_interval_unit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="64dp" />
+                    android:layout_width="56dp"
+                    android:layout_height="wrap_content" />
                 <Button
                     android:id="@+id/btn_custom_draft_interval"
                     android:layout_width="wrap_content"
@@ -751,10 +741,8 @@
                     android:textSize="14sp" />
                 <Spinner
                     android:id="@+id/sp_draft_max"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="96dp" />
+                    android:layout_width="88dp"
+                    android:layout_height="wrap_content" />
                 <Button
                     android:id="@+id/btn_custom_draft_max"
                     android:layout_width="wrap_content"
@@ -809,10 +797,8 @@
 
                 <Spinner
                     android:id="@+id/sp_trash_keep"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="96dp" />
+                    android:layout_width="96dp"
+                    android:layout_height="wrap_content" />
 
                 <Button
                     android:id="@+id/btn_custom_trash_keep"
@@ -1198,10 +1184,8 @@
 
                 <Spinner
                     android:id="@+id/sp_debug_log_keep"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
+                    android:layout_width="96dp"
                     android:layout_height="wrap_content"
-                    android:minWidth="96dp"
                     android:paddingStart="8dp" />
 
                 <!-- 与「数据」页的自定义按钮保持完全一致：
