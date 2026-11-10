@@ -2075,7 +2075,21 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     private fun cleanDirContent(dir: File) {
         if (!dir.exists()) return
         dir.listFiles()?.forEach {
-            if ((it.isDirectory && (it.name.startsWith("working_db_") || it.name.startsWith("db_restore_")))
+            /*
+             * ⚠️ `map_db_` 必须在这里清。
+             *
+             * 地图页每次 open() 都会把整个存档 db 复制进 Works/map_db_<时间戳>，
+             * 一个存档动辄几十 MB。以前这里只清 working_db_ / db_restore_，
+             * 地图副本就一直躺着，积累到十几个目录、占掉几百 MB —— 而且
+             * 用户在文件管理器里看得见，观感很差。
+             *
+             * 地图是只读预览，没有「没保存的编辑」会丢，重启时直接删是安全的。
+             */
+            if ((it.isDirectory && (
+                    it.name.startsWith("working_db_") ||
+                        it.name.startsWith("db_restore_") ||
+                        it.name.startsWith("map_db_")
+                    ))
                 || (it.isFile && it.name == MainActivity.LEVEL_DAT_NAME)
             ) deleteRecursive(it)
         }

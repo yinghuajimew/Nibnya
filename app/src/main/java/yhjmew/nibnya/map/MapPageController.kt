@@ -52,6 +52,10 @@ class MapPageController(
     private var visible = false
 
     init {
+        // 先扫一遍上次遗留的 map_db_*：进程被系统杀掉时 release() 跑不到，
+        // 副本会一直留在 Works 里。这里补一刀，不必等到下次冷启动。
+        sweepStaleCopies()
+
         tvRadius?.setOnClickListener { showRadiusMenu() }
         updateRadiusLabel()
 
@@ -65,9 +69,16 @@ class MapPageController(
                 // MapSession 在 open() 时就把 worldDir / workDir 固定下来了，
                 // 换世界却复用同一个 session，等于拿旧世界的 db 去画新世界 ——
                 // 表现为「换了世界地图还是空的 / 画的还是上一个世界」。
+                //
+                // dropSession() 是异步收尾（等旧渲染跑完才关库），
+                // 所以这里等它把旧目录删干净、再开新会话 ——
+                // 否则新会话可能刚建好就被旧的清理逻辑扫到。
                 if (changed) {
-                    renderedFolder = null
-                    dropSession()
+                    activity.lifecycleScope.launch {
+                        dropSessionAndWait()
+                        if (visible && folder == f && f != null) renderNow()
+                    }
+                    return@collect
                 }
                 if (visible && f != null && (f != renderedFolder || radiusChunks != renderedRadius)) {
                     renderNow()
@@ -241,24 +252,91 @@ class MapPageController(
     /**
      * 丢掉当前会话（连临时目录一起删）。
      *
-     * ⚠️ 必须先取消渲染任务再关库：渲染协程正拿着 rawDb() 逐区块读，
-     * 这时 close() 会让底层 LevelDB 句柄失效，轻则抛异常、重则 native crash。
+     * ⚠️ 顺序很重要：渲染协程正拿着 rawDb() 逐区块读，
+     * 直接 close() 会让底层 LevelDB 句柄失效。
+     *
+     * 而且 `cancel()` 是**协作式**的 —— 调用它不等于协程已经停下。
+     * TerrainMapBuilder 里的分块渲染是同步循环，没有挂起点，
+     * cancel 之后那段代码还会继续跑完。所以这里先 join 再关库。
      */
-    private fun dropSession() {
-        renderJob?.cancel()
+    private suspend fun dropSessionAndWait() {
+        val old = session
+        session = null
+        renderedFolder = null
+
+        val job = renderJob
         renderJob = null
-        session?.let { s ->
+        job?.cancel()
+        // 等渲染真正退出后再关库；超时也继续往下走，不能卡住界面
+        if (job != null) {
+            runCatching {
+                kotlinx.coroutines.withTimeoutOrNull(3000) { job.join() }
+            }
+        }
+
+        old?.let { s ->
             s.close()
             try {
                 s.workDir.deleteRecursively()
             } catch (_: Exception) {
             }
         }
+    }
+
+    /** 非挂起版本，给 release() 这种没有协程上下文的地方用。 */
+    private fun dropSession() {
+        val old = session
         session = null
+        renderedFolder = null
+        val job = renderJob
+        renderJob = null
+        job?.cancel()
+        // release() 之后 Activity 就要没了，等不到 join；直接关
+        old?.let { s ->
+            s.close()
+            try {
+                s.workDir.deleteRecursively()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /**
+     * 扫一遍 Works，把**除当前会话以外**的 `map_db_*` 全删掉。
+     *
+     * 为什么需要这个：
+     * 「启动时清一次」（[WorldViewModel.cleanUpOldSessions]）只能管到重启，
+     * 一次运行里反复切世界 / 反复改范围，照样会遗留多份副本。
+     * 每份是一个完整存档 db 的拷贝（几十 MB），攒十几个就很可观了。
+     *
+     * 只删 `map_db_` 前缀、且不是当前正在用的那个目录 ——
+     * 不碰 `working_db_*`（编辑中的工作副本，可能有未保存改动）。
+     */
+    private fun sweepStaleCopies() {
+        val keep = session?.workDir?.absolutePath
+        val works = vm.worksDir(activity)
+        var removed = 0
+        works.listFiles()?.forEach { dir ->
+            if (!dir.isDirectory) return@forEach
+            if (!dir.name.startsWith("map_db_")) return@forEach
+            if (keep != null && dir.absolutePath == keep) return@forEach
+            try {
+                if (dir.deleteRecursively()) removed++
+            } catch (e: Exception) {
+                // 公共目录删不掉通常是没有「所有文件访问」权限，
+                // 记一笔，免得以后又变成「用户看得见但删不掉」的哑谜
+                AppLogger.warn("MapPage", "清理地图副本失败 ${dir.name}: ${e.message}")
+            }
+        }
+        if (removed > 0) {
+            AppLogger.info("MapPage", "清理地图副本 $removed 个")
+        }
     }
 
     /** Activity 销毁：关库、删临时目录、取消任务。 */
     fun release() {
         dropSession()
+        // 关掉之后一个都不该留，连历史遗留的一起扫掉
+        sweepStaleCopies()
     }
 }
