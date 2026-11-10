@@ -305,7 +305,7 @@ fun MainActivity.showAutocompleteDialog(targetInput: EditText, dataType: String)
         suppressSub = true
         spSub.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_item, labels
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        ).also { it.setDropDownViewResource(R.layout.item_spinner_dropdown) }
         val idx = subValues.indexOf(currentSub).coerceAtLeast(0)
         spSub.setSelection(idx)
         spSub.isEnabled = subValues.size > 1

@@ -1072,7 +1072,7 @@ fun MainActivity.showAppInfoDialog() {
             getString(R.string.color_undyed)
         )
         sp.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            it.setDropDownViewResource(R.layout.item_spinner_dropdown)
         }
         val saved = prefs?.getString("shulker_color", "pink_shulker_box") ?: "pink_shulker_box"
         val idx = ids.indexOfFirst { it == saved }
@@ -1382,7 +1382,7 @@ fun MainActivity.showAppInfoDialog() {
             android.widget.ArrayAdapter(
                 act, android.R.layout.simple_spinner_item, ArrayList(items)
             ).also {
-                it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                it.setDropDownViewResource(R.layout.item_spinner_dropdown)
             }
 
         fun addCaption(text: String) {
@@ -1632,7 +1632,7 @@ private fun MainActivity.setupDraftSettings(root: android.view.View) {
             getString(R.string.unit_minutes),
             getString(R.string.unit_hours)
         )
-    ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+    ).also { it.setDropDownViewResource(R.layout.item_spinner_dropdown) }
     unitSp?.setSelection(unit.coerceIn(0, 2))
     var userPickedUnit = false
     unitSp?.setOnTouchListener { _, _ -> userPickedUnit = true; false }
@@ -1835,7 +1835,7 @@ internal fun MainActivity.bindPresetSpinner(
                 return tv
             }
         }.also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            it.setDropDownViewResource(R.layout.item_spinner_dropdown)
         }
     }
 
@@ -1933,7 +1933,7 @@ private fun MainActivity.bindPercentSpinner(
         val data = displayLabels()
         labels = data
         return object : ArrayAdapter<String>(
-            this@bindPercentSpinner, android.R.layout.simple_spinner_item, data
+            this@bindPercentSpinner, R.layout.item_spinner_selected, data
         ) {
             override fun getView(
                 position: Int, convertView: View?, parent: android.view.ViewGroup
@@ -1956,7 +1956,7 @@ private fun MainActivity.bindPercentSpinner(
                 return tv
             }
         }.also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            it.setDropDownViewResource(R.layout.item_spinner_dropdown)
         }
     }
 
@@ -2071,7 +2071,7 @@ private fun MainActivity.setupBackupSettings(root: android.view.View) {
             getString(R.string.unit_minutes),
             getString(R.string.unit_hours)
         )
-    ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+    ).also { it.setDropDownViewResource(R.layout.item_spinner_dropdown) }
     unitSp?.setSelection(unit.coerceIn(0, 2))
     var userPickedUnit = false
     unitSp?.setOnTouchListener { _, _ -> userPickedUnit = true; false }
@@ -2169,7 +2169,7 @@ private fun MainActivity.setupTrashSettings(root: android.view.View) {
     )
     if (days > 0 && TRASH_KEEP_VALUES.indexOf(days) < 0) labels.add(labelFor(days))
     val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels)
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+    adapter.setDropDownViewResource(R.layout.item_spinner_dropdown)
     sp.adapter = adapter
 
     fun apply() {

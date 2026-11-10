@@ -4,11 +4,21 @@
 
   为什么不用 android.R.layout.simple_spinner_item：
   它自带 singleLine + ellipsize="marquee"，宽度一受限就显示成「6..」，
-  和实际分到的宽度无关。这里显式关掉省略、按父宽度铺满，
-  让「✎ 646 秒」「最近 14 天」完整显示。
+  与实际分到的宽度无关。
+
+  为什么 width 用 wrap_content 而不是 match_parent：
+  Spinner 测量选中项时用的是 AT_MOST（不是 EXACTLY），
+  match_parent 会被解析成「Spinner 背景的固有宽度」，
+  反而把长文字裁掉。wrap_content 才能按文字真实宽度撑开。
+
+  已知残留（不高优先级）：
+  当选中值特别长（如「✎ 10000 秒」）而所在行又被标签+单位+按钮
+  占满时，文字末尾仍可能被切掉 1~2 个字符。
+  根治需要把该行改成两行布局（标签/值一行、按钮另一行），
+  目前未做 —— 等有人反馈再处理。
 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:minHeight="36dp"
     android:gravity="center_vertical"

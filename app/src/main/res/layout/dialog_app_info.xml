@@ -411,37 +411,53 @@
                 android:id="@+id/layout_puzzle_crop_min"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingEnd="8dp"
+                android:orientation="vertical"
                 android:layout_marginBottom="4dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 第一行：标签 + 值（+ 单位），值下拉独占剩余宽度，长值不被截断 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_crop_min_size"
-                    android:textColor="@color/app_text_primary"
-                    android:textSize="14sp" />
-                <Spinner
-                    android:id="@+id/sp_puzzle_crop_min"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_crop_min_size"
+                        android:textColor="@color/app_text_primary"
+                        android:textSize="14sp" />
+
+                    <Spinner
+                        android:id="@+id/sp_puzzle_crop_min"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp" />
+                </LinearLayout>
+
+                <!-- 第二行：「自定义」右对齐，不再和值抢横向空间 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minWidth="0dp" />
-                <Button
-                    android:id="@+id/btn_custom_puzzle_crop_min"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_custom"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:textColor="#2196F3"
-                    android:backgroundTint="#00000000" />
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btn_custom_puzzle_crop_min"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_custom"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:maxLines="1"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:textColor="#2196F3"
+                        android:backgroundTint="#00000000" />
+                </LinearLayout>
             </LinearLayout>
 
             <TextView
@@ -568,43 +584,59 @@
                 android:id="@+id/layout_backup_interval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:layout_marginBottom="6dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 第一行：标签 + 值（+ 单位），值下拉独占剩余宽度，长值不被截断 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_backup_interval"
-                    android:textColor="@color/app_text_primary"
-                    android:textSize="14sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <Spinner
-                    android:id="@+id/sp_backup_interval"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_backup_interval"
+                        android:textColor="@color/app_text_primary"
+                        android:textSize="14sp" />
+
+                    <Spinner
+                        android:id="@+id/sp_backup_interval"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp" />
+
                 <Spinner
                     android:id="@+id/sp_backup_interval_unit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:minWidth="44dp" />
+                    android:minWidth="48dp" />
+                </LinearLayout>
 
-                <Button
-                    android:id="@+id/btn_custom_backup_interval"
-                    android:layout_width="wrap_content"
+                <!-- 第二行：「自定义」右对齐，不再和值抢横向空间 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/btn_custom"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:textColor="#2196F3"
-                    android:backgroundTint="#00000000" />
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btn_custom_backup_interval"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_custom"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:maxLines="1"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:textColor="#2196F3"
+                        android:backgroundTint="#00000000" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 备份上限 -->
@@ -682,42 +714,59 @@
                 android:id="@+id/layout_draft_interval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingEnd="4dp"
+                android:orientation="vertical"
                 android:layout_marginBottom="6dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- 第一行：标签 + 值（+ 单位），值下拉独占剩余宽度，长值不被截断 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_draft_interval"
-                    android:textColor="@color/app_text_primary"
-                    android:textSize="14sp" />
-                <Spinner
-                    android:id="@+id/sp_draft_interval"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_draft_interval"
+                        android:textColor="@color/app_text_primary"
+                        android:textSize="14sp" />
+
+                    <Spinner
+                        android:id="@+id/sp_draft_interval"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp" />
+
                 <Spinner
                     android:id="@+id/sp_draft_interval_unit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:minWidth="44dp" />
-                <Button
-                    android:id="@+id/btn_custom_draft_interval"
-                    android:layout_width="wrap_content"
+                    android:minWidth="48dp" />
+                </LinearLayout>
+
+                <!-- 第二行：「自定义」右对齐，不再和值抢横向空间 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/btn_custom"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:maxLines="1"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:textColor="#2196F3"
-                    android:backgroundTint="#00000000" />
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btn_custom_draft_interval"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_custom"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:maxLines="1"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:textColor="#2196F3"
+                        android:backgroundTint="#00000000" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 草稿数量上限 -->
