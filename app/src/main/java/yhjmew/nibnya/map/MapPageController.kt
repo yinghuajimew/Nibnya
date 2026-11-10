@@ -34,6 +34,7 @@ class MapPageController(
     private val tvWorld: TextView? = activity.findViewById(R.id.tv_map_world)
     private val tvStatus: TextView? = activity.findViewById(R.id.tv_map_status)
     private val tvRadius: TextView? = activity.findViewById(R.id.tv_map_radius)
+    private val tvGrid: TextView? = activity.findViewById(R.id.tv_map_grid)
 
     /** 当前渲染的世界目录。null = 主页还没打开世界。 */
     private var folder: String? = null
@@ -58,6 +59,28 @@ class MapPageController(
 
         tvRadius?.setOnClickListener { showRadiusMenu() }
         updateRadiusLabel()
+
+        // 区块网格开关。状态存 prefs，下次进来保持。
+        // 网格只影响 MapView 的绘制，不需要重新渲染地形。
+        var gridOn = activity.prefs?.getBoolean("map_show_grid", true) ?: true
+        fun applyGrid() {
+            mapView?.showChunkGrid = gridOn
+            tvGrid?.text = activity.getString(
+                if (gridOn) R.string.map_grid_on else R.string.map_grid_off
+            )
+            // 关掉时用次要色，一看看出状态
+            tvGrid?.setTextColor(
+                activity.getColor(
+                    if (gridOn) R.color.c_link_lang else R.color.app_text_secondary
+                )
+            )
+        }
+        applyGrid()
+        tvGrid?.setOnClickListener {
+            gridOn = !gridOn
+            activity.prefs?.edit()?.putBoolean("map_show_grid", gridOn)?.apply()
+            applyGrid()
+        }
 
         // 跟随主页世界
         activity.lifecycleScope.launch {

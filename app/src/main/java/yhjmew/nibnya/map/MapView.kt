@@ -37,9 +37,43 @@ class MapView @JvmOverloads constructor(
 
         /** 方块→屏幕像素的默认倍率。1px 一个方块在手机上看太小，默认放大 3 倍。 */
         private const val DEFAULT_SCALE = 3f
+
+        /** 1 区块 = 16 方块 = Bitmap 上的 16 像素。 */
+        private const val CHUNK_PX = 16
+
+        /**
+         * 细网格（每区块一条）可读的最小屏幕间距。
+         * 低于这个值时线条会挤成一片白雾，反而看不清地形 —— 这时只画粗线。
+         */
+        private const val MIN_MINOR_GAP_PX = 10f
+
+        /**
+         * 粗网格的间隔（区块数）。
+         *
+         * 取自 BedrockMap：它每 32 区块画一条 3px 粗线、每区块一条 1px 细线
+         * （`mapoverlayquickitem.cpp:updateGridNode`）。我们一屏通常只画
+         * 17×17 区块，32 太大，缩到 4 —— 正好 4×4 个「大格」，
+         * 数格子时不容易数花眼。
+         */
+        private const val MAJOR_CHUNKS = 4
+
+        /** 细线在屏幕上的宽度（px）。 */
+        private const val MINOR_STROKE_PX = 1f
+
+        /** 粗线在屏幕上的宽度（px）。 */
+        private const val MAJOR_STROKE_PX = 2f
     }
 
     private var bitmap: Bitmap? = null
+
+    /** 是否显示区块网格。 */
+    var showChunkGrid: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
 
     /** 缩放倍率（相对 Bitmap 的原始像素）。 */
     private var scale = DEFAULT_SCALE
@@ -50,6 +84,28 @@ class MapView @JvmOverloads constructor(
 
     private val paint = Paint().apply {
         isFilterBitmap = false   // 像素画风格，放大不要糊
+        isAntiAlias = false
+    }
+
+    /**
+     * 区块网格画笔。
+     *
+     * ⚠️ 线宽按**屏幕像素**给，所以画之前要把画布缩回去
+     * （见 [drawChunkGrid]）—— 否则线宽会被 scale 放大，
+     * 放大到 8 倍时 1px 的线会变成 8px 的白带子。
+     */
+    private val minorGridPaint = Paint().apply {
+        color = 0x66FFFFFF.toInt()   // 白，40% 透明
+        style = Paint.Style.STROKE
+        strokeWidth = MINOR_STROKE_PX
+        isAntiAlias = false
+    }
+
+    /** 粗网格（每 [MAJOR_CHUNKS] 区块一条），用不透明的白，方便数格子。 */
+    private val majorGridPaint = Paint().apply {
+        color = 0xCCFFFFFF.toInt()   // 白，80% 透明
+        style = Paint.Style.STROKE
+        strokeWidth = MAJOR_STROKE_PX
         isAntiAlias = false
     }
 
@@ -161,6 +217,93 @@ class MapView @JvmOverloads constructor(
         canvas.translate(offsetX, offsetY)
         canvas.scale(scale, scale)
         canvas.drawBitmap(bmp, 0f, 0f, paint)
+        canvas.restore()
+
+        if (showChunkGrid) drawChunkGrid(canvas, bmp)
+    }
+
+    /**
+     * 画区块网格。
+     *
+     * 1 区块 = 16 方块 = Bitmap 上 16px，所以每 16px 一条线。
+     *
+     * 分两级（参考 BedrockMap 的 `updateGridNode`）：
+     * - **细线**：每区块一条，白色 40%。缩得太小时（屏幕间距 < [MIN_MINOR_GAP_PX]）
+     *   直接不画，否则整块图会糊成一片白。
+     * - **粗线**：每 [MAJOR_CHUNKS] 区块一条，白色 80%、2px。缩得再小也画，
+     *   保证任何时候都还能看出「大格」。
+     *
+     * ⚠️ 画之前把画布缩回 1:1，线宽才不会被 scale 放大 ——
+     * 否则放大到 8 倍时 1px 的线会变成 8px 的白带子。
+     */
+    private fun drawChunkGrid(canvas: Canvas, bmp: Bitmap) {
+        // 可见区域换算成 **Bitmap 像素**坐标，用来决定要画哪些线
+        val leftBmp = (-offsetX / scale).coerceIn(0f, bmp.width.toFloat())
+        val topBmp = (-offsetY / scale).coerceIn(0f, bmp.height.toFloat())
+        val rightBmp = ((width - offsetX) / scale).coerceIn(0f, bmp.width.toFloat())
+        val bottomBmp = ((height - offsetY) / scale).coerceIn(0f, bmp.height.toFloat())
+        if (rightBmp <= leftBmp || bottomBmp <= topBmp) return
+
+        val chunkW = bmp.width / CHUNK_PX
+        val chunkH = bmp.height / CHUNK_PX
+
+        // 只画可见范围内的线：一屏几十条，没必要遍历整张图
+        val firstCol = max(0, (leftBmp / CHUNK_PX).toInt())
+        val lastCol = min(chunkW, (rightBmp / CHUNK_PX).toInt() + 1)
+        val firstRow = max(0, (topBmp / CHUNK_PX).toInt())
+        val lastRow = min(chunkH, (bottomBmp / CHUNK_PX).toInt() + 1)
+
+        // 屏幕上的区块间距 = 16 * scale
+        val gapPx = CHUNK_PX * scale
+        val drawMinor = gapPx >= MIN_MINOR_GAP_PX
+
+        /*
+         * ⚠️ 线宽要除以 scale。
+         *
+         * 这里的画布只做了 translate，没有 scale —— 线的**位置**用 Bitmap 像素没错，
+         * 但 drawLine 的 strokeWidth 也会按这个坐标系算。图被放大 scale 倍时，
+         * 1px 的线会画成 scale px 粗（放大 8 倍就是 8px 白带子）。
+         *
+         * 除回去之后，不管缩放到多少，线在屏幕上始终是 1~2px。
+         */
+        minorGridPaint.strokeWidth = MINOR_STROKE_PX / scale
+        majorGridPaint.strokeWidth = MAJOR_STROKE_PX / scale
+
+        canvas.save()
+        canvas.translate(offsetX, offsetY)   // 之后的坐标都是 Bitmap 像素
+
+        // 每列/每行的横纵范围（Bitmap 像素），用可见区裁一下，线条不会画到屏幕外
+        val clipTop = topBmp
+        val clipBottom = bottomBmp
+        val clipLeft = leftBmp
+        val clipRight = rightBmp
+
+        // ① 细线（每区块）
+        if (drawMinor) {
+            for (c in firstCol..lastCol) {
+                if (c % MAJOR_CHUNKS == 0) continue   // 粗线位置跳过，避免重叠发灰
+                val x = c * CHUNK_PX.toFloat()
+                canvas.drawLine(x, clipTop, x, clipBottom, minorGridPaint)
+            }
+            for (r in firstRow..lastRow) {
+                if (r % MAJOR_CHUNKS == 0) continue
+                val y = r * CHUNK_PX.toFloat()
+                canvas.drawLine(clipLeft, y, clipRight, y, minorGridPaint)
+            }
+        }
+
+        // ② 粗线（每 MAJOR_CHUNKS 区块）。缩得再小也画。
+        for (c in firstCol..lastCol) {
+            if (c % MAJOR_CHUNKS != 0) continue
+            val x = c * CHUNK_PX.toFloat()
+            canvas.drawLine(x, clipTop, x, clipBottom, majorGridPaint)
+        }
+        for (r in firstRow..lastRow) {
+            if (r % MAJOR_CHUNKS != 0) continue
+            val y = r * CHUNK_PX.toFloat()
+            canvas.drawLine(clipLeft, y, clipRight, y, majorGridPaint)
+        }
+
         canvas.restore()
     }
 

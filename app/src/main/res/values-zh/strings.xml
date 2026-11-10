@@ -969,6 +969,8 @@ ID：%3$s
     <string name="map_radius_custom_invalid">请输入正整数</string>
     <string name="map_status_waiting_world">请先在主页打开一个世界</string>
     <string name="map_status_no_data">这个维度没有区块数据</string>
+    <string name="map_grid_on">网格</string>
+    <string name="map_grid_off">网格</string>
 
     <!-- 日志查看 / 清理（2026-11-08） -->
     <string name="debug_logs_desc_days">日志按天保存，重启后仍在。当前保留最近 %1$d 天，超出部分在下次启动时清理。</string>

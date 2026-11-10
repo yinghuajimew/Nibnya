@@ -967,6 +967,8 @@ Make sure the path belongs to an installed app.</string>
     <string name="map_radius_custom_invalid">Enter a positive number</string>
     <string name="map_status_waiting_world">Open a world on the Home page first</string>
     <string name="map_status_no_data">No chunk data in this dimension</string>
+    <string name="map_grid_on">Grid</string>
+    <string name="map_grid_off">Grid</string>
 
     <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days; older files are pruned on next launch.</string>
     <string name="debug_logs_desc_forever">Logs are kept per day across restarts. Auto-cleanup is off.</string>

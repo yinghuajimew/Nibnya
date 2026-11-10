@@ -44,6 +44,22 @@
             android:maxLines="1"
             android:ellipsize="middle" />
 
+        <!-- 区块网格开关：点击切换，选中时用强调色 -->
+        <TextView
+            android:id="@+id/tv_map_grid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="@string/map_grid_on"
+            android:textColor="@color/c_link_lang"
+            android:textSize="13sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+
         <!-- 范围选择：点击弹出下拉，而不是循环 -->
         <TextView
             android:id="@+id/tv_map_radius"
