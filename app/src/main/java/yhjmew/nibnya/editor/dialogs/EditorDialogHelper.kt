@@ -1598,8 +1598,22 @@ private fun MainActivity.setupDraftSettings(root: android.view.View) {
         } else {
             val lastCustom = prefs?.getInt("draft_interval_last", 30) ?: 30
             interval = if (lastCustom > 0) lastCustom else 30
+            /*
+             * ⚠️ 不要用 DRAFT_INTERVAL_VALUES.indexOf(interval) 算下标：
+             * 那个数组含 -1 哨兵（5 项），而 Spinner 的标签是
+             * 「关闭/2/4/8 + 自定义」（4 或 5 项），两者数量口径不同。
+             * 越界会直接崩在 Spinner.layout（ArrayAdapter.getItem）。
+             * 一律以 adapter 实际条目数为准。
+             */
+            val count = intervalSp?.adapter?.count ?: 0
             val idx = DRAFT_INTERVAL_VALUES.indexOf(interval)
-            intervalSp?.setSelection(if (idx >= 0) idx else DRAFT_INTERVAL_VALUES.size - 1)
+            intervalSp?.setSelection(
+                when {
+                    idx in 0 until count -> idx
+                    count > 0 -> count - 1        // 兜底选中最后一项（自定义格）
+                    else -> 0
+                }
+            )
         }
         applyAll()
     }
@@ -2143,12 +2157,22 @@ private fun digitsOnlyFilter(): android.text.InputFilter =
         if (source.all { it in '0'..'9' }) source else ""
     }
 
-/** 「不自动清 / 7 / 30 / 90 / 自定义」对应的天数；-1 表示自定义 */
-private val TRASH_KEEP_VALUES = listOf(0, 7, 30, 90, -1)
+/**
+ * 「不自动清 / 7 / 30 / 90」对应的天数。
+ *
+ * ⚠️ 这里**只放真正的预设**，不要放 -1 之类的哨兵值。
+ * 曾经它是 `listOf(0, 7, 30, 90, -1)`，-1 表示「自定义」，
+ * 但下拉标签只建 4 项（自定义已移到旁边的按钮），于是
+ * 回显时 `indexOf(-1)` 算出 4，`setSelection(4)` 到一个只有
+ * 4 项的列表 —— 布局阶段直接崩（见 setupTrashSettings 的注释）。
+ * 现在值列表与标签列表**严格一一对应**，不再有这种错位。
+ */
+private val TRASH_KEEP_VALUES = listOf(0, 7, 30, 90)
 
 private fun MainActivity.setupTrashSettings(root: android.view.View) {
     val sp = root.findViewById<Spinner?>(R.id.sp_trash_keep) ?: return
-    var days = prefs?.getInt("trash_keep_days", TrashStore.DEFAULT_KEEP_DAYS)
+    val prefKey = "trash_keep_days"
+    var days = prefs?.getInt(prefKey, TrashStore.DEFAULT_KEEP_DAYS)
         ?: TrashStore.DEFAULT_KEEP_DAYS
 
     fun labelFor(d: Int): String = when (d) {
@@ -2156,32 +2180,76 @@ private fun MainActivity.setupTrashSettings(root: android.view.View) {
         else -> getString(R.string.trash_keep_days, d)
     }
 
-    // 「自定义」格：一旦有自定义值，直接显示成「N 天」
-    // （之前显示「自定义… 3650」，用户看不出到底保留多少天）
-    fun customLabel(): String =
-        if (days > 0 && TRASH_KEEP_VALUES.indexOf(days) < 0) labelFor(days)
-        else getString(R.string.thread_count_custom)
+    /**
+     * 单位是「天」的自定义值（3650 这类）。
+     * 它不属于任何预设，只能作为额外一项追加在末尾展示。
+     */
+    fun isCustomValue(): Boolean = days > 0 && TRASH_KEEP_VALUES.indexOf(days) < 0
 
-    // 「自定义」入口已移到旁边的独立按钮，下拉里只放预设
-    // （若当前是自定义值，额外追加一项用于展示）
-    val labels = mutableListOf(
-        labelFor(0), labelFor(7), labelFor(30), labelFor(90)
-    )
-    if (days > 0 && TRASH_KEEP_VALUES.indexOf(days) < 0) labels.add(labelFor(days))
-    val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels)
-    adapter.setDropDownViewResource(R.layout.item_spinner_dropdown)
-    sp.adapter = adapter
+    /**
+     * 下拉标签 = 预设 + （可选）自定义值。
+     *
+     * 关键：**标签列表和值列表必须同步生成**。
+     * 以前两者各写各的，一旦数量对不上就取越界。
+     */
+    fun buildLabels(): MutableList<String> {
+        val list = mutableListOf(
+            labelFor(0), labelFor(7), labelFor(30), labelFor(90)
+        )
+        if (isCustomValue()) list.add(labelFor(days))
+        return list
+    }
+
+    /** 当前 days 在标签里的下标；找不到就回到第 0 项（永不越界）。 */
+    fun indexOfDays(labels: List<String>): Int {
+        val i = labels.indexOf(labelFor(days))
+        return if (i >= 0) i else 0
+    }
+
+    var labels: MutableList<String> = buildLabels()
+
+    /**
+     * 每次整表重建（原因同 bindPresetSpinner）。
+     *
+     * 复用旧 adapter 只 clear+addAll 时，Spinner 的 mOldSelectedPosition
+     * 仍停在旧下标上。新列表一变短，下一帧 layout 就取越界 ->
+     * `IndexOutOfBoundsException: Index: 4, Size: 4`（就是本函数曾崩的那个）。
+     * 换新 adapter 会让 Spinner 自己重置选中位置。
+     */
+    fun buildAdapter(): ArrayAdapter<String> {
+        val data = buildLabels()
+        labels = data
+        return object : ArrayAdapter<String>(
+            this@setupTrashSettings, R.layout.item_spinner_selected, data
+        ) {
+            override fun getView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                if (position !in data.indices) return super.getView(0, convertView, parent)
+                return super.getView(position, convertView, parent)
+            }
+
+            override fun getDropDownView(
+                position: Int, convertView: View?, parent: android.view.ViewGroup
+            ): View {
+                if (position !in data.indices) {
+                    return super.getDropDownView(0, convertView, parent)
+                }
+                val tv = super.getDropDownView(position, convertView, parent) as TextView
+                tv.text = data[position]
+                // 列表行不能挂监听，否则会抢掉其它行的点击
+                tv.setOnClickListener(null)
+                tv.isClickable = false
+                return tv
+            }
+        }.also {
+            it.setDropDownViewResource(R.layout.item_spinner_dropdown)
+        }
+    }
 
     fun apply() {
-        prefs?.edit()?.putInt("trash_keep_days", days)?.apply()
+        prefs?.edit()?.putInt(prefKey, days)?.apply()
     }
-
-    // 回显
-    run {
-        val idx = TRASH_KEEP_VALUES.indexOf(days)
-        sp.setSelection(if (idx >= 0) idx else labels.size - 1)
-    }
-    apply()
 
     // ⚠️ 时序陷阱：setSelection 的回调由**布局阶段**派发，时机不可控
     // （post{} / 延迟标志都不可靠）。改为只响应**用户真的触摸过**的操作，
@@ -2191,12 +2259,21 @@ private fun MainActivity.setupTrashSettings(root: android.view.View) {
     sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, position: Int, id: Long) {
             if (!userPicked) return
-            val valAt = TRASH_KEEP_VALUES.getOrNull(position) ?: return
-            days = valAt
+            // 只有前 4 项是预设；末尾的自定义只是展示，选了不改写天数
+            val picked = TRASH_KEEP_VALUES.getOrNull(position) ?: return
+            days = picked
             apply()
         }
         override fun onNothingSelected(p: AdapterView<*>?) {}
     }
+
+    // 回显：先装 adapter、再按**标签列表**算下标（顺序反了会留脏下标）
+    run {
+        labels = buildLabels()
+        sp.adapter = buildAdapter()
+        sp.setSelection(indexOfDays(labels), false)
+    }
+    apply()
 
     // ---- 「自定义」独立按钮：随时可点，不受下拉选中位置限制 ----
     root.findViewById<android.widget.Button?>(R.id.btn_custom_trash_keep)?.setOnClickListener {
@@ -2207,10 +2284,10 @@ private fun MainActivity.setupTrashSettings(root: android.view.View) {
         ) { n ->
             days = n
             apply()
-            // 自定义值不属于任何预设 -> 追加到末尾并选中
-            val lbl = labelFor(n)
-            if (labels.none { it == lbl }) labels.add(lbl)
-            adapter.notifyDataSetChanged()
+            // 自定义值不属于任何预设 -> 重建整表并选中最后一项。
+            // （不能往旧 adapter 里 add：那样会留着脏下标）
+            labels = buildLabels()
+            sp.adapter = buildAdapter()
             sp.setSelection(labels.size - 1, false)
         }
     }
