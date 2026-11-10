@@ -1721,8 +1721,15 @@ internal fun MainActivity.bindPresetSpinner(
     if (sp == null) return
     val pen = getString(R.string.draft_interval_custom)
 
-    /** 自定义值最多记 3 个，避免下拉被撑爆。 */
-    val MAX_REMEMBERED = 3
+    /**
+     * 自定义值**只保留最后一个**。
+     *
+     * 以前记 3 个，用户反复改自定义（1 → 1000 → 5）时下拉里
+     * 会同时攒出「✎ 1 天」「✎ 1000 天」「✎ 5 天」多条，看起来像
+     * 每次都“多跑出一条”。用户要的是「改了就替换掉旧的」，
+     * 不是攒历史。所以上限设为 1：新值进来就把旧的挤掉。
+     */
+    val MAX_REMEMBERED = 1
 
     /** 记下来的自定义值（去重，最近的排最后）。 */
     val rememberedCustom = linkedSetOf<Int>().apply {
@@ -1801,7 +1808,7 @@ internal fun MainActivity.bindPresetSpinner(
         val data = displayLabels()
         labels = data
         return object : ArrayAdapter<String>(
-            this@bindPresetSpinner, android.R.layout.simple_spinner_item, data
+            this@bindPresetSpinner, R.layout.item_spinner_selected, data
         ) {
             override fun getView(
                 position: Int, convertView: View?, parent: android.view.ViewGroup

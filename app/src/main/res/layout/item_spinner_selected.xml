@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  设置页下拉框的「已选中」显示行。
+
+  为什么不用 android.R.layout.simple_spinner_item：
+  它自带 singleLine + ellipsize="marquee"，宽度一受限就显示成「6..」，
+  和实际分到的宽度无关。这里显式关掉省略、按父宽度铺满，
+  让「✎ 646 秒」「最近 14 天」完整显示。
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="36dp"
+    android:gravity="center_vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp"
+    android:singleLine="true"
+    android:ellipsize="none"
+    android:textSize="15sp"
+    android:textColor="@color/app_text_primary" />
