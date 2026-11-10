@@ -58,6 +58,16 @@ class MapSession private constructor(
             }
             val sx = intOf("SpawnX") ?: return null
             val sz = intOf("SpawnZ") ?: return null
+            /*
+             * ⚠️ SpawnX/SpawnZ 可能是 Int.MIN_VALUE（-2147483648），
+             * 表示「未设置」。不挡掉的话 floorDiv 会算出
+             * 区块坐标 -134217728 —— 那里什么都没有，地图一片空白，
+             * 而且不会报错，非常难查。
+             * 这里直接当作「读不到出生点」，交给包围盒兜底。
+             */
+            if (sx == Int.MIN_VALUE || sz == Int.MIN_VALUE) return null
+            // 同理挡掉明显不合理的坐标（超出世界边界几个数量级）
+            if (sx !in -30_000_000..30_000_000 || sz !in -30_000_000..30_000_000) return null
             // 方块坐标 → 区块坐标（向下取整，负数不能直接整除）
             Pair(Math.floorDiv(sx, 16), Math.floorDiv(sz, 16))
         } catch (_: Throwable) {
@@ -89,37 +99,92 @@ class MapSession private constructor(
             val workDir = File(vm.worksDir(ctx), "map_db_$uniqueId")
             if (!workDir.exists()) workDir.mkdirs()
 
-            val readable = srcDb.exists() && srcDb.isDirectory && srcDb.listFiles() != null
-            if (readable) {
+            /*
+             * ⚠️ 「能列出文件」不等于「能读文件」。
+             *
+             * Android 11+ 的分区存储下，`Android/data/<包名>/...` 里的目录
+             * 可以 listFiles()，但里面文件的内容读不了。以前这里只判断
+             * `listFiles() != null` 就走普通复制，结果复制出空壳 db，
+             * 一路"成功"到最后才报「没有任何区块数据」。
+             *
+             * 现在按**实际复制成功的文件数**判定：一个都没读到，
+             * 就当作读不了，转 Shizuku。
+             */
+            val copied = if (srcDb.exists() && srcDb.isDirectory) {
                 copyTree(srcDb, workDir)
             } else {
+                0
+            }
+
+            val empty = workDir.listFiles().isNullOrEmpty() ||
+                (workDir.listFiles()?.none { it.isFile } ?: true)
+
+            if (copied == 0 || empty) {
+                AppLogger.warn(
+                    "MapSession",
+                    "普通复制得到空库（copied=$copied），改走 Shizuku：${srcDb.absolutePath}"
+                )
+                // 清掉半成品，避免和 Shizuku 的结果混在一起
+                try {
+                    workDir.deleteRecursively()
+                    workDir.mkdirs()
+                } catch (_: Exception) {
+                }
                 copyViaShizuku(vm, srcDb, workDir)
             }
 
-            if (workDir.listFiles().isNullOrEmpty()) {
+            val fileCount = workDir.listFiles()?.count { it.isFile } ?: 0
+            AppLogger.info(
+                "MapSession",
+                "打开世界 $worldFolder：src=$srcDb copied=$copied 工作副本=$fileCount 个文件"
+            )
+            if (fileCount == 0) {
                 throw IllegalStateException("数据库目录为空，无法读取地形：${srcDb.absolutePath}")
             }
             return MapSession(workDir, worldFolder, worldDir)
         }
 
-        /** 普通目录复制。保留子目录（LevelDB 可能有 .sst 分片）。 */
-        private fun copyTree(src: File, dst: File) {
+        /**
+         * 普通目录复制。保留子目录（LevelDB 可能有 .sst 分片）。
+         *
+         * @return 实际复制成功的文件数；0 表示一个都没读到
+         */
+        private fun copyTree(src: File, dst: File): Int {
             if (!dst.exists()) dst.mkdirs()
-            val children = src.listFiles() ?: return
+            val children = src.listFiles() ?: return 0
+            var ok = 0
             for (f in children) {
                 val target = File(dst, f.name)
                 if (f.isDirectory) {
-                    copyTree(f, target)
+                    ok += copyTree(f, target)
                 } else {
                     try {
                         f.inputStream().use { input ->
                             target.outputStream().use { output -> input.copyTo(output) }
                         }
+                        ok++
                     } catch (e: Exception) {
+                        /*
+                         * ⚠️ 这里以前只 warn 一句就继续，导致一个很阴的 bug：
+                         *
+                         * Android 11+ 分区存储下，`Android/data/<包名>/.../db`
+                         * 这个**目录**可以 listFiles()，但里面每个**文件**都读不了
+                         * （EACCES）。于是每个文件都在这里失败、被跳过，
+                         * 复制出来的是一个"结构完整、内容全空"的 db 目录。
+                         *
+                         * 后续全都能"成功"：workDir.listFiles() 非空（有条目）、
+                         * PlayerDbManager 能打开空库、ChunkIndex.scan 扫到 0 个区块
+                         * -> 界面报「这个维度没有任何区块数据」。
+                         *
+                         * 表现为「不管换哪个世界地图都是空的」，且日志里
+                         * 只有一行不起眼的 warn —— 极难定位。
+                         * 所以复制失败必须计数上报，不能吞。
+                         */
                         AppLogger.warn("MapSession", "复制失败 ${f.name}: ${e.message}")
                     }
                 }
             }
+            return ok
         }
 
         /**
@@ -192,13 +257,28 @@ class MapSession private constructor(
 
         // ① 出生点优先
         val spawn = spawnChunkOf(worldDir)
-            ?: run {
-                // 读不到 level.dat 时用包围盒中心
-                val b = ChunkIndex(dbRef).scan(dim)
-                if (b.isEmpty) null else Pair(b.centerCx, b.centerCz)
-            }
+        val scanned = if (spawn == null) ChunkIndex(dbRef).scan(dim) else null
 
-        if (spawn == null) {
+        /*
+         * 诊断日志（2026-11-10 加）：用户反馈「换哪个世界地图都是空的」，
+         * 而崩溃/报错发生在区块枚举之前，需要看清到底是哪一环断了：
+         *   · level.dat 读不到 → spawn 为 null
+         *   · db 是空的 / 复制失败 → scan 的 chunkCount 为 0
+         * 这两条信息在一次失败里必须同时可见，否则只能靠猜。
+         */
+        AppLogger.info(
+            "MapDiag",
+            "world=${worldDir.absolutePath} db=${workDir.absolutePath} " +
+                "levelDatExists=${File(worldDir, "level.dat").exists()} " +
+                "spawn=$spawn scan=" +
+                (scanned?.let { "count=${it.chunkCount} x=${it.minCx}..${it.maxCx} z=${it.minCz}..${it.maxCz}" }
+                    ?: "(未触发)")
+        )
+
+        val center = spawn
+            ?: scanned?.takeUnless { it.isEmpty }?.let { Pair(it.centerCx, it.centerCz) }
+
+        if (center == null) {
             throw IllegalStateException("这个维度没有任何区块数据")
         }
 
@@ -210,8 +290,8 @@ class MapSession private constructor(
         val builder = TerrainMapBuilder(reader, colors)
 
         return builder.render(
-            minCx = spawn.first - r,
-            minCz = spawn.second - r,
+            minCx = center.first - r,
+            minCz = center.second - r,
             chunkCountX = r * 2 + 1,
             chunkCountZ = r * 2 + 1,
             dim = dim,

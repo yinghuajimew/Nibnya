@@ -58,8 +58,17 @@ class MapPageController(
         // 跟随主页世界
         activity.lifecycleScope.launch {
             vm.currentWorldFolder.collect { f ->
+                val changed = f != folder
                 folder = f
                 updateWorldLabel()
+                // ⚠️ 换世界必须丢掉旧会话。
+                // MapSession 在 open() 时就把 worldDir / workDir 固定下来了，
+                // 换世界却复用同一个 session，等于拿旧世界的 db 去画新世界 ——
+                // 表现为「换了世界地图还是空的 / 画的还是上一个世界」。
+                if (changed) {
+                    renderedFolder = null
+                    dropSession()
+                }
                 if (visible && f != null && (f != renderedFolder || radiusChunks != renderedRadius)) {
                     renderNow()
                 }
@@ -229,8 +238,15 @@ class MapPageController(
         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** 换世界时丢掉旧会话（连同临时目录）。 */
+    /**
+     * 丢掉当前会话（连临时目录一起删）。
+     *
+     * ⚠️ 必须先取消渲染任务再关库：渲染协程正拿着 rawDb() 逐区块读，
+     * 这时 close() 会让底层 LevelDB 句柄失效，轻则抛异常、重则 native crash。
+     */
     private fun dropSession() {
+        renderJob?.cancel()
+        renderJob = null
         session?.let { s ->
             s.close()
             try {
@@ -243,8 +259,6 @@ class MapPageController(
 
     /** Activity 销毁：关库、删临时目录、取消任务。 */
     fun release() {
-        renderJob?.cancel()
-        renderJob = null
         dropSession()
     }
 }
