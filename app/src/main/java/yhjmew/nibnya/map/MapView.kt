@@ -187,18 +187,40 @@ class MapView @JvmOverloads constructor(
         bitmap = bmp
         scale = DEFAULT_SCALE
         if (bmp != null) {
-            offsetX = (width - bmp.width * scale) / 2f
-            offsetY = (height - bmp.height * scale) / 2f
+            /*
+             * ⚠️ 只有 View 已经测量过才能算居中偏移。
+             *
+             * 渲染是异步的，结果回来时 View 通常已经有尺寸；
+             * 但如果 width/height 还是 0（页面刚切换、还没 layout），
+             * 算出来的 offsetX 会是 -bmp.width*scale/2，图片就贴到左上角外。
+             * 这种情况先标脏，等 onSizeChanged 再居中。
+             */
+            if (width > 0 && height > 0) {
+                offsetX = (width - bmp.width * scale) / 2f
+                offsetY = (height - bmp.height * scale) / 2f
+                clampOffset()
+            } else {
+                needsCenter = true
+            }
         }
-        clampOffset()
         invalidate()
     }
+
+    /** View 尺寸还没准备好时，等 layout 完成再居中。 */
+    private var needsCenter = false
 
     /** 当前缩放倍率，UI 上显示用。 */
     val currentScale: Float get() = scale
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        if (needsCenter && w > 0 && h > 0) {
+            bitmap?.let { bmp ->
+                offsetX = (w - bmp.width * scale) / 2f
+                offsetY = (h - bmp.height * scale) / 2f
+            }
+            needsCenter = false
+        }
         clampOffset()
     }
 
@@ -233,8 +255,23 @@ class MapView @JvmOverloads constructor(
      * - **粗线**：每 [MAJOR_CHUNKS] 区块一条，白色 80%、2px。缩得再小也画，
      *   保证任何时候都还能看出「大格」。
      *
-     * ⚠️ 画之前把画布缩回 1:1，线宽才不会被 scale 放大 ——
-     * 否则放大到 8 倍时 1px 的线会变成 8px 的白带子。
+     * ## ⚠️ 坐标系必须和 onDraw 里画地形图的那段一致
+     *
+     * onDraw 是这么画的：
+     * ```
+     * canvas.translate(offsetX, offsetY)
+     * canvas.scale(scale, scale)      ← 关键
+     * canvas.drawBitmap(bmp, 0f, 0f)
+     * ```
+     * 地形图因此被放大了 scale 倍。
+     *
+     * 第一版这里只 translate 没 scale，于是网格按 1:1 的 Bitmap 像素画，
+     * 而地形按 scale 放大 —— 网格只覆盖了图片左上角 1/scale 的一块，
+     * 屏幕上表现为「网格只画了左上角一小片」。
+     *
+     * 现在两种做法里选了更简单的一种：
+     * **线的坐标自己乘 scale，全部用屏幕坐标画**。
+     * 这样线宽就是屏幕像素，不用再除以 scale。
      */
     private fun drawChunkGrid(canvas: Canvas, bmp: Bitmap) {
         // 可见区域换算成 **Bitmap 像素**坐标，用来决定要画哪些线
@@ -244,50 +281,44 @@ class MapView @JvmOverloads constructor(
         val bottomBmp = ((height - offsetY) / scale).coerceIn(0f, bmp.height.toFloat())
         if (rightBmp <= leftBmp || bottomBmp <= topBmp) return
 
-        val chunkW = bmp.width / CHUNK_PX
-        val chunkH = bmp.height / CHUNK_PX
+        // 块数向上取整：1950px 的图有 122 个区块（最后一个是半截），
+        // 用整数除法会算成 121，少画一条右边的边界线。
+        val chunkW = (bmp.width + CHUNK_PX - 1) / CHUNK_PX
+        val chunkH = (bmp.height + CHUNK_PX - 1) / CHUNK_PX
 
         // 只画可见范围内的线：一屏几十条，没必要遍历整张图
         val firstCol = max(0, (leftBmp / CHUNK_PX).toInt())
         val lastCol = min(chunkW, (rightBmp / CHUNK_PX).toInt() + 1)
         val firstRow = max(0, (topBmp / CHUNK_PX).toInt())
         val lastRow = min(chunkH, (bottomBmp / CHUNK_PX).toInt() + 1)
+        if (firstCol > lastCol || firstRow > lastRow) return
 
         // 屏幕上的区块间距 = 16 * scale
         val gapPx = CHUNK_PX * scale
         val drawMinor = gapPx >= MIN_MINOR_GAP_PX
 
-        /*
-         * ⚠️ 线宽要除以 scale。
-         *
-         * 这里的画布只做了 translate，没有 scale —— 线的**位置**用 Bitmap 像素没错，
-         * 但 drawLine 的 strokeWidth 也会按这个坐标系算。图被放大 scale 倍时，
-         * 1px 的线会画成 scale px 粗（放大 8 倍就是 8px 白带子）。
-         *
-         * 除回去之后，不管缩放到多少，线在屏幕上始终是 1~2px。
-         */
-        minorGridPaint.strokeWidth = MINOR_STROKE_PX / scale
-        majorGridPaint.strokeWidth = MAJOR_STROKE_PX / scale
+        // 线的端点用**屏幕坐标**，和地形图的绘制范围一致
+        // 图片可能比 View 小（居中显示），所以还要和 View 边界取交集，
+        // 否则线会画到图片外面、落到灰底上。
+        val clipLeft = max(leftBmp * scale + offsetX, 0f)
+        val clipRight = min(rightBmp * scale + offsetX, width.toFloat())
+        val clipTop = max(topBmp * scale + offsetY, 0f)
+        val clipBottom = min(bottomBmp * scale + offsetY, height.toFloat())
 
-        canvas.save()
-        canvas.translate(offsetX, offsetY)   // 之后的坐标都是 Bitmap 像素
-
-        // 每列/每行的横纵范围（Bitmap 像素），用可见区裁一下，线条不会画到屏幕外
-        val clipTop = topBmp
-        val clipBottom = bottomBmp
-        val clipLeft = leftBmp
-        val clipRight = rightBmp
+        // 线宽就是屏幕像素（不缩放画布，所以不用除 scale）
+        minorGridPaint.strokeWidth = MINOR_STROKE_PX
+        majorGridPaint.strokeWidth = MAJOR_STROKE_PX
 
         // ① 细线（每区块）
         if (drawMinor) {
             for (c in firstCol..lastCol) {
                 if (c % MAJOR_CHUNKS == 0) continue   // 粗线位置跳过，避免重叠发灰
-                val x = c * CHUNK_PX.toFloat()
+                val x = c * CHUNK_PX * scale + offsetX
                 canvas.drawLine(x, clipTop, x, clipBottom, minorGridPaint)
             }
             for (r in firstRow..lastRow) {
                 if (r % MAJOR_CHUNKS == 0) continue
-                val y = r * CHUNK_PX.toFloat()
+                val y = r * CHUNK_PX * scale + offsetY
                 canvas.drawLine(clipLeft, y, clipRight, y, minorGridPaint)
             }
         }
@@ -295,16 +326,24 @@ class MapView @JvmOverloads constructor(
         // ② 粗线（每 MAJOR_CHUNKS 区块）。缩得再小也画。
         for (c in firstCol..lastCol) {
             if (c % MAJOR_CHUNKS != 0) continue
-            val x = c * CHUNK_PX.toFloat()
+            val x = c * CHUNK_PX * scale + offsetX
             canvas.drawLine(x, clipTop, x, clipBottom, majorGridPaint)
         }
         for (r in firstRow..lastRow) {
             if (r % MAJOR_CHUNKS != 0) continue
-            val y = r * CHUNK_PX.toFloat()
+            val y = r * CHUNK_PX * scale + offsetY
             canvas.drawLine(clipLeft, y, clipRight, y, majorGridPaint)
         }
 
-        canvas.restore()
+        // 图边缘补一条线：最后一个区块可能不满 16px，上面的循环到不了图的右/下边缘
+        if (chunkW * CHUNK_PX > bmp.width) {
+            val x = bmp.width * scale + offsetX
+            canvas.drawLine(x, clipTop, x, clipBottom, majorGridPaint)
+        }
+        if (chunkH * CHUNK_PX > bmp.height) {
+            val y = bmp.height * scale + offsetY
+            canvas.drawLine(clipLeft, y, clipRight, y, majorGridPaint)
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
