@@ -1,6 +1,5 @@
 package yhjmew.nibnya.db
 
-import com.litl.leveldb.DB
 import java.io.File
 import java.nio.charset.StandardCharsets
 import yhjmew.nibnya.R
@@ -8,7 +7,7 @@ import yhjmew.nibnya.nbt.NbtTranslator.getString
 
 // Litl LevelDB JNI
 class PlayerDbManager(dbFolderPath: String) {
-    private var db: DB?
+    private var db: LevelDb?
     private val dbFolder = File(dbFolderPath)
 
     init {
@@ -24,23 +23,51 @@ class PlayerDbManager(dbFolderPath: String) {
         db = openWithRetry()
     }
 
-    private fun openWithRetry(): DB {
-        var lastErr: Exception? = null
-        for (attempt in 0 until 3) {
-            try {
-                return DB(dbFolder).also { it.open() }
-            } catch (e: Exception) {
-                lastErr = e
-                if (attempt < 2) {
-                    // 再清一次 LOCK/LOG
-                    File(dbFolder, "LOCK").takeIf { it.exists() }?.delete()
-                    File(dbFolder, "LOG").takeIf { it.exists() }?.delete()
-                    File(dbFolder, "LOG.old").takeIf { it.exists() }?.delete()
-                    Thread.sleep(150)
+    /**
+     * 打开数据库。
+     *
+     * 先按用户选择/默认走 C++（litl JNI，快），
+     * **失败或用户主动选了 Java 时**回退到纯 Java 实现。
+     *
+     * ⚠️ 这个回退是必须的：`com.litl.leveldb.DB` 一旦 so 加载失败，
+     * 抛的是 [UnsatisfiedLinkError]（Error，不是 Exception），
+     * 用 `catch (e: Exception)` 根本接不住，整页会直接崩。
+     * 所以这里必须 catch Throwable。
+     */
+    private fun openWithRetry(): LevelDb {
+        val preferJava = LevelDbEngine.current(dbFolder.absolutePath) == LevelDbEngine.ENGINE_JAVA
+
+        if (!preferJava) {
+            var lastErr: Throwable? = null
+            for (attempt in 0 until 3) {
+                try {
+                    return LitlLevelDb.open(dbFolder)
+                } catch (e: Throwable) {
+                    lastErr = e
+                    if (attempt < 2) {
+                        // 再清一次 LOCK/LOG
+                        File(dbFolder, "LOCK").takeIf { it.exists() }?.delete()
+                        File(dbFolder, "LOG").takeIf { it.exists() }?.delete()
+                        File(dbFolder, "LOG.old").takeIf { it.exists() }?.delete()
+                        Thread.sleep(150)
+                    }
                 }
             }
+            // 走到这里说明 C++ 版确实用不了，记一笔再降级
+            yhjmew.nibnya.util.AppLogger.warn(
+                "PlayerDbManager",
+                "C++ LevelDB 不可用（${lastErr?.javaClass?.simpleName}: ${lastErr?.message}），回退纯 Java 版"
+            )
         }
-        throw lastErr ?: Exception(getString(R.string.label_sub_database_is_not_open))
+
+        try {
+            return JavaBackedLevelDb.open(dbFolder)
+        } catch (e: Throwable) {
+            throw Exception(
+                getString(R.string.label_sub_database_is_not_open) + "：" + (e.message ?: ""),
+                e
+            )
+        }
     }
 
     @Throws(Exception::class)
@@ -54,7 +81,7 @@ class PlayerDbManager(dbFolderPath: String) {
             // 兜底遍历查找
             d.iterator().use { iterator ->
                 iterator.seekToFirst()
-                while (iterator.isValid) {
+                while (iterator.isValid()) {
                     val keyStr = String(iterator.key, StandardCharsets.UTF_8)
                     if (keyStr.contains("local_player") || keyStr.contains("player_server")) {
                         return iterator.value
@@ -77,6 +104,7 @@ class PlayerDbManager(dbFolderPath: String) {
     @Throws(Exception::class)
     fun readRawKey(keyBytes: ByteArray?): ByteArray {
         val d = db ?: throw Exception(getString(R.string.label_sub_db_not_open))
+        if (keyBytes == null) throw Exception(getString(R.string.msg_key_not_found))
         return d.get(keyBytes) ?: throw Exception(getString(R.string.msg_key_not_found))
     }
 
@@ -109,7 +137,7 @@ class PlayerDbManager(dbFolderPath: String) {
         d.iterator().use { iterator ->
             val prefix = "map_".toByteArray(StandardCharsets.UTF_8)
             iterator.seek(prefix)
-            while (iterator.isValid) {
+            while (iterator.isValid()) {
                 val keyStr = String(iterator.key, StandardCharsets.UTF_8)
                 if (!keyStr.startsWith("map_")) break
                 list.add(keyStr)
@@ -128,7 +156,7 @@ class PlayerDbManager(dbFolderPath: String) {
         d.iterator().use { iterator ->
             val prefix = "VILLAGE_".toByteArray(StandardCharsets.UTF_8)
             iterator.seek(prefix)
-            while (iterator.isValid) {
+            while (iterator.isValid()) {
                 val keyStr = String(iterator.key, StandardCharsets.UTF_8)
                 if (!keyStr.startsWith("VILLAGE_")) break
                 list.add(keyStr)
@@ -147,7 +175,7 @@ class PlayerDbManager(dbFolderPath: String) {
         d.iterator().use { iterator ->
             val prefix = "player".toByteArray(StandardCharsets.UTF_8)
             iterator.seek(prefix)
-            while (iterator.isValid) {
+            while (iterator.isValid()) {
                 val keyStr = String(iterator.key, StandardCharsets.UTF_8)
                 if (!keyStr.startsWith("player")) break
 
@@ -167,7 +195,7 @@ class PlayerDbManager(dbFolderPath: String) {
      * **不要**拿它做写操作 —— 写请走本类的方法，
      * 这样以后加事务或前置校验时不用满仓库找调用点。
      */
-    fun rawDb(): DB =
+    fun rawDb(): LevelDb =
         db ?: throw Exception(getString(R.string.label_sub_database_is_not_open))
 
     fun close() {
@@ -198,7 +226,7 @@ class PlayerDbManager(dbFolderPath: String) {
             File(folder, "CURRENT").takeIf { it.exists() }?.delete()
 
             try {
-                DB(folder).also { it.open(); it.close() }
+                LitlLevelDb.open(folder).close()
             } catch (e: Exception) {
                 throw Exception("${getString(R.string.msg_repair_failed_corrupted)}${e.message}")
             }

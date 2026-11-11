@@ -539,6 +539,10 @@ class MainActivity : ComponentActivity() {
         // 地图页（只读地形预览，2026-11-02）
         mapPage = yhjmew.nibnya.map.MapPageController(this, worldVM)
 
+        // 数据库引擎选择要读 prefs，但 PlayerDbManager 只收一个目录路径，
+        // 所以在这里把 application context 登记进去。
+        yhjmew.nibnya.db.LevelDbEngine.attach(this)
+
         // 按用户配色刷一遍主页（默认颜色模式时走 colors.xml 原值，等于没刷）
         prefs?.let { ColorApplier.apply(this, it) }
     }

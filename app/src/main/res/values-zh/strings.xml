@@ -969,7 +969,15 @@ ID：%3$s
     <string name="map_radius_custom_invalid">请输入正整数</string>
     <string name="map_status_waiting_world">请先在主页打开一个世界</string>
     <string name="map_status_no_data">这个维度没有区块数据</string>
-    <string name="map_grid_on">网格</string>
+        <string name="label_db_engine">数据库引擎</string>
+    <string name="desc_db_engine">Java 版慢一些，但不依赖原生库。存档打不开时可以切到这里试试。</string>
+    <string name="btn_db_engine_test">自检当前引擎</string>
+    <string name="db_engine_cpp">C++（快）</string>
+    <string name="db_engine_java">Java（兼容）</string>
+    <string name="db_engine_auto">自动</string>
+    <string name="toast_db_engine_ok">%s 引擎正常</string>
+    <string name="toast_db_engine_fail">%s 引擎失败：%s</string>
+<string name="map_grid_on">网格</string>
     <string name="map_grid_off">网格</string>
 
     <!-- 日志查看 / 清理（2026-11-08） -->

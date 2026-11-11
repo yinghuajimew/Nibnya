@@ -11,3 +11,6 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# 云盘凭据（个人，不入库）
+webdav.txt

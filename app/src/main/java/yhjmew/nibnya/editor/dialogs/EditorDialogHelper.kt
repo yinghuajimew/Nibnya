@@ -1109,6 +1109,13 @@ fun MainActivity.showAppInfoDialog() {
         dialog.dismiss()
         startDataMigration(manual = true)
     }
+
+    // ---- 数据库引擎（2026-11-10）----
+    // 默认 C++（JNI，快）。纯 Java 版慢一个数量级但不依赖 .so，
+    // 是「存档死活打不开」时的逃生通道。
+    // 放在「高级」而不是「调试」：用户进不去存档时会自己来找这个。
+    setupDbEngine(dialogView)
+
     // ---- 调试页（2026-11-02 新增）----
     // 原本这些入口藏在「点应用图标 10 次」，用户找不到。
     // 现在独立成标签页，图标彩蛋保留（两种方式都能进）。
@@ -2168,6 +2175,105 @@ private fun digitsOnlyFilter(): android.text.InputFilter =
  * 现在值列表与标签列表**严格一一对应**，不再有这种错位。
  */
 private val TRASH_KEEP_VALUES = listOf(0, 7, 30, 90)
+
+// ============================================
+// 数据库引擎选择（2026-11-10）
+// ============================================
+
+/** 下拉顺序必须和 [ENGINE_KEYS] 一一对应（见 Spinner 那条铁律）。 */
+private val ENGINE_KEYS = listOf(
+    yhjmew.nibnya.db.LevelDbEngine.ENGINE_CPP,
+    yhjmew.nibnya.db.LevelDbEngine.ENGINE_JAVA,
+)
+
+/**
+ * 「设置 → 高级 → 数据库引擎」。
+ *
+ * 为什么放在「高级」而不是「调试」：
+ * 这不是给开发者看的诊断开关，而是**用户真的会用到**的东西 ——
+ * 某个存档打不开、或者设备的 ABI 没有对应的 .so 时，
+ * 切到 Java 版就能绕过。放在调试页等于让普通用户找不到。
+ */
+private fun MainActivity.setupDbEngine(root: android.view.View) {
+    val sp = root.findViewById<Spinner?>(R.id.sp_db_engine)
+    val btnTest = root.findViewById<Button?>(R.id.btn_db_engine_test)
+
+    fun labels(): MutableList<String> = mutableListOf(
+        getString(R.string.db_engine_cpp),
+        getString(R.string.db_engine_java),
+    )
+
+    if (sp != null) {
+        var labels = labels()
+
+        fun buildAdapter(): ArrayAdapter<String> = object : ArrayAdapter<String>(
+            this, R.layout.item_spinner_selected, labels
+        ) {
+            override fun getView(
+                position: Int, convertView: android.view.View?, parent: android.view.ViewGroup
+            ): android.view.View {
+                if (position !in labels.indices) return super.getView(0, convertView, parent)
+                return super.getView(position, convertView, parent)
+            }
+
+            override fun getDropDownView(
+                position: Int, convertView: android.view.View?, parent: android.view.ViewGroup
+            ): android.view.View {
+                if (position !in labels.indices) {
+                    return super.getDropDownView(0, convertView, parent)
+                }
+                val tv = super.getDropDownView(position, convertView, parent) as TextView
+                tv.text = labels[position]
+                tv.setOnClickListener(null)
+                tv.isClickable = false
+                return tv
+            }
+        }.also { it.setDropDownViewResource(R.layout.item_spinner_dropdown) }
+
+        sp.adapter = buildAdapter()
+        val cur = yhjmew.nibnya.db.LevelDbEngine.get(this)
+        // auto 在界面上等同于 C++（自动 = 先试 C++，失败才回退）
+        val idx = ENGINE_KEYS.indexOf(if (cur.isEmpty()) ENGINE_KEYS[0] else cur)
+        sp.setSelection(if (idx >= 0) idx else 0, false)
+
+        var userPicked = false
+        sp.setOnTouchListener { _, _ -> userPicked = true; false }
+        sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                p: AdapterView<*>?, v: android.view.View?, position: Int, id: Long
+            ) {
+                if (!userPicked) return
+                val key = ENGINE_KEYS.getOrNull(position) ?: return
+                yhjmew.nibnya.db.LevelDbEngine.set(this@setupDbEngine, key)
+                // 切引擎后旧连接仍然有效，但下次打开存档才会用新的，
+                // 所以这里只提示、不重启任何东西
+                labels = labels()   // 保持与 adapter 条目数一致
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+    }
+
+    btnTest?.setOnClickListener {
+        val engine = yhjmew.nibnya.db.LevelDbEngine.get(this)
+        val name = yhjmew.nibnya.db.LevelDbEngine.labelOf(engine)
+        // 自检跑在后台：Java 版要建索引，主线程做会 ANR
+        Thread {
+            val (ok, msg) = if (engine == yhjmew.nibnya.db.LevelDbEngine.ENGINE_JAVA) {
+                yhjmew.nibnya.db.JavaLevelDb.selfTest()
+            } else {
+                yhjmew.nibnya.db.LitlLevelDb.selfTest()
+            }
+            runOnUiThread {
+                val text = if (ok) {
+                    getString(R.string.toast_db_engine_ok, name)
+                } else {
+                    getString(R.string.toast_db_engine_fail, name, msg)
+                }
+                android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }.start()
+    }
+}
 
 private fun MainActivity.setupTrashSettings(root: android.view.View) {
     val sp = root.findViewById<Spinner?>(R.id.sp_trash_keep) ?: return

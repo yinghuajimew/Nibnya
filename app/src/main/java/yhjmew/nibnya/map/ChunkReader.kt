@@ -1,6 +1,7 @@
 package yhjmew.nibnya.map
 
-import com.litl.leveldb.DB
+import yhjmew.nibnya.db.LevelDb
+import yhjmew.nibnya.db.DbIterator
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -33,7 +34,7 @@ import java.nio.ByteOrder
  *
  * 参照 `bedrock-level/src/{sub_chunk,palette,data_3d}.cpp`。
  */
-class ChunkReader(private val db: DB) {
+class ChunkReader(private val db: LevelDb) {
 
     companion object {
         // 区块键类型

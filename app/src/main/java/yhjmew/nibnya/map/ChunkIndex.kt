@@ -1,6 +1,7 @@
 package yhjmew.nibnya.map
 
-import com.litl.leveldb.DB
+import yhjmew.nibnya.db.LevelDb
+import yhjmew.nibnya.db.DbIterator
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -17,7 +18,7 @@ import java.nio.ByteOrder
  * ## 只读
  * 全程只 seek/next，不写。
  */
-class ChunkIndex(private val db: DB) {
+class ChunkIndex(private val db: LevelDb) {
 
     companion object {
         /** 过滤明显不合理坐标：解析错位时会得到天文数字。 */

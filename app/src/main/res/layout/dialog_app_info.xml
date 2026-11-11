@@ -1124,6 +1124,67 @@
 
             <!-- 6. 日夜模式 -->
 
+            <!-- 7. 数据库引擎（2026-11-10）
+                 默认 C++（JNI，快）。纯 Java 版慢一个数量级，
+                 但不需要任何 .so —— 设备 ABI 不匹配、so 被裁掉、
+                 或某个存档在 C++ 版上就是打不开时，这是唯一的救命通道。
+                 所以放在「高级」而不是「调试」：它不是给开发者看的诊断项，
+                 而是用户真的可能需要在进不去存档时自己切的东西。 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_db_engine"
+                        android:textColor="@color/app_text_primary"
+                        android:textSize="14sp" />
+
+                    <Spinner
+                        android:id="@+id/sp_db_engine"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/desc_db_engine"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="12sp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- 自检：不碰真实存档，只在临时目录里建个空库读写一次。
+                     用户切到 Java 后如果打不开存档，可以先点这个确认
+                     是引擎本身的问题还是存档的问题。 -->
+                <Button
+                    android:id="@+id/btn_db_engine_test"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="@string/btn_db_engine_test"
+                    android:textAllCaps="false"
+                    android:textColor="#4CAF50"
+                    android:textSize="14sp"
+                    android:gravity="start|center_vertical"
+                    android:paddingStart="4dp" />
+
+            </LinearLayout>
+
         </LinearLayout>
         <!-- ===== 分类：调试 =====
              2026-11-02 新增。原本这些入口藏在「点应用图标 10 次」，

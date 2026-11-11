@@ -967,7 +967,15 @@ Make sure the path belongs to an installed app.</string>
     <string name="map_radius_custom_invalid">Enter a positive number</string>
     <string name="map_status_waiting_world">Open a world on the Home page first</string>
     <string name="map_status_no_data">No chunk data in this dimension</string>
-    <string name="map_grid_on">Grid</string>
+        <string name="label_db_engine">Database engine</string>
+    <string name="desc_db_engine">Java is slower but needs no native library. Switch here if a world refuses to open.</string>
+    <string name="btn_db_engine_test">Self-test current engine</string>
+    <string name="db_engine_cpp">C++ (fast)</string>
+    <string name="db_engine_java">Java (compatible)</string>
+    <string name="db_engine_auto">Auto</string>
+    <string name="toast_db_engine_ok">%s engine OK</string>
+    <string name="toast_db_engine_fail">%s engine failed: %s</string>
+<string name="map_grid_on">Grid</string>
     <string name="map_grid_off">Grid</string>
 
     <string name="debug_logs_desc_days">Logs are kept per day across restarts. Keeping the last %1$d days; older files are pruned on next launch.</string>
