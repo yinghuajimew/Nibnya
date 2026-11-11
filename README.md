@@ -111,7 +111,7 @@ Introduction and usage tutorial：
 > [!TIP]
 > Make sure you **have the basics[Shizuku](https://github.com/RikkaApps/Shizuku)use**, the app will ask for<br/>
 > Otherwise, you will be **unable to access Android/data** Minecraft files.<br/>
-> **Currently only supports Android 9 ~ 13**<br/>
+> **Currently only supports Android 6 ~ 13**<br/>
 > Obtaining all file permissions is for the download directory to read and write to the old directory and the private directory.
 
 ## 📄 Change log
