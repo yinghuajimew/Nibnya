@@ -1,5 +1,19 @@
+# ── 构建产物 ──
+# 注意：`/build` 只匹配仓库根目录，**不会**匹配 app/build。
+# 历史上就是因为这条规则，app/build 下的 dex/apk 被提交进仓库，
+# 让 .git 从十几 MB 涨到 160 MB（详见仓库 README 的说明）。
 /build
+build/
+app/build/
+*/build/
+
+# 打包/备份文件（早期在手机上手动备份时留下的）
+# 只挡这两个已知的名字，不用 *.zip —— 免得以后真要提交某个
+# 压缩包（模板、测试数据）时被静默忽略。
 NBTEditor.zip
+NBTeditor.zip
+NBTeditor.rar
+
 .juggler/
 TODO.md
 
