@@ -6,6 +6,7 @@
 
 <!-- SHIELD GROUP -->
 [![Version][version-shield]][version-link]
+[![Android][android-shield]][android-link]
 [![License][license-shield]][license-link]
 [![Issues][issues-shield]][issues-link]
 
@@ -246,6 +247,9 @@ Nibnya 通过 **[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-
 
 [version-shield]: https://img.shields.io/badge/版本-v1.0.4-369eff?style=flat-square&labelColor=black
 [version-link]: https://github.com/yinghuajimew/Nibnya/releases
+
+[android-shield]: https://img.shields.io/badge/Android-6.0%2B-3ddc84?style=flat-square&labelColor=black&logo=android&logoColor=white
+[android-link]: https://developer.android.com
 
 [issues-shield]: https://img.shields.io/github/issues/yinghuajimew/Nibnya?color=ff80eb&labelColor=black&style=flat-square
 [issues-link]: https://github.com/yinghuajimew/Nibnya/issues

@@ -361,7 +361,9 @@ internal fun MainActivity.showPuzzlePreview(
         previewView.invalidate()
 
         val isGrid = mode == TAB_GRID
-        stepperRow.visibility = if (isGrid) View.VISIBLE else View.GONE
+        // 行列步进两页都显示：rows/cols 是共用的同一组数字，
+        // 在哪个标签页调都一样，不用先退回去改再切过来。
+        stepperRow.visibility = View.VISIBLE
         lockRow.visibility = if (isGrid) View.GONE else View.VISIBLE
         padRow.visibility = if (isGrid) View.VISIBLE else View.GONE
 
