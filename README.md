@@ -200,6 +200,44 @@ _Other ideas and modifications are still being implemented_
  [@LeviMC](https://github.com/LiteLDev) Provided me with methods and ideas for modifications<br/>
 (It is also recommended to take a look at LeviMC’s open source projects)
 
+## 🔧 Built with / 第三方组件
+
+Nibnya reads Minecraft Bedrock world databases through
+**[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-src)** —
+our own trimmed build of
+[HiveGamesOSS/leveldb-mcpe-java](https://github.com/HiveGamesOSS/leveldb-mcpe-java)
+(Apache 2.0), the pure-Java LevelDB fork that understands MCPE worlds.
+
+> [!NOTE]
+> **This is not a stock dependency — it is a fork we modified ourselves.**
+> Upstream needs Guava (2.33 MB for 1814 classes) while we use only 30 of its
+> types, so those 30 were reimplemented by hand. Snappy was dropped entirely
+> (Bedrock chunks are raw deflate, never Snappy). Two build restrictions were
+> also worked around: an `android.os.Build` reference that blocked desktop
+> compilation, and a `MethodHandle` call that D8 rejects below API 26.
+>
+> **2605 KB → 263 KB**, verified byte-for-byte against upstream by hashing every
+> key and value in a 127k-entry world database.
+>
+> Source, rationale and verification data:
+> **[github.com/yinghuajimew/leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-src)**
+
+The library is used through a small `LevelDb` interface with two backends:
+
+| Backend | Class | Notes |
+|---|---|---|
+| C++ (JNI) | `LitlLevelDb` | default, fast, needs `libleveldbjni.so` for the device ABI |
+| Java (ours) | `JavaBackedLevelDb` | slower, no native dependency, works on any ABI |
+
+Switch between them in **Settings → Advanced → Database engine**. The Java
+backend is an escape hatch for devices where the `.so` will not load, or worlds
+the native build refuses to open.
+
+To rebuild the jars: `python build_leveldb_java.py` (fetches the source
+automatically; pass `--src` to use a local checkout).
+
+---
+
 ## 📜 Open source agreement
 
 This project uses **[AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0)** protocol

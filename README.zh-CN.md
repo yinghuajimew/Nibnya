@@ -198,6 +198,44 @@ _其他想法和修改还在实现中_
  [@LeviMC](https://github.com/LiteLDev) 给我提供了方法和修改的点子<br/>
 (也推荐看看LeviMC他们的开源项目)
 
+## 🔧 使用的第三方组件
+
+Nibnya 通过 **[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-src)**
+读取 Minecraft 基岩版存档数据库 —— 那是我们自己裁剪过的一份
+[HiveGamesOSS/leveldb-mcpe-java](https://github.com/HiveGamesOSS/leveldb-mcpe-java)
+（Apache 2.0），一个能读写 MCPE 存档的纯 Java LevelDB 实现。
+
+> [!NOTE]
+> **这不是直接拿来用的现成依赖，是我们自己爆改过的版本。**
+>
+> 上游需要 Guava（2.33 MB / 1814 个类），而我们只用其中 30 个类型，
+> 于是把这 30 个各自手写实现了一遍。Snappy 整个去掉 ——
+> 基岩版区块是 raw deflate，从不使用 Snappy。
+>
+> 另外绕开了两处构建限制：一处 `android.os.Build` 引用导致桌面编不过，
+> 一处 `MethodHandle` 调用在 API 26 以下会被 D8 拒绝。
+>
+> **2605 KB → 263 KB**，正确性用 12.7 万键的真实存档逐键算 SHA-256 验证过，
+> 与上游完全一致。
+>
+> 源码、改动原因、验证数据：
+> **[github.com/yinghuajimew/leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-src)**
+
+库通过一个轻量的 `LevelDb` 接口接入，有两个后端：
+
+| 后端 | 类 | 说明 |
+|---|---|---|
+| C++（JNI） | `LitlLevelDb` | 默认，快，需要对应 ABI 的 `libleveldbjni.so` |
+| Java（本项目） | `JavaBackedLevelDb` | 慢，不依赖原生库，任何 ABI 都能跑 |
+
+在 **设置 → 高级 → 数据库引擎** 里切换。Java 后端是逃生通道：
+设备加载不了 `.so`、或者某个存档原生版就是打不开时，还有路可走。
+
+重新构建 jar：`python build_leveldb_java.py`
+（会自动拉取源码，也可以用 `--src` 指定本地副本）。
+
+---
+
 ## 📜 开源协议
 
 本项目采用 **[AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0)** 协议

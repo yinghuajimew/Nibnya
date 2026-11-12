@@ -1,7 +1,7 @@
 # ── 构建产物 ──
 # 注意：`/build` 只匹配仓库根目录，**不会**匹配 app/build。
-# 历史上就是因为这条规则，app/build 下的 dex/apk 被提交进仓库，
-# 让 .git 从十几 MB 涨到 160 MB（详见仓库 README 的说明）。
+# 历史上就因为写了 `/build`，app/build 下的 dex/apk 被一路提交进仓库，
+# .git 一度涨到 161 MB（已清理，相关的旧历史分支也已删除）。
 /build
 build/
 app/build/
@@ -16,6 +16,10 @@ NBTeditor.rar
 
 .juggler/
 TODO.md
+
+# 本地 clone 的 leveldb 源码（build_leveldb_java.py 支持 --src / 本地目录）
+# 它是独立仓库：https://github.com/yinghuajimew/leveldb-java-src
+leveldb-java-src/
 
 # 本地构建环境（不应提交）
 local.properties
