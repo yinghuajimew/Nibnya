@@ -1550,9 +1550,22 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                                                 "写回结构异常 current=$hasCurrent nested=$hasNested，" +
                                                 "回滚到原目录"
                                             )
-                                            // 把坏的新目录丢掉，原目录放回去
+                                            // 把坏的新目录丢掉，原目录放回去。
+                                            //
+                                            // ⚠️ 不用 rm -rf mcDbPath：
+                                            //    那是真实存档路径，安全策略按设计拒绝删除
+                                            //    （见 isSafeDestructiveTarget 的黑名单），
+                                            //    强行放行就等于给「路径拼错也照删不误」开口子。
+                                            //
+                                            // 改用 rename 让位：
+                                            //    坏内容 -> tmpNew（临时目录，允许删）
+                                            //    原内容 tmpOld -> mcDbPath
+                                            // 全程只是改名，任何一步失败都能看出原始数据还在。
                                             runShizukuCmd(
-                                                arrayOf("sh", "-c", "rm -rf \"$mcDbPath\"")
+                                                arrayOf("sh", "-c", "rm -rf \"$tmpNew\"")
+                                            ).waitFor()
+                                            runShizukuCmd(
+                                                arrayOf("sh", "-c", "mv \"$mcDbPath\" \"$tmpNew\"")
                                             ).waitFor()
                                             runShizukuCmd(
                                                 arrayOf("sh", "-c", "mv \"$tmpOld\" \"$mcDbPath\"")

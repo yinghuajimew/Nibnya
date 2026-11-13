@@ -269,6 +269,18 @@ object PrivilegedExec {
         if (p.isEmpty()) return false
         if (!p.startsWith("/")) return false                 // 必须是绝对路径
         if (p.length < 12) return false                      // 太短，肯定是拼错了
+
+        // 我们自己的临时目录（原子替换用的 .nibnya_tmp_*）永远允许删除。
+        //
+        // ⚠️ 必须放在「Android 受保护区」判断**之前**。
+        //    原子替换要求临时目录与目标 db 同级（同一分区 rename 才原子），
+        //    所以临时目录必然落在 Android/data/<pkg>/... 下面 ——
+        //    若先命中下面那条一刀切的黑名单，豁免就永远轮不到它，
+        //    表现就是「ROOT 已连接，但保存时报 rm target outside allowed area」。
+        //    这是 ea43497 起就存在的旧缺陷，不是路径改动引入的。
+        val isOwnTmp = p.substringAfterLast('/').startsWith(TMP_PREFIX)
+        if (isOwnTmp) return true
+
         if (p.startsWith("/storage/emulated/0/Android")) return false  // 系统受保护区
 
         // 「上一级」目录绝不删：删了就完了
@@ -285,19 +297,15 @@ object PrivilegedExec {
         )
         if (p.trimEnd('/') in forbidden) return false
 
-
         if (strictBridgeOnly) {
             // rm -rf 允许的目标（除此之外一律拒绝）：
             //  ① Bridge/ 下的临时目录
             val bridge = BRIDGE_ROOT.trimEnd('/')
             val inBridge = p.startsWith("$bridge/") && p.trimEnd('/') != bridge
-            //  ② 我们自己的隐藏临时目录（原子替换用的 .nibnya_tmp_*）
-            val isOwnTmp = p.substringAfterLast('/').startsWith(TMP_PREFIX)
-            //  ③ 回收站 Trash 下的内容 —— 删除存档时 mv 之前要先清掉占位目录
+            //  ② 回收站 Trash 下的内容 —— 删除存档时 mv 之前要先清掉占位目录
             val inTrash = p.contains("/Trash/") && p.substringAfterLast('/').isNotEmpty()
-            return inBridge || isOwnTmp || inTrash
+            return inBridge || inTrash
         }
-
 
         return true
     }
