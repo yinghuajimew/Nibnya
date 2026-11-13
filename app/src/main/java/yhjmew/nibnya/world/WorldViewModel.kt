@@ -118,6 +118,13 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
 
     fun clearOfferCreateKey() { _offerCreateKey.value = null }
 
+    /**
+     * 初始路径：若用户设过默认包名，直接用它的路径；
+     * 否则回退到原版包名的标准路径。
+     *
+     * 这里不能用 MainActivity.PATH_STANDARD 直接算 —— 它在 ViewModel
+     * 构造时还没 attach（偏好缓存为空），所以先留空，由 [restorePath] 填。
+     */
     private val _currentPath = MutableStateFlow(MainActivity.PATH_STANDARD)
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
     var pendingSidebarTask: Runnable? = null
@@ -508,10 +515,16 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             try {
                 val roots = mutableListOf<Pair<String, String>>()
                 // 顺序即优先级：标准 > 旧版 > 内部（仅用于标签展示，不影响去重——不去重）
-                roots.add(MainActivity.PATH_STANDARD to getString(R.string.path_standard_short))
+                //
+                // 「标准」这条用**当前包名**，不是写死的原版包名 ——
+                // 用户切到共存版之后，这里必须跟着变。
+                val pkg = PackagePrefs.defaultPackage(context)
+                    ?: PackageResolver.currentPackageName(_currentPath.value)
+                    ?: MainActivity.DEFAULT_PACKAGE
+                roots.add(PackageResolver.externalBase(pkg) to getString(R.string.path_standard_short))
                 roots.add(MainActivity.PATH_LEGACY to getString(R.string.path_legacy_short))
                 if (includeInternal) {
-                    roots.add(MainActivity.PATH_INTERNAL to getString(R.string.path_internal_short))
+                    roots.add(PackageResolver.internalBase(pkg) to getString(R.string.path_internal_short))
                 }
 
                 val merged = mutableListOf<WorldItem>()
@@ -553,6 +566,80 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 _isLoading.value = false
             }
         }
+    }
+
+    /**
+     * 判断某个存档根目录下**是否真的有存档**（给「按应用选择」用）。
+     *
+     * 为什么不能用 File API：Android 11+ 对 Android/data 下的路径，
+     * 即使有 MANAGE_EXTERNAL_STORAGE，File.exists() 也恒为 false。
+     * 所以这里优先走提权，提权不可用才退回 File API。
+     */
+    fun hasWorldsUnder(base: String): Boolean {
+        // 先试 File API（公共目录 / 老系统能直接看到）
+        try {
+            val dir = File(base)
+            if (dir.exists() && dir.isDirectory) {
+                if (dir.listFiles()?.any { File(it, "level.dat").exists() } == true) return true
+            }
+        } catch (_: Exception) {}
+
+        if (!checkShizukuAvailable()) return false
+        return try {
+            val p = runShizukuCmd(arrayOf("sh", "-c",
+                "ls -d \"${base}*\" 2>/dev/null | head -n 1"))
+            val out = BufferedReader(InputStreamReader(p.inputStream)).readText().trim()
+            p.waitFor()
+            out.isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 一次性列出「所有带存档目录的包名」——给「按应用选择」用。
+     *
+     * 为什么需要批量版：手机上通常 200+ 应用，若逐个探测
+     * 就要创建几百次提权进程，慢到没法用。这里只用一条命令
+     * 把 Android/data 下所有含 minecraftWorlds 的目录列出来。
+     *
+     * @return 包名集合；提权不可用或命令失败时返回 null（调用方会退回逐条探测）
+     */
+    fun listPackagesWithWorlds(includeInternal: Boolean): Set<String>? {
+        if (!checkShizukuAvailable()) return null
+        val out = linkedSetOf<String>()
+        try {
+            // 外部私有目录：Android/data/<pkg>/files/games/com.mojang/minecraftWorlds
+            // 用 glob 一次匹配，避免 for 循环里逐个 test
+            val p = runShizukuCmd(arrayOf("sh", "-c",
+                "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>/dev/null; " +
+                "ls -d /storage/emulated/0/Android/data/*/files/minecraftWorlds 2>/dev/null"))
+            val text = BufferedReader(InputStreamReader(p.inputStream)).readText()
+            p.waitFor()
+            for (line in text.lines()) {
+                val pkg = PackageResolver.packageOfPath(line.trim())
+                if (!pkg.isNullOrBlank()) out.add(pkg)
+            }
+
+            if (includeInternal) {
+                // 内部私有目录只有 root 能看；Shizuku(shell) 不会有权限，
+                // 失败也无所谓，不影响外部结果。
+                val p2 = runShizukuCmd(arrayOf("sh", "-c",
+                    "ls -d /data/user/0/*/games/com.mojang/minecraftWorlds 2>/dev/null"))
+                val t2 = BufferedReader(InputStreamReader(p2.inputStream)).readText()
+                p2.waitFor()
+                for (line in t2.lines()) {
+                    val pkg = PackageResolver.packageOfPath(line.trim())
+                    if (!pkg.isNullOrBlank()) out.add(pkg)
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.warn("PkgScan", "批量探测失败: ${e.message}")
+            return null
+        }
+        // 命令成功但一个都没有时，返回空集合（不是 null）——
+        // 说明「确实没有」，不该退回逐条探测把它变成几百次命令。
+        return out
     }
 
     /** 列出一个根目录下的子文件夹名（优先 File API，失败退回 Shizuku） */

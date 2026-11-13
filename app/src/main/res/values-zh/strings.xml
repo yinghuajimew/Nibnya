@@ -1014,4 +1014,27 @@ ID：%3$s
 %1$s
 
 没有写入任何数据。请确认游戏仍已安装、路径正确。</string>
+    <string name="path_by_app">按应用选择…</string>
+    <string name="pkg_dialog_title">选择应用（共 %1$d 个）</string>
+    <string name="pkg_search_hint">搜索名称 / 包名</string>
+    <string name="pkg_tag_current">当前</string>
+    <string name="pkg_tag_default">默认</string>
+    <string name="pkg_sort_label">排序：%1$s</string>
+    <string name="pkg_sort_name">A-Z</string>
+    <string name="pkg_sort_installed_asc">安装时间 ↑</string>
+    <string name="pkg_sort_installed_desc">安装时间 ↓</string>
+    <string name="pkg_none_found">没有找到带存档目录的应用。
+
+如果游戏用的是非标准位置，请改用「自定义路径」。</string>
+    <string name="pkg_scanning">正在查找应用…</string>
+    <string name="pkg_set_default">设为默认</string>
+    <string name="pkg_default_set">默认应用：%1$s</string>
+    <string name="pkg_clear_default">清除默认</string>
+    <string name="pkg_default_cleared">已清除默认</string>
+    <string name="pkg_menu_title">%1$s</string>
+    <string name="pkg_need_root_for_internal">内部存储需要 root</string>
+    <string name="pkg_installed_at">安装于 %1$s</string>
+    <string name="pkg_last_played">最近存档 %1$s</string>
+    <string name="toast_path_switched">已切换到：
+%1$s</string>
 </resources>

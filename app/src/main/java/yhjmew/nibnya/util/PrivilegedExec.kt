@@ -284,13 +284,24 @@ object PrivilegedExec {
         "/storage/emulated/0/Download", "/storage/emulated/0/Download/Nibnya",
         "/storage/emulated/0/Download/Nibnya/Bridge",
         "/data", "/data/user", "/data/user/0", "/data/data",
-        "/data/user/0/com.mojang.minecraftpe",
-        "/data/user/0/com.mojang.minecraftpe/games",
-        "/data/user/0/com.mojang.minecraftpe/games/com.mojang",
-        "/data/user/0/com.mojang.minecraftpe/games/com.mojang/minecraftWorlds",
         "/storage/emulated/0/Android",
         "/storage/emulated/0/Android/data"
     )
+
+    /**
+     * 「某个应用的存档根目录」这类路径永远不许删。
+     *
+     * 不能写死包名 —— 用户可能用共存版/改包版，包名随时可能变。
+     * 所以按**结构**判断：路径末尾是
+     *   .../games/com.mojang/minecraftWorlds   或
+     *   .../files/games/com.mojang/minecraftWorlds
+     * 就算「存档根目录」，无论前面是哪个包名。
+     */
+    private fun isWorldRootPath(p: String): Boolean {
+        val t = p.trimEnd('/')
+        return t.endsWith("/minecraftWorlds") &&
+            (t.contains("/games/com.mojang/") || t.contains("/files/minecraftWorlds"))
+    }
 
     fun isSafeDestructiveTarget(path: String, strictBridgeOnly: Boolean): Boolean {
         val p = path.trim().removeSurrounding("\"").removeSurrounding("'")
@@ -313,6 +324,8 @@ object PrivilegedExec {
 
         // 「上一级」目录绝不删：删了就完了（与移动共用同一份清单）
         if (p.trimEnd('/') in FORBIDDEN_TOPS) return false
+        // 任何应用的存档根目录同样不许删（包名不写死，按结构识别）
+        if (isWorldRootPath(p)) return false
 
         if (strictBridgeOnly) {
             // rm -rf 允许的目标（除此之外一律拒绝）：
@@ -358,6 +371,8 @@ object PrivilegedExec {
         if (!isSafeAbsolute(p)) return false
         // 「上一级」目录一律不许作为目标
         if (p in FORBIDDEN_TOPS) return false
+        // 不允许把东西改名成「某个应用的存档根目录」——那会顶掉整个存档目录
+        if (isWorldRootPath(p)) return false
         if (p.substringAfterLast('/').startsWith(TMP_PREFIX)) return true
         if (isDataArea(p)) return true
         if (p.startsWith(BRIDGE_ROOT.trimEnd('/') + "/")) return true

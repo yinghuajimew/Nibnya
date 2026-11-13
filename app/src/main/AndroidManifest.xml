@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Shizuku 权限 -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -9,6 +10,20 @@
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
     </queries>
+
+    <!--
+      包可见性（Android 11+）：
+      「按应用选择」需要枚举本机应用来找出带存档目录的那些。
+
+      QUERY_ALL_PACKAGES 在 Google Play 需要申报理由，本项目不走商店分发，
+      但它属于「宽泛」权限。这里只声明我们真正需要的两类：
+        · 能查询到有游戏存档目录的应用 —— 无法用 queries 精确表达，
+          因为包名是任意的，所以仍需 QUERY_ALL_PACKAGES。
+      若将来上架，应改为让用户手动输入包名，或改用 MORE_SPECIFIC 的 queries。
+    -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
     <application

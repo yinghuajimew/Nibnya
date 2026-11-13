@@ -1011,4 +1011,27 @@ Make sure the path belongs to an installed app.</string>
 %1$s
 
 The save was not written. Check that the game is still installed and the path is correct.</string>
+    <string name="path_by_app">Choose by app…</string>
+    <string name="pkg_dialog_title">Choose app (%1$d found)</string>
+    <string name="pkg_search_hint">Search name / package</string>
+    <string name="pkg_tag_current">Current</string>
+    <string name="pkg_tag_default">Default</string>
+    <string name="pkg_sort_label">Sort: %1$s</string>
+    <string name="pkg_sort_name">A-Z</string>
+    <string name="pkg_sort_installed_asc">Install date ↑</string>
+    <string name="pkg_sort_installed_desc">Install date ↓</string>
+    <string name="pkg_none_found">No app with a save folder was found.
+
+If the game uses a non-standard location, use "Custom path" instead.</string>
+    <string name="pkg_scanning">Looking for apps…</string>
+    <string name="pkg_set_default">Set as default</string>
+    <string name="pkg_default_set">Default app: %1$s</string>
+    <string name="pkg_clear_default">Clear default</string>
+    <string name="pkg_default_cleared">Default cleared</string>
+    <string name="pkg_menu_title">%1$s</string>
+    <string name="pkg_need_root_for_internal">Internal storage needs root</string>
+    <string name="pkg_installed_at">installed %1$s</string>
+    <string name="pkg_last_played">last save %1$s</string>
+    <string name="toast_path_switched">Switched to:
+%1$s</string>
 </resources>

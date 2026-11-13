@@ -29,6 +29,8 @@ import java.io.*
 import java.util.*
 import yhjmew.nibnya.editor.dialogs.*
 import yhjmew.nibnya.editor.EditorViewModel
+import yhjmew.nibnya.world.PackageResolver
+import yhjmew.nibnya.world.PackagePrefs
 import yhjmew.nibnya.world.WorldViewModel
 import yhjmew.nibnya.world.WorldViewModel.BackupItem
 import yhjmew.nibnya.world.WorldViewModel.CacheItem
@@ -391,6 +393,10 @@ class MainActivity : ComponentActivity() {
         worldVM.setIoThreadCount(prefs!!.getInt("io_thread_count", 0))
         mapVM.setPuzzleMultiThread(prefs!!.getBoolean("puzzle_multithread", true))
         mapVM.setPuzzleThreadCount(prefs!!.getInt("puzzle_thread_count", 0))
+
+        // 包名选择：让 PATH_STANDARD / PATH_INTERNAL 这两个「静态路径」能读到
+        // 当前选的包名。必须在恢复路径之前调用。
+        PackagePrefs.attach(this)
 
         // issue #6：恢复上次使用的路径（避免重启后回退到需 Shizuku 的 Android/data）
         prefs!!.getString("last_path", null)?.let { saved ->
@@ -1204,6 +1210,9 @@ class MainActivity : ComponentActivity() {
             getString(R.string.path_saf)
         )
         if (rootAvailable) labels.add(getString(R.string.path_internal))
+        // 「按应用选择」放最后：它是「先定包名、再定位存档」这条链路的起点，
+        // 但不该抢在前面 —— 多数人还是直接用默认路径。
+        labels.add(getString(R.string.path_by_app))
 
         // 因为「显示所有」占了第 0 位，下面所有索引整体后移一位。
         // 用变量算出来，避免以后再加项时又要手工数一遍。
@@ -1213,6 +1222,8 @@ class MainActivity : ComponentActivity() {
         val iCustom = 3
         val iSaf = 4
         val iInternal = 5
+        // 内部存储是否出现取决于 root，所以「按应用」的位置是浮动的
+        val iByApp = labels.size - 1
 
         AlertDialog.Builder(this).setTitle(getString(R.string.dialog_path_title))
             .setItems(labels.toTypedArray()) { _, w ->
@@ -1255,10 +1266,279 @@ class MainActivity : ComponentActivity() {
                         applyPath(PATH_INTERNAL)
                         showWorldSelector()
                     }
+                    iByApp -> showAppPicker(rootAvailable)
                 }
             }.setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
 
+
+    /**
+     * 「按应用选择」：列出本机上确实带存档目录的应用，让用户点选。
+     *
+     * 交互规则（按用户确认的方案）：
+     *   · 有默认包名 → 直接用，不再弹列表
+     *   · 只有一个候选 → 直接用，也不弹
+     *   · 多个且无默认 → 弹列表
+     */
+    private fun showAppPicker(rootAvailable: Boolean) {
+        val savedDefault = PackagePrefs.defaultPackage(this)
+        if (savedDefault != null) {
+            applyPackage(savedDefault, rootAvailable, announce = true)
+            return
+        }
+
+        toast(getString(R.string.pkg_scanning))
+        Thread {
+            val list = PackageResolver.scan(
+                context = this,
+                includeInternal = rootAvailable,
+                // Android 11+ 下 File API 看不到 Android/data，
+                // 交给 ViewModel 用提权探测，否则列表会永远是空的。
+                prober = { path -> worldVM.hasWorldsUnder(path) },
+                // 批量探测优先：一条 ls 代替几百次单点查询
+                bulkProber = { worldVM.listPackagesWithWorlds(rootAvailable) }
+            )
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                when {
+                    list.isEmpty() -> showAppPickerEmpty()
+                    list.size == 1 -> {
+                        // 只有一个候选就别让用户多点一次
+                        applyPackage(list[0].packageName, rootAvailable, announce = true)
+                    }
+                    else -> showAppListDialog(list, rootAvailable)
+                }
+            }
+        }.start()
+    }
+
+    private fun showAppPickerEmpty() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.path_by_app))
+            .setMessage(getString(R.string.pkg_none_found))
+            .setPositiveButton(getString(R.string.path_custom)) { _, _ -> showCustomPathDialog() }
+            .setNegativeButton(getString(R.string.btn_cancel)) { _, _ -> showPathSelector() }
+            .show()
+    }
+
+    /**
+     * 应用列表。
+     *
+     * 支持：搜索（名称 / 包名）、排序（A-Z / 安装时间升 / 降）、
+     * 长按设为默认或清除默认。
+     */
+    private fun showAppListDialog(all: List<PackageResolver.Candidate>, rootAvailable: Boolean) {
+        val savedDefault = PackagePrefs.defaultPackage(this)
+
+        // A-Z 默认；点顶部排序行在本机切换，不持久化（一次性视图）
+        var sortMode = SORT_NAME
+        var keyword = ""
+
+        // 容器：搜索框 + 排序行 + 列表
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        val search = EditText(this).apply {
+            hint = getString(R.string.pkg_search_hint)
+            setSingleLine()
+            setPadding(28, 20, 28, 20)
+        }
+        root.addView(search)
+
+        val sortBar = TextView(this).apply {
+            setPadding(28, 14, 28, 14)
+            textSize = 13f
+        }
+        root.addView(sortBar)
+
+        // 内部存储开关：只有 root 可用时才显示（/data/user/0 只有 root 进得去）
+        if (rootAvailable) {
+            val cbInternal = android.widget.CheckBox(this).apply {
+                text = getString(R.string.path_internal_short)
+                isChecked = PackagePrefs.useInternal(this@MainActivity)
+                setPadding(28, 10, 28, 10)
+                textSize = 13f
+                setOnCheckedChangeListener { _, checked ->
+                    PackagePrefs.setUseInternal(this@MainActivity, checked)
+                }
+            }
+            root.addView(cbInternal)
+        }
+
+        val lv = ListView(this)
+        root.addView(lv, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+        ))
+
+        fun sortLabel(): String = getString(
+            when (sortMode) {
+                SORT_INSTALLED_ASC -> R.string.pkg_sort_installed_asc
+                SORT_INSTALLED_DESC -> R.string.pkg_sort_installed_desc
+                else -> R.string.pkg_sort_name
+            }
+        )
+
+        fun currentShown(): List<PackageResolver.Candidate> {
+            val kw = keyword.trim().lowercase()
+            val filtered = if (kw.isEmpty()) all else all.filter {
+                it.label.lowercase().contains(kw) ||
+                    it.packageName.lowercase().contains(kw)
+            }
+            return when (sortMode) {
+                SORT_INSTALLED_ASC -> filtered.sortedBy { it.installedAt }
+                SORT_INSTALLED_DESC -> filtered.sortedByDescending { it.installedAt }
+                else -> filtered.sortedWith(compareBy({ it.label.lowercase() }, { it.packageName }))
+            }
+        }
+
+        val dlg = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.pkg_dialog_title, all.size))
+            .setView(root)
+            .setNegativeButton(getString(R.string.btn_cancel)) { _, _ -> showPathSelector() }
+            .create()
+
+        fun render() {
+            sortBar.text = getString(R.string.pkg_sort_label, sortLabel())
+            val shown = currentShown()
+            lv.adapter = object : android.widget.BaseAdapter() {
+                override fun getCount() = shown.size
+                override fun getItem(position: Int) = shown[position]
+                override fun getItemId(position: Int) = position.toLong()
+                override fun getView(
+                    pos: Int, convertView: android.view.View?, parent: android.view.ViewGroup?
+                ): android.view.View {
+                    val c = shown[pos]
+                    val tv = (convertView as? TextView) ?: TextView(this@MainActivity).apply {
+                        setPadding(28, 22, 28, 22)
+                        textSize = 15f
+                        setLineSpacing(0f, 1.15f)
+                    }
+                    // 第一行：名称 + 标签；第二行：包名；第三行：时间
+                    val tags = mutableListOf<String>()
+                    if (c.isCurrent) tags.add(getString(R.string.pkg_tag_current))
+                    if (c.packageName == savedDefault) tags.add(getString(R.string.pkg_tag_default))
+                    val tagStr = if (tags.isEmpty()) "" else "  ·  " + tags.joinToString(" / ")
+
+                    val timeBits = mutableListOf<String>()
+                    if (c.installedAt > 0) {
+                        timeBits.add(getString(R.string.pkg_installed_at, shortDate(c.installedAt)))
+                    }
+                    if (c.lastModified > 0) {
+                        timeBits.add(getString(R.string.pkg_last_played, shortDate(c.lastModified)))
+                    }
+
+                    tv.text = buildString {
+                        append(c.label).append(tagStr).append('\n')
+                        append(c.packageName)
+                        if (timeBits.isNotEmpty()) append('\n').append(timeBits.joinToString(" · "))
+                    }
+                    tv
+                }
+            }
+        }
+
+        // 排序：点一次换一种
+        sortBar.setOnClickListener {
+            sortMode = when (sortMode) {
+                SORT_NAME -> SORT_INSTALLED_DESC
+                SORT_INSTALLED_DESC -> SORT_INSTALLED_ASC
+                else -> SORT_NAME
+            }
+            render()
+        }
+
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                keyword = s?.toString() ?: ""
+                render()
+            }
+        })
+
+        lv.setOnItemClickListener { _, _, p, _ ->
+            val c = currentShown().getOrNull(p) ?: return@setOnItemClickListener
+            applyPackage(c.packageName, rootAvailable, announce = true)
+            dlg.dismiss()
+        }
+
+        // 长按：设默认 / 清除默认（只清默认，历史保留）
+        lv.setOnItemLongClickListener { _, _, p, _ ->
+            val c = currentShown().getOrNull(p) ?: return@setOnItemLongClickListener false
+            val items = mutableListOf<String>()
+            items.add(getString(R.string.pkg_set_default) + "  (" + c.label + ")")
+            if (savedDefault != null) items.add(getString(R.string.pkg_clear_default))
+
+            AlertDialog.Builder(this)
+                .setTitle(c.label)
+                .setItems(items.toTypedArray()) { _, w ->
+                    when (w) {
+                        0 -> {
+                            PackagePrefs.setDefaultPackage(this, c.packageName)
+                            toast(getString(R.string.pkg_default_set, c.label))
+                            dlg.dismiss()
+                            applyPackage(c.packageName, rootAvailable, announce = false)
+                        }
+                        1 -> {
+                            PackagePrefs.clearDefaultPackage(this)
+                            toast(getString(R.string.pkg_default_cleared))
+                            dlg.dismiss()
+                            // 回到原版路径，避免停留在一个「刚被取消默认」的位置
+                            applyPackage(DEFAULT_PACKAGE, rootAvailable, announce = false)
+                        }
+                    }
+                }
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show()
+            true
+        }
+
+        dlg.setOnDismissListener { currentDialog = null }
+        currentDialog = dlg
+        dlg.show()
+        // 与其他列表弹窗保持一致的尺寸
+        val winW = (resources.displayMetrics.widthPixels * 0.9).toInt()
+        val winH = (resources.displayMetrics.heightPixels * 0.65).toInt()
+        root.minimumHeight = winH
+        dlg.window?.setLayout(winW, winH)
+        render()
+    }
+
+    /** 应用某个包名：切路径 + 记历史 + 扫存档 */
+    private fun applyPackage(pkg: String, rootAvailable: Boolean, announce: Boolean) {
+        prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
+        worldVM.safTreeUri = null
+        prefs?.edit()?.remove("saf_tree_uri")?.apply()
+        PackagePrefs.attach(this)
+        PackagePrefs.rememberHistory(this, pkg)
+
+        // 默认走外部路径（不需要 root，能直接读写）。
+        // 只有用户明确勾了「用内部存储」且 root 可用时才走 /data/user/0。
+        val internal = PackagePrefs.useInternal(this) && rootAvailable
+        val base = if (internal) {
+            PackageResolver.internalBase(pkg)
+        } else {
+            PackageResolver.externalBase(pkg)
+        }
+
+        applyPath(base)
+        if (internal) {
+            // 内部存储只有 root 进得去，顺手切模式，免得保存时白失败一次
+            PrivilegedExec.setMode(PrivilegedExec.Mode.ROOT)
+            worldVM.setUseShizuku(true)
+        }
+        if (announce) toast(getString(R.string.toast_path_switched, base))
+        showWorldSelector()
+    }
+
+    /** 只取到「日」的简短时间，用于列表副行 */
+    private fun shortDate(ms: Long): String {
+        return try {
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                .format(java.util.Date(ms))
+        } catch (_: Exception) {
+            getString(R.string.time_unknown)
+        }
+    }
 
     private fun showCustomPathDialog() {
         val input = EditText(this).apply { setText(worldVM.currentPath.value) }
@@ -2737,9 +3017,30 @@ class MainActivity : ComponentActivity() {
     // Companion
     // ============================================
     companion object {
+        private const val SORT_NAME = 0
+        private const val SORT_INSTALLED_DESC = 1
+        private const val SORT_INSTALLED_ASC = 2
+
         const val TYPE_PLAYER = 0; const val TYPE_MAP = 1; const val TYPE_VILLAGE = 2
-        const val PATH_STANDARD =
-            "/storage/emulated/0/Android/data/com.mojang.minecraftpe/files/games/com.mojang/minecraftWorlds/"
+        /**
+         * 默认包名 —— 只是「没选过时的兜底」。
+         *
+         * 真正的当前包名由 [PackagePrefs.defaultPackage] 决定；
+         * 用户可以在「路径 → 按应用选择」里换成共存版/改包版的包名。
+         *
+         * ⚠️ 凡是需要「当前包名」的地方，都应当走
+         *    [PackageResolver.currentPackageName] / [PackagePrefs]，
+         *    不要直接读这个常量 —— 否则换包名后仍会指向原版。
+         */
+        const val DEFAULT_PACKAGE = "com.mojang.minecraftpe"
+
+        /** 标准路径（外部私有目录）：Android/data/<pkg>/files/games/com.mojang/minecraftWorlds */
+        val PATH_STANDARD: String
+            get() = PackageResolver.externalBase(
+                PackagePrefs.defaultPackageForStatic ?: DEFAULT_PACKAGE
+            )
+
+        /** 旧版路径：/storage/emulated/0/games/com.mojang/minecraftWorlds（与包名无关） */
         const val PATH_LEGACY = "/storage/emulated/0/games/com.mojang/minecraftWorlds/"
 
         /**
@@ -2749,8 +3050,10 @@ class MainActivity : ComponentActivity() {
          *    除了 root，任何应用（含 Shizuku 的 shell 用户）都进不去。
          *    所以这个选项只在「真实 root 可用」时才允许展示。
          */
-        const val PATH_INTERNAL =
-            "/data/user/0/com.mojang.minecraftpe/games/com.mojang/minecraftWorlds/"
+        val PATH_INTERNAL: String
+            get() = PackageResolver.internalBase(
+                PackagePrefs.defaultPackageForStatic ?: DEFAULT_PACKAGE
+            )
 
         const val BRIDGE_ROOT = AppDirs.PUBLIC_ROOT + AppDirs.BRIDGE + "/"
         const val LEVEL_DAT_NAME = "level.dat"
