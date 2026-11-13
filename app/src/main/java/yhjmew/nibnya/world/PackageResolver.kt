@@ -101,10 +101,8 @@ object PackageResolver {
          * 一次性拿回来（一条 ls 命令），再和包列表求交集。
          * 只有在批量探测不可用时，才逐条退回单点探测。
          */
-        var bulkHint: Set<String>? = prober == null ? null : run {
-            val lister = bulkProber
-            if (lister == null) null else lister()
-        }
+        // Kotlin 没有三元运算符（C 风格的 a ? b : c 不合法），用 if 表达式
+        var bulkHint: Set<String>? = if (prober == null) null else bulkProber?.invoke()
 
         /*
          * 自检：批量结果为空时先别急着信。

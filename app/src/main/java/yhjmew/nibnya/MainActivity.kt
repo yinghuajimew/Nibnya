@@ -1431,7 +1431,8 @@ class MainActivity : ComponentActivity() {
                         append(c.packageName)
                         if (timeBits.isNotEmpty()) append('\n').append(timeBits.joinToString(" · "))
                     }
-                    tv
+                    // 块体函数必须显式 return —— 只有 lambda 才有「最后一行即返回值」
+                    return tv
                 }
             }
         }
