@@ -1002,4 +1002,13 @@ Make sure the path belongs to an installed app.</string>
     <string name="debug_crash_test">Crash test (simulate app crash)</string>
     <string name="log_keep_custom_fmt">✎ %1$d days</string>
     <string name="debug_layout_probe">Layout comparison (diagnostic)</string>
+    <string name="path_all">Show all saves (all paths)</string>
+    <string name="path_standard_short">Standard</string>
+    <string name="path_legacy_short">Legacy</string>
+    <string name="path_internal_short">Internal</string>
+    <string name="status_scanning_all">Scanning all paths…</string>
+    <string name="msg_save_target_missing">Save target no longer exists:
+%1$s
+
+The save was not written. Check that the game is still installed and the path is correct.</string>
 </resources>

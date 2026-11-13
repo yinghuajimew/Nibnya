@@ -64,7 +64,8 @@ object DraftStore {
         folder: String?,
         originalData: JsonObject?,
         worldName: String?,
-        maxDrafts: Int
+        maxDrafts: Int,
+        basePath: String = ""
     ) {
         try {
             val obj = JsonObject()
@@ -75,6 +76,7 @@ object DraftStore {
             obj.addProperty("dbPath", dbPath)
             obj.addProperty("folder", folder)
             obj.addProperty("worldName", worldName)
+            if (basePath.isNotBlank()) obj.addProperty("basePath", basePath)
             obj.add("data", data)
             originalData?.let { obj.add("originalData", it) }
 
@@ -142,7 +144,8 @@ object DraftStore {
                 folder = obj.str("folder"),
                 worldName = obj.str("worldName"),
                 data = data,
-                originalData = obj.getAsJsonObject("originalData")
+                originalData = obj.getAsJsonObject("originalData"),
+                basePath = obj.str("basePath") ?: ""
             )
         } catch (_: Exception) {
             null
@@ -199,7 +202,14 @@ object DraftStore {
         val worldName: String?,
         val data: JsonObject,
         /** 可选：进入编辑时的原始数据，用于对比改动 */
-        val originalData: JsonObject?
+        val originalData: JsonObject?,
+        /**
+         * 这份草稿对应的存档原本在哪个根目录（带尾斜杠）。
+         *
+         * 「显示所有」模式下用户可能从旧版路径编辑，草稿恢复后若按
+         * 「当前路径」保存，就会写到别处。旧草稿没有这个字段，退回当前路径。
+         */
+        val basePath: String = ""
     ) {
         /**
          * 列表第一行冒号前的「名称」：

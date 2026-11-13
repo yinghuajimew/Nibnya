@@ -1112,9 +1112,11 @@ class MainActivity : ComponentActivity() {
     // ============================================
     private fun showWorldSelector() {
         // issue #6：只有受限路径（Android/data 等）才需要 Shizuku；
-        // 公共目录（Download、games/...）用 File API 即可，不打扰用户。
+        // 「显示所有」模式：扫三条路径，其中标准路径受限时用提权读取，
+        // 能拿到多少算多少，不应该因此拦下整个列表。
+        val allMode = prefs?.getBoolean("path_all_mode", false) == true
         val path = worldVM.currentPath.value
-        val needsShizuku = worldVM.isRestrictedPath(path)
+        val needsShizuku = !allMode && worldVM.isRestrictedPath(path)
         // 只有「确实需要提权」且「当前不是正常模式」时才提示
         if (needsShizuku && PrivilegedExec.canAttemptPrivileged()) {
             // 提示文案要跟着当前模式走：ROOT 模式下不该再提 Shizuku，
@@ -1153,6 +1155,9 @@ class MainActivity : ComponentActivity() {
         pendingWorldSelector = true
         if (worldVM.safTreeUri != null) {
             worldVM.scanWorldsViaSaf(this, worldVM.safTreeUri!!)
+        } else if (prefs?.getBoolean("path_all_mode", false) == true) {
+            // 「显示所有」模式：三条固定路径一起扫，结果合并成一个列表
+            worldVM.scanAllWorlds(this, PrivilegedExec.detectRoot(this))
         } else {
             worldVM.scanWorlds(this)
         }
@@ -1189,7 +1194,10 @@ class MainActivity : ComponentActivity() {
         // 所以按实测结果决定是否展示这一项，而不是按用户选的模式。
         val rootAvailable = PrivilegedExec.detectRoot(this)
 
+        // 「显示所有」放在最上面：一次性看到三条路径的全部存档，
+        // 不用在菜单里来回切。顺序即优先级，也符合「先给全局视角」的直觉。
         val labels = mutableListOf(
+            getString(R.string.path_all),
             getString(R.string.path_standard),
             getString(R.string.path_legacy),
             getString(R.string.path_custom),
@@ -1197,33 +1205,56 @@ class MainActivity : ComponentActivity() {
         )
         if (rootAvailable) labels.add(getString(R.string.path_internal))
 
+        // 因为「显示所有」占了第 0 位，下面所有索引整体后移一位。
+        // 用变量算出来，避免以后再加项时又要手工数一遍。
+        val iAll = 0
+        val iStandard = 1
+        val iLegacy = 2
+        val iCustom = 3
+        val iSaf = 4
+        val iInternal = 5
+
         AlertDialog.Builder(this).setTitle(getString(R.string.dialog_path_title))
             .setItems(labels.toTypedArray()) { _, w ->
                 when (w) {
-                    0 -> {
-                    worldVM.safTreeUri = null
-                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
-                    applyPath(PATH_STANDARD)
-                    showWorldSelector()
-                }
-                    1 -> {
-                    worldVM.safTreeUri = null
-                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
-                    applyPath(PATH_LEGACY)
-                    showWorldSelector()
-                }
-                    2 -> showCustomPathDialog()
-                    3 -> safPathLauncher.launch(null)
-                    4 -> {
-                    worldVM.safTreeUri = null
-                    prefs?.edit()?.remove("saf_tree_uri")?.apply()
-                    // 软件内部只能用 root 读写；顺手把运行模式切到 ROOT，
-                    // 否则保存时又会去找 Shizuku，白白失败一次。
-                    PrivilegedExec.setMode(PrivilegedExec.Mode.ROOT)
-                    worldVM.setUseShizuku(true)
-                    applyPath(PATH_INTERNAL)
-                    showWorldSelector()
-                }
+                    iAll -> {
+                        // 三条固定路径合并。内部存储只有 root 进得去，
+                        // 所以按实测结果决定要不要一并扫。
+                        worldVM.safTreeUri = null
+                        prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                        prefs?.edit()?.putBoolean("path_all_mode", true)?.apply()
+                        // 复用现有机制：扫描结果经 scanResultChannel 回到
+                        // 「显示存档列表」那条路径，不用另写一套导航。
+                        pendingWorldSelector = true
+                        worldVM.scanAllWorlds(this, rootAvailable)
+                    }
+                    iStandard -> {
+                        prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
+                        worldVM.safTreeUri = null
+                        prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                        applyPath(PATH_STANDARD)
+                        showWorldSelector()
+                    }
+                    iLegacy -> {
+                        prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
+                        worldVM.safTreeUri = null
+                        prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                        applyPath(PATH_LEGACY)
+                        showWorldSelector()
+                    }
+                    iCustom -> showCustomPathDialog()
+                    iSaf -> safPathLauncher.launch(null)
+                    iInternal -> {
+                        prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
+                        worldVM.safTreeUri = null
+                        prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                        // 软件内部只能用 root 读写；顺手把运行模式切到 ROOT，
+                        // 否则保存时又会去找 Shizuku，白白失败一次。
+                        PrivilegedExec.setMode(PrivilegedExec.Mode.ROOT)
+                        worldVM.setUseShizuku(true)
+                        applyPath(PATH_INTERNAL)
+                        showWorldSelector()
+                    }
                 }
             }.setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
@@ -1262,6 +1293,9 @@ class MainActivity : ComponentActivity() {
             },
             onShortClick = { w ->
                 etWorldName?.setText(w.folderName)
+                // 「显示所有」模式下列表混着三条路径的存档，
+                // 必须把这条自己的根目录记下来，否则后续读写会跑到当前路径去。
+                worldVM.setCurrentWorldBase(w.basePath)
                 worldVM.openLevelDat(this, w.folderName)
             },
             onLongClick = { showWorldManageMenu(it) },
@@ -1282,7 +1316,9 @@ class MainActivity : ComponentActivity() {
                 //   ① 世界名（长了换行，最多 3 行）
                 //   ② 文件夹 ID（一行，中间省略）
                 //   ③ 最后游玩时间（一行）—— 之前被挤掉的就是它
-                tvTitle?.text = w.displayName?.takeIf { it.isNotBlank() } ?: w.folderName
+                val label = w.rootLabel
+                val titleText = w.displayName?.takeIf { it.isNotBlank() } ?: w.folderName
+                tvTitle?.text = if (label.isBlank()) titleText else "$titleText  ·  $label"
                 tvFolder?.text = w.folderName
                 tvFolder?.visibility = if (w.displayName.isNullOrBlank() || w.displayName == w.folderName)
                     android.view.View.GONE else android.view.View.VISIBLE

@@ -62,7 +62,16 @@ object TrashStore {
         val hasDrafts: Boolean,         // 当时是否连带移除了草稿
         val sizeBytes: Long,            // 占用体积
         /** 被删的存档原本在 SAF 位置（恢复时要写回 content:// 路径） */
-        val safFolder: Boolean = false
+        val safFolder: Boolean = false,
+        /**
+         * 被删的存档原本属于哪个根目录（带尾斜杠）。
+         *
+         * 「显示所有」模式下用户可能从旧版路径删除存档，恢复时必须回到那个根，
+         * 否则会恢复进标准路径 —— 看起来「恢复了」，实际出现在别的地方。
+         *
+         * 空串 = 老记录没这个字段，退回当前路径（兼容升级前的回收站条目）。
+         */
+        val originalBase: String = ""
     ) {
         val label: String get() = worldName?.takeIf { it.isNotBlank() } ?: originalFolder
 
@@ -91,7 +100,8 @@ object TrashStore {
         worldName: String?,
         hasBackups: Boolean,
         hasDrafts: Boolean,
-        safFolder: Boolean = false
+        safFolder: Boolean = false,
+        originalBase: String = ""
     ) {
         try {
             if (!slot.exists()) slot.mkdirs()
@@ -102,6 +112,7 @@ object TrashStore {
             o.addProperty("hasBackups", hasBackups)
             o.addProperty("hasDrafts", hasDrafts)
             o.addProperty("safFolder", safFolder)
+            if (originalBase.isNotBlank()) o.addProperty("originalBase", originalBase)
             File(slot, META_NAME).writeText(o.toString())
         } catch (e: Exception) {
             AppLogger.warn("Trash", R.string.log_trash_meta_write_failed, e.message)
@@ -150,7 +161,8 @@ object TrashStore {
                 hasBackups = o.get("hasBackups")?.asBoolean ?: false,
                 hasDrafts = o.get("hasDrafts")?.asBoolean ?: false,
                 sizeBytes = sizeOf(dir),
-                safFolder = o.get("safFolder")?.asBoolean ?: false
+                safFolder = o.get("safFolder")?.asBoolean ?: false,
+                originalBase = o.get("originalBase")?.takeIf { !it.isJsonNull }?.asString ?: ""
             )
         } catch (_: Exception) {
             null

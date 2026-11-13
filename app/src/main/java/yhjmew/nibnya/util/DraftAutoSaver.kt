@@ -35,7 +35,9 @@ object DraftAutoSaver {
         val dbPath: String?,
         val folder: String?,
         /** 世界名（用于草稿箱展示） */
-        val worldName: String?
+        val worldName: String?,
+        /** 存档所在根目录（「显示所有」模式下恢复草稿要靠它回到正确位置） */
+        val basePath: String = ""
     )
 
     private var providerRef: WeakReference<Provider>? = null
@@ -167,7 +169,8 @@ object DraftAutoSaver {
                 folder = snap.folder,
                 originalData = if (keepOriginal) originalByKey[snap.sessionKey] else null,
                 worldName = snap.worldName,
-                maxDrafts = maxDrafts
+                maxDrafts = maxDrafts,
+                basePath = snap.basePath
             )
         } catch (e: Throwable) {
             AppLogger.warn("Draft", R.string.log_draft_write_failed, e.message)

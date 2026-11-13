@@ -70,7 +70,21 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
          * 这是游戏退出时保存的「最后一刻」画面，用来帮用户分辨同名存档。
          * null / 文件不存在时列表显示占位图标。
          */
-        val iconPath: String? = null
+        val iconPath: String? = null,
+
+        /**
+         * 这条存档属于哪个根目录（带尾斜杠）。
+         *
+         * 「显示所有」模式下列表里混着三条路径的存档，
+         * 加载/保存都必须用它拼路径 —— 不能用「当前路径」，
+         * 否则来自旧版路径的存档会被写到标准路径下，甚至覆盖同名的另一个。
+         *
+         * 空串 = 老调用方没传，退回 [_currentPath]（兼容单路径模式）。
+         */
+        val basePath: String = "",
+
+        /** 来源标签（「标准路径」「旧版路径」「内部存储」），列表里用来区分同名存档 */
+        val rootLabel: String = ""
     )
 
     data class CacheItem(
@@ -187,6 +201,15 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     private val _currentWorldFolder = MutableStateFlow<String?>(null)
     val currentWorldFolder: StateFlow<String?> = _currentWorldFolder.asStateFlow()
 
+    /**
+     * 当前打开的存档属于哪个根目录。
+     *
+     * 「显示所有」模式下用户可能从旧版路径打开存档，
+     * 之后所有读写都必须回到那个根目录 —— 不能跟着「当前路径」走。
+     * 空串 = 沿用 [_currentPath]。
+     */
+    private val _currentWorldBase = MutableStateFlow("")
+
     private val _worldNameForTitle = MutableStateFlow<String?>(null)
     val worldNameForTitle: StateFlow<String?> = _worldNameForTitle.asStateFlow()
 
@@ -263,6 +286,9 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     // ============================================
     fun switchPath(newPath: String) {
         _currentPath.value = newPath
+        // 用户主动换了根目录：之前那条存档的来源记录已经失效，
+        // 留着会让下一次保存往旧位置写。
+        clearCurrentWorldBase()
     }
 
     /**
@@ -463,6 +489,110 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     // ============================================
     // 扫描存档
     // ============================================
+    /**
+     * 扫描**所有**已知根目录：标准路径 + 旧版路径 + 内部存储（需要 root）。
+     *
+     * 为什么不能直接调 [scanWorlds] 三次：
+     * 它会把结果写进同一个 `_worldList`，后一次覆盖前一次。这里逐条扫、
+     * 逐条记下各自的 [WorldItem.basePath]，最后合并排序。
+     *
+     * 同名存档会各出一条 —— 文件夹名相同但在不同根下，是两份不同的数据，
+     * 合并掉任意一份都等于隐藏用户的存档。列表靠 [WorldItem.rootLabel] 区分。
+     *
+     * @param includeInternal 是否包含 /data/user/0/<pkg> 下的内部存储（仅 root）
+     */
+    fun scanAllWorlds(context: Context, includeInternal: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _loadingMessage.value = getString(R.string.status_scanning_all)
+            try {
+                val roots = mutableListOf<Pair<String, String>>()
+                // 顺序即优先级：标准 > 旧版 > 内部（仅用于标签展示，不影响去重——不去重）
+                roots.add(MainActivity.PATH_STANDARD to getString(R.string.path_standard_short))
+                roots.add(MainActivity.PATH_LEGACY to getString(R.string.path_legacy_short))
+                if (includeInternal) {
+                    roots.add(MainActivity.PATH_INTERNAL to getString(R.string.path_internal_short))
+                }
+
+                val merged = mutableListOf<WorldItem>()
+                for ((root, label) in roots) {
+                    // 根目录不存在就跳过，别让一次失败拖垮整个列表
+                    val exists = try {
+                        File(root).let { it.exists() && it.canRead() }
+                    } catch (_: Exception) { false }
+                    val rootUsable = exists || checkShizukuAvailable()
+                    if (!rootUsable) continue
+
+                    val names = listWorldFolders(root)
+                    for (name in names) {
+                        val fullPath = if (root.endsWith("/")) "$root$name/" else "$root/$name/"
+                        if (!looksLikeWorld(fullPath)) continue
+                        val realName = getWorldRealName(context, name, root) ?: "Unknown"
+                        merged.add(
+                            WorldItem(
+                                folderName = name,
+                                displayName = realName,
+                                lastModified = levelDatTime(File(fullPath)),
+                                iconPath = worldIconPath(File(fullPath)),
+                                basePath = if (root.endsWith("/")) root else "$root/",
+                                rootLabel = label
+                            )
+                        )
+                    }
+                }
+
+                // 和单路径扫描一致：最近玩过的排前面
+                merged.sortByDescending { it.lastModified }
+                _worldList.value = merged
+                _scanResultChannel.trySend(ScanResult(merged))
+            } catch (e: Exception) {
+                AppLogger.error("ScanAllWorlds", "Scan failed", e)
+                _errorMessage.value = e.toString()
+                _scanResultChannel.trySend(ScanResult(emptyList(), e.toString()))
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /** 列出一个根目录下的子文件夹名（优先 File API，失败退回 Shizuku） */
+    private fun listWorldFolders(root: String): List<String> {
+        val out = mutableListOf<String>()
+        try {
+            val dir = File(root)
+            if (dir.exists() && dir.canRead()) {
+                dir.listFiles()?.forEach { if (it.isDirectory) out.add(it.name) }
+            }
+        } catch (_: Exception) {}
+        if (out.isEmpty() && checkShizukuAvailable()) {
+            try {
+                val p = runShizukuCmd(arrayOf("sh", "-c", "ls \"$root\""))
+                val r = BufferedReader(InputStreamReader(p.inputStream))
+                var line: String?
+                while (r.readLine().also { line = it } != null) {
+                    line?.trim()?.takeIf { it.isNotEmpty() }?.let { out.add(it) }
+                }
+                p.waitFor()
+            } catch (_: Exception) {}
+        }
+        return out
+    }
+
+    /** 判断一个目录是不是有效存档（有 level.dat 和 db） */
+    private fun looksLikeWorld(worldPath: String): Boolean {
+        val level = File(worldPath, "level.dat")
+        val db = File(worldPath, "db")
+        if (level.exists() && db.exists()) return true
+        if (!checkShizukuAvailable()) return false
+        return try {
+            val c1 = runShizukuCmd(arrayOf("sh", "-c", "ls \"${level.absolutePath}\"")).waitFor()
+            val c2 = runShizukuCmd(arrayOf("sh", "-c", "ls -d \"${db.absolutePath}\"")).waitFor()
+            c1 == 0 && c2 == 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun scanWorlds(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
@@ -650,8 +780,12 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     // ============================================
     // 读取真实世界名
     // ============================================
-    private fun getWorldRealName(context: Context, folderName: String): String? {
-        val fullPath = "${_currentPath.value}$folderName/levelname.txt"
+    private fun getWorldRealName(context: Context, folderName: String): String? =
+        getWorldRealName(context, folderName, _currentPath.value)
+
+    /** 按指定根目录读取世界名（「显示所有」模式下必须用这条） */
+    private fun getWorldRealName(context: Context, folderName: String, basePath: String): String? {
+        val fullPath = "$basePath$folderName/levelname.txt"
         val file = File(fullPath)
         if (file.exists() && file.canRead()) {
             try {
@@ -717,7 +851,8 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             targetKey = if (isPlayer) evm.currentTargetKey.value else null,
             dbPath = currentWorkingDbPath,
             folder = lastLoadedWorldFolder,
-            worldName = _worldNameForTitle.value
+            worldName = _worldNameForTitle.value,
+            basePath = _currentWorldBase.value
         )
     }
 
@@ -735,7 +870,8 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             // 原始数据由 DraftAutoSaver 按开关携带，这里只写当前数据
             originalData = null,
             worldName = _worldNameForTitle.value,
-            maxDrafts = DraftAutoSaver.maxDrafts
+            maxDrafts = DraftAutoSaver.maxDrafts,
+            basePath = _currentWorldBase.value
         )
     }
 
@@ -768,6 +904,8 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             lastLoadedWorldFolder = it
             _currentWorldFolder.value = it
         }
+        // 根目录也要还原：这份草稿可能来自旧版路径，若按当前路径保存就写错地方了
+        _currentWorldBase.value = draft.basePath.orEmpty()
 
         // 4) 进入编辑状态，启动草稿自动保存
         DraftAutoSaver.start()
@@ -1209,6 +1347,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
 
                     db.close()
 
+                    verifyTargetBelongsToWorld(folder)?.let { throw Exception(it) }
                     val mcDbPath = "${resolveWorldPath(folder)}db/"
                     val mcDbDir = File(mcDbPath)
 
@@ -1503,6 +1642,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                     BedrockParser.write(dataToSave, currentWorkingFileOrDir)
 
                     val workingFile = File(currentWorkingFileOrDir!!)
+                    verifyTargetBelongsToWorld(folder)?.let { throw Exception(it) }
                     val targetPath = "${resolveWorldPath(folder)}level.dat"
                     val targetFile = File(targetPath)
 
@@ -1824,7 +1964,8 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 // 已复制成功但删不掉源：回收站里有副本、源也还在，明确报告失败
                 return Pair(false, getString(R.string.label_sub_delete_failed))
             }
-            TrashStore.writeMeta(slot, folder, worldName, alsoBackups, alsoDrafts, safFolder = true)
+            TrashStore.writeMeta(slot, folder, worldName, alsoBackups, alsoDrafts,
+                safFolder = true, originalBase = "")
             if (alsoBackups) moveBackupsIntoSlot(context, folder, slot)
             if (alsoDrafts) deleteDraftsOf(context, folder)
             if (lastLoadedWorldFolder == folder) {
@@ -1832,6 +1973,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 currentWorkingDbPath = null
                 currentWorkingFileOrDir = null
                 _currentWorldFolder.value = null
+                clearCurrentWorldBase()
                 editorVM?.reset()
             }
             AppLogger.info("World", R.string.log_world_moved_trash_saf, folder, slotName)
@@ -1901,7 +2043,8 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
 
         if (!moved) return Pair(false, getString(R.string.label_sub_delete_failed))
 
-        TrashStore.writeMeta(slot, folder, worldName, alsoBackups, alsoDrafts)
+        TrashStore.writeMeta(slot, folder, worldName, alsoBackups, alsoDrafts,
+            originalBase = _currentWorldBase.value)
 
         // 连带处理：备份（移入回收站槽内，恢复时可一并找回）
         if (alsoBackups) moveBackupsIntoSlot(context, folder, slot)
@@ -1915,6 +2058,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             currentWorkingDbPath = null
             currentWorkingFileOrDir = null
             _currentWorldFolder.value = null
+            clearCurrentWorldBase()
             editorVM?.reset()
         }
 
@@ -1931,7 +2075,9 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val src = item.worldDir()
         if (!src.exists()) return Pair(false, getString(R.string.msg_trash_content_missing))
 
-        val targetParent = File(_currentPath.value)
+        // 回到「它当初被删的那个根目录」。老记录没有这个字段时退回当前路径。
+        val restoreBase = item.originalBase.takeIf { it.isNotBlank() } ?: _currentPath.value
+        val targetParent = File(restoreBase)
         val target = File(targetParent, item.originalFolder)
 
         // SAF 模式恢复：目标位置是 content://，只能走 DocumentFile
@@ -2634,14 +2780,71 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     /** 供 UI 展示用：暴露世界目录路径 */
     fun resolveWorldPathPublic(folder: String): String = resolveWorldPath(folder)
 
-    private fun resolveWorldPath(folder: String): String {
-        val base = _currentPath.value
-        val baseFile = File(base)
-        // 如果当前路径的最后一段文件夹名 == folder，说明路径已经指向世界本身
+    /**
+     * 记录「当前打开的存档来自哪个根目录」。
+     *
+     * 之后所有读写都会回到这个根 —— 「显示所有」模式下用户可能从旧版路径
+     * 打开存档，若仍按「当前路径」拼，保存就会写到别的地方去。
+     */
+    fun setCurrentWorldBase(basePath: String?) {
+        _currentWorldBase.value = basePath?.trim().orEmpty()
+    }
+
+    fun currentWorldBase(): String = _currentWorldBase.value
+
+    /** 清掉当前存档的根（关闭存档/移入回收站时用） */
+    private fun clearCurrentWorldBase() {
+        _currentWorldBase.value = ""
+    }
+
+    private fun resolveWorldPath(folder: String): String =
+        resolveWorldPath(folder, _currentWorldBase.value)
+
+    /**
+     * 按**指定根目录**拼出存档路径。
+     *
+     * 「显示所有」模式下列表里混着三条路径的存档，必须用每条自己的
+     * 根目录来拼，否则会把旧版路径的存档写到标准路径下。
+     *
+     * [base] 为空时退回当前路径（兼容单路径模式下的老调用）。
+     */
+    private fun resolveWorldPath(folder: String, base: String?): String {
+        val root = base?.takeIf { it.isNotBlank() } ?: _currentPath.value
+        val baseFile = File(root)
+        // 路径已经指向世界本身（最后一段就是 folder）
         if (baseFile.name == folder) {
-            return if (base.endsWith("/")) base else "$base/"
+            return if (root.endsWith("/")) root else "$root/"
         }
-        return if (base.endsWith("/")) "$base$folder/" else "$base/$folder/"
+        return if (root.endsWith("/")) "$root$folder/" else "$root/$folder/"
+    }
+    /**
+     * 保存前校验：目标目录必须真的属于这条存档。
+     *
+     * 「显示所有」模式下最容易出的错是「列表看着对，写回却写错地方」——
+     * 用户从旧版路径打开存档，但当前路径被切到了标准路径，于是写到别处，
+     * 严重时覆盖同名存档。这里在落盘前做一次硬校验。
+     *
+     * @return null 表示通过；否则返回给用户看的错误说明
+     */
+    private fun verifyTargetBelongsToWorld(folder: String, base: String? = null): String? {
+        val root = base?.takeIf { it.isNotBlank() } ?: _currentWorldBase.value
+            .takeIf { it.isNotBlank() } ?: _currentPath.value
+
+        // SAF 模式下没有可校验的 File 路径，交给 DocumentFile 自己处理
+        if (root.startsWith("content://")) return null
+
+        val worldPath = resolveWorldPath(folder, root)
+        val dir = File(worldPath)
+        val exists = if (dir.exists()) true else {
+            // 走 Shizuku 的目录，File 看不见，但命令能访问
+            if (!checkShizukuAvailable()) false else try {
+                runShizukuCmd(arrayOf("sh", "-c", "ls -d \"$worldPath\"")).waitFor() == 0
+            } catch (_: Exception) { false }
+        }
+        if (!exists) {
+            return getString(R.string.msg_save_target_missing, worldPath)
+        }
+        return null
     }
 
     fun reloadPlayerFromCurrentDb() {

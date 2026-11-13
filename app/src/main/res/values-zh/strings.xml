@@ -1005,4 +1005,13 @@ ID：%3$s
     <string name="debug_crash_test">崩溃测试（模拟应用崩溃）</string>
     <string name="log_keep_custom_fmt">✎ %1$d 天</string>
     <string name="debug_layout_probe">布局对比（诊断）</string>
+    <string name="path_all">显示所有存档（全部路径）</string>
+    <string name="path_standard_short">标准</string>
+    <string name="path_legacy_short">旧版</string>
+    <string name="path_internal_short">内部</string>
+    <string name="status_scanning_all">正在扫描全部路径…</string>
+    <string name="msg_save_target_missing">保存目标已不存在：
+%1$s
+
+没有写入任何数据。请确认游戏仍已安装、路径正确。</string>
 </resources>
