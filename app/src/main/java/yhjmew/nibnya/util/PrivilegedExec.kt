@@ -239,17 +239,28 @@ object PrivilegedExec {
             }
         }
 
-        // mv 也必须校验：root 下 `mv /data/... /` 同样能毁掉数据。
-        //   · 源路径：允许存档区、Bridge、Trash、/data 下的我们的临时目录
-        //   · 目标路径：同上，且不能是「上一级」目录
+        // mv 校验：root 下 `mv /data/... /` 同样能毁掉数据。
+        //
+        // ⚠️ mv 和 rm 的语义不同，不能共用一套判断：
+        //    rm 是「灭失数据」，所以它的目标(s) 必须极窄；
+        //    mv 是「改名」，源和目标里**必然有一个是真实存档目录**
+        //    （原子替换：db -> .nibnya_tmp_db_old，再把新目录 -> db）。
+        //
+        //    早期设计里写回只走 `cp -rf bridge/. db/`，mv 从不碰存档，
+        //    所以一条「Android/data 一律拒绝」就够了。加了原子替换之后，
+        //    那条规则把正常的 mv 也拦了 —— 用户看到的就是保存失败。
+        //
+        // 现在的规则：
+        //    · 源：必须是「合法数据区」（存档 / Bridge / Trash / 我们自己的临时目录）
+        //    · 目标：同样必须落在数据区，且不能是任何「上一级」目录
+        //    · 额外：不能把东西 mv 到系统区（/system、/data/data 等）
         if (c.trimStart().startsWith("mv ")) {
             val paths = Regex("""["'](/[^"']*)["']""").findAll(c).map { it.groupValues[1] }.toList()
             if (paths.size < 2) return "mv needs source and destination"
-            for (p in paths) {
-                if (!isSafeDestructiveTarget(p, strictBridgeOnly = false)) {
-                    return "mv path outside allowed area: $p"
-                }
-            }
+            val src = paths[0]
+            val dst = paths.last()
+            if (!isSafeMoveSource(src)) return "mv source outside data area: $src"
+            if (!isSafeMoveDestination(dst)) return "mv destination refused: $dst"
         }
 
         return null
@@ -261,8 +272,25 @@ object PrivilegedExec {
      * @param strictBridgeOnly true 时只允许 Bridge 下的路径（rm 专用）；
      *                         false 时允许存档/工作区路径（mv/chmod 用）
      */
-    /** 我们自己的临时目录前缀。只有以它开头的目录才允许被 rm -rf */
+    /** 我们自己的临时目录前缀。只有以它开头的目录才允许被删除 */
     const val TMP_PREFIX = ".nibnya_tmp_"
+
+    /**
+     * 「上一级」目录：删了或搬走就是灾难。
+     * 删除与移动共用同一份，避免两处各写一套、迟早不一致。
+     */
+    private val FORBIDDEN_TOPS = setOf(
+        "/", "/storage", "/storage/emulated", "/storage/emulated/0",
+        "/storage/emulated/0/Download", "/storage/emulated/0/Download/Nibnya",
+        "/storage/emulated/0/Download/Nibnya/Bridge",
+        "/data", "/data/user", "/data/user/0", "/data/data",
+        "/data/user/0/com.mojang.minecraftpe",
+        "/data/user/0/com.mojang.minecraftpe/games",
+        "/data/user/0/com.mojang.minecraftpe/games/com.mojang",
+        "/data/user/0/com.mojang.minecraftpe/games/com.mojang/minecraftWorlds",
+        "/storage/emulated/0/Android",
+        "/storage/emulated/0/Android/data"
+    )
 
     fun isSafeDestructiveTarget(path: String, strictBridgeOnly: Boolean): Boolean {
         val p = path.trim().removeSurrounding("\"").removeSurrounding("'")
@@ -283,19 +311,8 @@ object PrivilegedExec {
 
         if (p.startsWith("/storage/emulated/0/Android")) return false  // 系统受保护区
 
-        // 「上一级」目录绝不删：删了就完了
-        val forbidden = setOf(
-            "/", "/storage", "/storage/emulated", "/storage/emulated/0",
-            "/storage/emulated/0/Download", "/storage/emulated/0/Download/Nibnya",
-            "/storage/emulated/0/Download/Nibnya/Bridge",
-            // /data 侧的「上一级」——root 下删掉就是系统级事故
-            "/data", "/data/user", "/data/user/0",
-            "/data/user/0/com.mojang.minecraftpe",
-            "/data/user/0/com.mojang.minecraftpe/games",
-            "/data/user/0/com.mojang.minecraftpe/games/com.mojang",
-            "/data/user/0/com.mojang.minecraftpe/games/com.mojang/minecraftWorlds"
-        )
-        if (p.trimEnd('/') in forbidden) return false
+        // 「上一级」目录绝不删：删了就完了（与移动共用同一份清单）
+        if (p.trimEnd('/') in FORBIDDEN_TOPS) return false
 
         if (strictBridgeOnly) {
             // rm -rf 允许的目标（除此之外一律拒绝）：
@@ -308,6 +325,73 @@ object PrivilegedExec {
         }
 
         return true
+    }
+
+    /**
+     * mv 的**源**是否允许。
+     *
+     * 源只需要「是一块我们认可的数据区」，不需要更窄 —— 因为 mv 不改内容，
+     * 只改名字；真正要防的是「把文件搬到哪去」（见 [isSafeMoveDestination]）。
+     */
+    private fun isSafeMoveSource(path: String): Boolean {
+        val p = path.trim().trimEnd('/')
+        if (!isSafeAbsolute(p)) return false
+        // 我们自己的临时目录
+        if (p.substringAfterLast('/').startsWith(TMP_PREFIX)) return true
+        // 存档区：Android/data/<pkg>/... 或 /data/user/0/<pkg>/...
+        if (isDataArea(p)) return true
+        // Bridge / Trash
+        if (p.startsWith(BRIDGE_ROOT.trimEnd('/') + "/")) return true
+        if (p.contains("/Trash/")) return true
+        return false
+    }
+
+    /**
+     * mv 的**目标**是否允许。
+     *
+     * 比源严格：除了要落在数据区，还必须是「可预期的名字」——
+     * 要么是 db 目录本身，要么是我们自己的 .nibnya_tmp_*。
+     * 这样即使路径拼接出了 bug，也不会把存档搬到一个莫名其妙的角落。
+     */
+    private fun isSafeMoveDestination(path: String): Boolean {
+        val p = path.trim().trimEnd('/')
+        if (!isSafeAbsolute(p)) return false
+        // 「上一级」目录一律不许作为目标
+        if (p in FORBIDDEN_TOPS) return false
+        if (p.substringAfterLast('/').startsWith(TMP_PREFIX)) return true
+        if (isDataArea(p)) return true
+        if (p.startsWith(BRIDGE_ROOT.trimEnd('/') + "/")) return true
+        if (p.contains("/Trash/")) return true
+        return false
+    }
+
+    /** 绝对路径且长度合理、不是根 */
+    private fun isSafeAbsolute(p: String): Boolean =
+        p.startsWith("/") && p.length >= 12 && p != "/"
+
+    /**
+     * 是否属于「游戏数据区」：
+     *   /storage/emulated/0/Android/data/<pkg>/...
+     *   /data/user/0/<pkg>/...  或  /data/data/<pkg>/...
+     *
+     * ⚠️ 只认「/Android/data/<包名>/ 之下」，不是整片 Android 目录。
+     *    这样 /Android/obb、/Android/media 之类不会被顺带放行。
+     */
+    private fun isDataArea(p: String): Boolean {
+        if (p.length <= 12) return false
+        val ext = "/storage/emulated/0/Android/data/"
+        if (p.startsWith(ext)) {
+            // 至少要有 <包名>/<子路径>
+            val rest = p.substring(ext.length)
+            return rest.contains('/') && rest.substringBefore('/').isNotBlank()
+        }
+        for (pre in listOf("/data/user/0/", "/data/data/")) {
+            if (p.startsWith(pre)) {
+                val rest = p.substring(pre.length)
+                return rest.contains('/') && rest.substringBefore('/').isNotBlank()
+            }
+        }
+        return false
     }
 
     /** 取命令里最后一个带引号的绝对路径 */
