@@ -10,11 +10,13 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.net.Uri
+import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
@@ -213,26 +215,87 @@ internal fun MainActivity.showPuzzlePreview(
     }
     root.addView(tvWarn)
 
-    // 行列步进行（仅标签页 A）
+    // 行列步进行：两个标签页共用（rows/cols 本来就是同一组数字）
     val stepperRow = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(px(4), px(10), px(4), 0)
     }
-    val tvRows = TextView(this).apply { textSize = 13f }
-    val tvCols = TextView(this).apply { textSize = 13f }
-    stepperRow.addView(tvRows)
+
+    /**
+     * 可编辑的行/列数字框。
+     *
+     * 只按 +/- 太慢：要做 20x20 得点 38 次。这里做成能直接键入的数字框，
+     * 同时保留 +/-。中间过程允许空串（用户全选删除时），失焦或回车才落地，
+     * 落地时夹到 1..STEP_MAX。
+     */
+    fun makeNumberBox(initial: Int, onChange: (Int) -> Unit): EditText =
+        EditText(this).apply {
+            setText(initial.toString())
+            inputType = InputType.TYPE_CLASS_NUMBER
+            textSize = 13f
+            setSingleLine()
+            gravity = Gravity.CENTER
+            // 宽度固定，避免位数变化时整行抖动；高度贴文字，不要太占地方
+            layoutParams = LinearLayout.LayoutParams(px(46), px(38))
+            setPadding(0, 0, 0, 0)
+            // 淡边框：既比默认下划线整齐，又能让人看出「这里可以直接改数字」。
+            // 之前想过干脆去掉背景，但那样和旁边的静态文字没区别，
+            // 用户根本不会想到可以点进来输入。
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 6f * density
+                setStroke((1f * density).toInt().coerceAtLeast(1),
+                    Color.argb(70, 0, 0, 0))
+                setColor(Color.argb(12, 0, 0, 0))
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 23)
+                textDirection = View.TEXT_DIRECTION_LTR
+            // 数字键盘右下角显示「完成」，点了直接生效并收起键盘
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+
+            var lastGood = initial
+
+            fun commit() {
+                val raw = text.toString().trim()
+                val v = raw.toIntOrNull()?.coerceIn(1, STEP_MAX) ?: lastGood
+                lastGood = v
+                if (text.toString() != v.toString()) setText(v.toString())
+                onChange(v)
+            }
+
+            // 回车（数字键盘的完成键）立刻生效
+            setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                    actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) {
+                    commit(); clearFocus()
+                    true
+                } else false
+            }
+            // 失焦才落地：输入过程中不打断（否则打「12」时打完 1 就被夹成 1）
+            setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) commit() }
+        }
+
+    val etRows = makeNumberBox(rows) { v ->
+        if (rows != v) { val p = snapshot(); rows = v; pushHistory(p); refresh() }
+    }
+    val etCols = makeNumberBox(cols) { v ->
+        if (cols != v) { val p = snapshot(); cols = v; pushHistory(p); refresh() }
+    }
+
+    stepperRow.addView(makeStripLabel(getString(R.string.msg_puzzle_rows_label)))
     stepperRow.addView(makeSmallButton("−", density) {
         if (rows > 1) { val p = snapshot(); rows--; pushHistory(p); refresh() }
     })
+    stepperRow.addView(etRows)
     stepperRow.addView(makeSmallButton("+", density) {
         if (rows < STEP_MAX) { val p = snapshot(); rows++; pushHistory(p); refresh() }
     })
     stepperRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-    stepperRow.addView(tvCols)
+    stepperRow.addView(makeStripLabel(getString(R.string.msg_puzzle_cols_label)))
     stepperRow.addView(makeSmallButton("−", density) {
         if (cols > 1) { val p = snapshot(); cols--; pushHistory(p); refresh() }
     })
+    stepperRow.addView(etCols)
     stepperRow.addView(makeSmallButton("+", density) {
         if (cols < STEP_MAX) { val p = snapshot(); cols++; pushHistory(p); refresh() }
     })
@@ -260,6 +323,7 @@ internal fun MainActivity.showPuzzlePreview(
         )
         previewView.cropImage = RectF(crop)
         previewView.invalidate()
+
         refresh()          // 同步文案里的张数/尺寸
     }
 
@@ -360,6 +424,13 @@ internal fun MainActivity.showPuzzlePreview(
         previewView.ratioH = rows.toFloat()
         previewView.invalidate()
 
+        // 数字框与状态双向同步：点 +/- 或撤销之后，输入框也要跟着变。
+        // 正在输入时不覆盖，否则光标会跳、打一半的字被冲掉。
+        if (!etRows.hasFocus() && etRows.text.toString() != rows.toString())
+            etRows.setText(rows.toString())
+        if (!etCols.hasFocus() && etCols.text.toString() != cols.toString())
+            etCols.setText(cols.toString())
+
         val isGrid = mode == TAB_GRID
         // 行列步进两页都显示：rows/cols 是共用的同一组数字，
         // 在哪个标签页调都一样，不用先退回去改再切过来。
@@ -389,8 +460,6 @@ internal fun MainActivity.showPuzzlePreview(
                     else (cropH(crop) / rows).roundToInt()
 
 
-        tvRows.text = getString(R.string.msg_puzzle_rows, rows)
-        tvCols.text = getString(R.string.msg_puzzle_cols, cols)
 
         tvInfo.text = if (isGrid) {
             getString(
@@ -574,6 +643,14 @@ private fun MainActivity.setTabStyle(tv: TextView, selected: Boolean, density: F
     tv.isClickable = true
 }
 
+/** 步进行里的小标签（「行」「列」），比正文小一号，不抢数字框的视觉重心 */
+private fun MainActivity.makeStripLabel(text: String): TextView =
+    TextView(this).apply {
+        this.text = text
+        textSize = 13f
+        setPadding(0, 0, 2, 0)
+    }
+
 private fun MainActivity.makeSmallButton(text: String, density: Float, onClick: () -> Unit): Button =
     Button(this, null, android.R.attr.borderlessButtonStyle).apply {
         this.text = text
@@ -630,8 +707,29 @@ private class GridPreviewView<T>(ctx: Context, val bitmap: Bitmap) : View(ctx) {
     var dragStartSnapshot: T? = null
 
     private val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { isAntiAlias = true }
+    /**
+     * 网格线：白色。
+     *
+     * 原来用红色（#FF3B30）——在彩色图上太抢，尤其樱花这类红粉色调的图，
+     * 红线几乎融进画面，反而看不出切成了几块。白色带一点透明，
+     * 深浅底色都清楚，也不至于盖住图本身。
+     */
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#FF3B30"); style = Paint.Style.STROKE; isAntiAlias = true
+        color = Color.argb(235, 255, 255, 255)
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+    /**
+     * 白线的垫底描边。
+     *
+     * 纯白线在浅色画面上（白云、雪地、白底素材）等于隐形。
+     * 先在下面画一条半透明黑线，再叠白线，深浅背景都能看清 ——
+     * 比给白线加阴影便宜，也不需要 blur。
+     */
+    private val gridShadowPaint = Paint().apply {
+        color = Color.argb(110, 0, 0, 0)
+        style = Paint.Style.STROKE
+        isAntiAlias = true
     }
     private val dimPaint = Paint().apply {
         color = Color.parseColor("#99000000"); style = Paint.Style.FILL
@@ -756,15 +854,21 @@ private class GridPreviewView<T>(ctx: Context, val bitmap: Bitmap) : View(ctx) {
                 canvas.drawRect(eff.left, eff.bottom, eff.right, dst.bottom, barPaint)
             }
 
-            gridPaint.strokeWidth = max(1.5f, resources.displayMetrics.density * 1.2f)
-            for (c in 1 until cols) {
-                val x = eff.left + eff.width() * c / cols
-                canvas.drawLine(x, eff.top, x, eff.bottom, gridPaint)
-            }
-            for (r in 1 until rows) {
-                val y = eff.top + eff.height() * r / rows
-                canvas.drawLine(eff.left, y, eff.right, y, gridPaint)
-            }
+            val lineW = max(1.5f, resources.displayMetrics.density * 1.2f)
+            gridPaint.strokeWidth = lineW
+            // 垫底的黑线比白线粗 1px，白线压在上面 → 深浅底色都能看清
+            gridShadowPaint.strokeWidth = lineW + 2f
+
+            val vLines = (1 until cols).map { c -> eff.left + eff.width() * c / cols }
+            val hLines = (1 until rows).map { r -> eff.top + eff.height() * r / rows }
+            for (x in vLines) canvas.drawLine(x, eff.top, x, eff.bottom, gridShadowPaint)
+            for (y in hLines) canvas.drawLine(eff.left, y, eff.right, y, gridShadowPaint)
+            for (x in vLines) canvas.drawLine(x, eff.top, x, eff.bottom, gridPaint)
+            for (y in hLines) canvas.drawLine(eff.left, y, eff.right, y, gridPaint)
+
+            // 外框同样垫一层
+            gridShadowPaint.strokeWidth = resources.displayMetrics.density * 1.6f + 2f
+            canvas.drawRect(eff, gridShadowPaint)
             gridPaint.strokeWidth = resources.displayMetrics.density * 1.6f
             canvas.drawRect(eff, gridPaint)
         } else {
@@ -777,16 +881,24 @@ private class GridPreviewView<T>(ctx: Context, val bitmap: Bitmap) : View(ctx) {
             borderPaint.strokeWidth = resources.displayMetrics.density * 2f
             canvas.drawRect(cropView, borderPaint)
 
-            // 三分线（辅助构图）
-            gridPaint.strokeWidth = resources.displayMetrics.density
-            gridPaint.alpha = 110
+            // 三分线（辅助构图）：同样垫一层黑再画白，浅色画面上也看得见
+            val thirdW = resources.displayMetrics.density
+            val savedAlpha = gridPaint.alpha
+            gridPaint.strokeWidth = thirdW
+            gridShadowPaint.strokeWidth = thirdW + 2f
+            gridPaint.alpha = 150
+            gridShadowPaint.alpha = 60
             for (i in 1..2) {
                 val x = cropView.left + cropView.width() * i / 3f
                 val y = cropView.top + cropView.height() * i / 3f
+                canvas.drawLine(x, cropView.top, x, cropView.bottom, gridShadowPaint)
+                canvas.drawLine(cropView.left, y, cropView.right, y, gridShadowPaint)
                 canvas.drawLine(x, cropView.top, x, cropView.bottom, gridPaint)
                 canvas.drawLine(cropView.left, y, cropView.right, y, gridPaint)
             }
-            gridPaint.alpha = 255
+            // 还原，避免影响下一次绘制（原来写死 255，会覆盖初始的 235）
+            gridPaint.alpha = savedAlpha
+            gridShadowPaint.alpha = 110
 
             // 四角把手
             val hs = resources.displayMetrics.density * 7f

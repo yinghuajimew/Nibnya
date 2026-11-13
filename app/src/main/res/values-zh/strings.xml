@@ -755,6 +755,8 @@ ID：%3$s
     <string name="title_puzzle_preview">拼图预览</string>
     <string name="tab_puzzle_grid">按行列切</string>
     <string name="tab_puzzle_crop">自由裁剪</string>
+    <string name="msg_puzzle_rows_label">行</string>
+    <string name="msg_puzzle_cols_label">列</string>
     <string name="msg_puzzle_rows">行 %1$d</string>
     <string name="msg_puzzle_cols">列 %1$d</string>
     <string name="msg_puzzle_preview_info">%1$d 行 × %2$d 列 = %3$d 张地图

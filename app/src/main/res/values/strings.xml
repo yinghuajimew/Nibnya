@@ -754,6 +754,8 @@ Count: %4$d</string>
     <string name="title_puzzle_preview">Puzzle preview</string>
     <string name="tab_puzzle_grid">Grid split</string>
     <string name="tab_puzzle_crop">Free crop</string>
+    <string name="msg_puzzle_rows_label">Rows</string>
+    <string name="msg_puzzle_cols_label">Cols</string>
     <string name="msg_puzzle_rows">Rows %1$d</string>
     <string name="msg_puzzle_cols">Cols %1$d</string>
     <string name="msg_puzzle_preview_info">%1$d rows × %2$d cols = %3$d maps
