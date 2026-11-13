@@ -223,80 +223,122 @@ internal fun MainActivity.showPuzzlePreview(
     }
 
     /**
+     * 输入框的「结算」入口。
+     *
+     * 用户可能输完数字直接点「选槽位」，这时输入框未必失焦，值还没落地。
+     * 把每个输入框的 commit 登记进来，确认前统一跑一遍。
+     */
+    val numberBoxCommits = mutableListOf<() -> Unit>()
+    fun settleNumberBoxes() = numberBoxCommits.forEach { it() }
+
+    /**
+     * 结算并收起焦点。
+     *
+     * 光结算不够：refresh() 为了不打断输入，对**有焦点**的框不覆盖文字。
+     * 点 +/- 时框仍有焦点，于是数字变了却不显示（用户看到的就是这个 bug）。
+     * 结算完主动失焦，同步条件就成立了。
+     */
+    fun settleAndBlur(vararg boxes: EditText) {
+        settleNumberBoxes()
+        boxes.forEach { it.clearFocus() }
+    }
+
+    /**
      * 可编辑的行/列数字框。
      *
      * 只按 +/- 太慢：要做 20x20 得点 38 次。这里做成能直接键入的数字框，
      * 同时保留 +/-。中间过程允许空串（用户全选删除时），失焦或回车才落地，
      * 落地时夹到 1..STEP_MAX。
      */
-    fun makeNumberBox(initial: Int, onChange: (Int) -> Unit): EditText =
-        EditText(this).apply {
-            setText(initial.toString())
-            inputType = InputType.TYPE_CLASS_NUMBER
-            textSize = 13f
-            setSingleLine()
-            gravity = Gravity.CENTER
-            // 宽度固定，避免位数变化时整行抖动；高度贴文字，不要太占地方
-            layoutParams = LinearLayout.LayoutParams(px(46), px(38))
-            setPadding(0, 0, 0, 0)
-            // 淡边框：既比默认下划线整齐，又能让人看出「这里可以直接改数字」。
-            // 之前想过干脆去掉背景，但那样和旁边的静态文字没区别，
-            // 用户根本不会想到可以点进来输入。
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 6f * density
-                setStroke((1f * density).toInt().coerceAtLeast(1),
-                    Color.argb(70, 0, 0, 0))
-                setColor(Color.argb(12, 0, 0, 0))
-            }
-            if (android.os.Build.VERSION.SDK_INT >= 23)
-                textDirection = View.TEXT_DIRECTION_LTR
-            // 数字键盘右下角显示「完成」，点了直接生效并收起键盘
-            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+    /** 数字框 + 它的「从状态同步」入口 */
+    class NumberBox(val view: EditText, val syncFrom: (Int) -> Unit)
 
-            var lastGood = initial
+    /**
+     * 可编辑的行/列数字框。
+     *
+     * 只按 +/- 太慢：要做 20x20 得点 38 次。这里做成能直接键入的数字框，
+     * 同时保留 +/-。输入过程中允许空串（用户全选删除时），
+     * 失焦、点「完成」或点 +/- 才落地，落地时夹到 1..STEP_MAX。
+     */
+    fun makeNumberBox(initial: Int, onChange: (Int) -> Unit): NumberBox {
+        var lastGood = initial
 
-            fun commit() {
-                val raw = text.toString().trim()
-                val v = raw.toIntOrNull()?.coerceIn(1, STEP_MAX) ?: lastGood
-                lastGood = v
-                if (text.toString() != v.toString()) setText(v.toString())
-                onChange(v)
-            }
-
-            // 回车（数字键盘的完成键）立刻生效
-            setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
-                    actionId == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) {
-                    commit(); clearFocus()
-                    true
-                } else false
-            }
-            // 失焦才落地：输入过程中不打断（否则打「12」时打完 1 就被夹成 1）
-            setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) commit() }
+        fun commit(target: EditText) {
+            val raw = target.text.toString().trim()
+            val v = raw.toIntOrNull()?.coerceIn(1, STEP_MAX) ?: lastGood
+            lastGood = v
+            if (target.text.toString() != v.toString()) target.setText(v.toString())
+            onChange(v)
         }
 
-    val etRows = makeNumberBox(rows) { v ->
+        val et = EditText(this)
+        et.setText(initial.toString())
+        et.inputType = InputType.TYPE_CLASS_NUMBER
+        et.textSize = 13f
+        et.setSingleLine()
+        et.gravity = Gravity.CENTER
+        et.layoutParams = LinearLayout.LayoutParams(px(46), px(38))
+        et.setPadding(0, 0, 0, 0)
+        // 淡边框：既比默认下划线整齐，又能让人看出「这里可以直接改数字」。
+        // 去掉背景的话就和旁边的静态文字没区别，用户不会想到可以点进来。
+        et.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 6f * density
+            setStroke((1f * density).toInt().coerceAtLeast(1), Color.argb(70, 0, 0, 0))
+            setColor(Color.argb(12, 0, 0, 0))
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 23)
+            et.textDirection = View.TEXT_DIRECTION_LTR
+        // 数字键盘右下角是「完成」，点了立刻生效并收起键盘
+        et.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+
+        et.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                commit(et)
+                et.clearFocus()
+                true
+            } else false
+        }
+        // 失焦才落地：输入过程中不打断（否则打「12」时打完 1 就被夹成 1）
+        et.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) commit(et) }
+
+        numberBoxCommits.add { commit(et) }
+        return NumberBox(et) { v ->
+            lastGood = v
+            // 有焦点时不覆盖，否则光标会跳、打一半的字被冲掉
+            if (!et.hasFocus() && et.text.toString() != v.toString()) et.setText(v.toString())
+        }
+    }
+
+    val boxRows = makeNumberBox(rows) { v ->
         if (rows != v) { val p = snapshot(); rows = v; pushHistory(p); refresh() }
     }
-    val etCols = makeNumberBox(cols) { v ->
+    val boxCols = makeNumberBox(cols) { v ->
         if (cols != v) { val p = snapshot(); cols = v; pushHistory(p); refresh() }
     }
+    val etRows = boxRows.view
+    val etCols = boxCols.view
 
     stepperRow.addView(makeStripLabel(getString(R.string.msg_puzzle_rows_label)))
     stepperRow.addView(makeSmallButton("−", density) {
+        // 先结算并失焦：清空状态下点 +/-，输入框仍有焦点，
+        // refresh() 的「有焦点不覆盖」会挡掉同步，导致数字变了却不显示。
+        settleAndBlur(etRows)
         if (rows > 1) { val p = snapshot(); rows--; pushHistory(p); refresh() }
     })
     stepperRow.addView(etRows)
     stepperRow.addView(makeSmallButton("+", density) {
+        settleAndBlur(etRows)
         if (rows < STEP_MAX) { val p = snapshot(); rows++; pushHistory(p); refresh() }
     })
     stepperRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
     stepperRow.addView(makeStripLabel(getString(R.string.msg_puzzle_cols_label)))
     stepperRow.addView(makeSmallButton("−", density) {
+        settleAndBlur(etCols)
         if (cols > 1) { val p = snapshot(); cols--; pushHistory(p); refresh() }
     })
     stepperRow.addView(etCols)
     stepperRow.addView(makeSmallButton("+", density) {
+        settleAndBlur(etCols)
         if (cols < STEP_MAX) { val p = snapshot(); cols++; pushHistory(p); refresh() }
     })
     root.addView(stepperRow)
@@ -425,11 +467,9 @@ internal fun MainActivity.showPuzzlePreview(
         previewView.invalidate()
 
         // 数字框与状态双向同步：点 +/- 或撤销之后，输入框也要跟着变。
-        // 正在输入时不覆盖，否则光标会跳、打一半的字被冲掉。
-        if (!etRows.hasFocus() && etRows.text.toString() != rows.toString())
-            etRows.setText(rows.toString())
-        if (!etCols.hasFocus() && etCols.text.toString() != cols.toString())
-            etCols.setText(cols.toString())
+        // 有焦点时不覆盖（syncFrom 内部判断），避免光标跳动、输入被冲掉。
+        boxRows.syncFrom(rows)
+        boxCols.syncFrom(cols)
 
         val isGrid = mode == TAB_GRID
         // 行列步进两页都显示：rows/cols 是共用的同一组数字，
@@ -517,6 +557,8 @@ internal fun MainActivity.showPuzzlePreview(
         .setTitle(getString(R.string.title_puzzle_preview))
         .setView(root)
         .setPositiveButton(R.string.btn_next_pick_slot) { _, _ ->
+            // 用户可能输完数字直接点这里，输入框还没失焦 —— 先落地
+            settleNumberBoxes()
             if (mode == TAB_GRID) {
                 puzzleRows = rows
                 puzzleCols = cols
