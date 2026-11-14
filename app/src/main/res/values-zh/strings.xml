@@ -1041,4 +1041,7 @@ ID：%3$s
     <string name="pkg_state_unverified">未验证（需要 root）</string>
     <string name="pkg_unverified_hint">没有 root 或 Shizuku 时，Android 11+ 不允许任何应用查看 Android/data 里的内容。下面列出的是「看起来与 Minecraft 相关」的应用；如果某个里面没有存档，换一个试试。</string>
     <string name="pkg_search_requires_game">无 root 时只列出疑似 Minecraft 相关的应用。</string>
+    <string name="pkg_diag">诊断</string>
+    <string name="pkg_diag_running">正在收集诊断信息…</string>
+    <string name="btn_ok">确定</string>
 </resources>

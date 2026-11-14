@@ -1320,9 +1320,39 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.path_by_app))
             .setMessage(getString(R.string.pkg_none_found))
+            // 「一个都没找到」是最需要诊断的情况：可能是没权限，也可能是命令没跑通。
+            // 留一个入口让用户直接把原因发给我，比来回猜快得多。
+            .setNeutralButton(getString(R.string.pkg_diag)) { _, _ -> showPackageDiag() }
             .setPositiveButton(getString(R.string.path_custom)) { _, _ -> showCustomPathDialog() }
             .setNegativeButton(getString(R.string.btn_cancel)) { _, _ -> showPathSelector() }
             .show()
+    }
+
+    /** 展示「按应用选择」的诊断信息，用户可长按复制 */
+    private fun showPackageDiag() {
+        toast(getString(R.string.pkg_diag_running))
+        Thread {
+            val text = try {
+                worldVM.diagnosePackageScan()
+            } catch (e: Exception) {
+                "诊断失败: ${e.message}"
+            }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                val tv = TextView(this).apply {
+                    this.text = text
+                    textSize = 12f
+                    setPadding(32, 24, 32, 24)
+                    setTextIsSelectable(true)   // 允许长按复制
+                }
+                val sv = ScrollView(this).apply { addView(tv) }
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.pkg_diag))
+                    .setView(sv)
+                    .setPositiveButton(getString(R.string.btn_ok), null)
+                    .show()
+            }
+        }.start()
     }
 
     /**

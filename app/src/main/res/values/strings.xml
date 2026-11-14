@@ -1038,4 +1038,7 @@ If the game uses a non-standard location, use "Custom path" instead.</string>
     <string name="pkg_state_unverified">not verified (needs root)</string>
     <string name="pkg_unverified_hint">Without root or Shizuku, Android 11+ does not let any app look inside Android/data. The apps below are listed because they look like Minecraft-related. If one has no saves, try another.</string>
     <string name="pkg_search_requires_game">Only apps that look Minecraft-related are listed without root.</string>
+    <string name="pkg_diag">Diagnostics</string>
+    <string name="pkg_diag_running">Collecting diagnostics…</string>
+    <string name="btn_ok">OK</string>
 </resources>

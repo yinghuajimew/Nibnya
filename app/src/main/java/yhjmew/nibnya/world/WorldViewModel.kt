@@ -584,16 +584,55 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             }
         } catch (_: Exception) {}
 
-        if (!checkShizukuAvailable()) return false
-        return try {
-            val p = runShizukuCmd(arrayOf("sh", "-c",
-                "ls -d \"${base}*\" 2>/dev/null | head -n 1"))
-            val out = BufferedReader(InputStreamReader(p.inputStream)).readText().trim()
+        // 不写死「必须先 checkShizukuAvailable」—— 那是按模式判断，
+        // 模式是 ROOT 而 su 失败时会把可用的 Shizuku 一起否定掉。
+        val out = execProbeReadOnly("ls -d \"${base}*\" 2>/dev/null | head -n 1")
+        return out != null && out.trim().isNotEmpty()
+    }
+
+    /**
+     * 只读探测专用：执行一条 shell 命令并取回 stdout。
+     *
+     * 与 [runShizukuCmd] 的区别：那里按**当前模式**走（ROOT 就只用 su），
+     * 这里两条通道都试 —— 因为「读目录列表」是纯只读操作，
+     * 只要有一条路能走通就该走通。
+     *
+     * 实际踩到的问题：用户模式是 ROOT 但 su 失败，
+     * 而 Shizuku 明明可用（设置页也显示"已检测到 Shizuku"）。
+     * 按模式走会直接放弃，导致「按应用选择」永远是空的。
+     *
+     * @return stdout（失败返回 null）
+     */
+    fun execProbeReadOnly(shell: String): String? {
+        // ① 当前模式能用就用（最省事）
+        try {
+            if (checkShizukuAvailable()) {
+                val p = runShizukuCmd(arrayOf("sh", "-c", shell))
+                val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
+                p.waitFor()
+                return out
+            }
+        } catch (_: Exception) {}
+
+        // ② 强制走 Shizuku（无视当前模式）
+        try {
+            val p = PrivilegedExec.execShizukuForced(shell)
+            if (p != null) {
+                val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
+                val code = p.waitFor()
+                if (code == 0 || out.isNotEmpty()) return out
+            }
+        } catch (_: Exception) {}
+
+        // ③ 最后试 su
+        try {
+            val p = Runtime.getRuntime().exec(arrayOf("su", "-c", shell))
+            val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
             p.waitFor()
-            out.isNotEmpty()
-        } catch (_: Exception) {
-            false
-        }
+            return out
+        } catch (_: Exception) {}
+
+        return null
     }
 
     /**
@@ -635,40 +674,65 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      * @return 包名集合；提权不可用或命令失败时返回 null（调用方会退回逐条探测）
      */
     fun listPackagesWithWorlds(includeInternal: Boolean): Set<String>? {
-        if (!checkShizukuAvailable()) return null
         val out = linkedSetOf<String>()
-        try {
-            // 外部私有目录：Android/data/<pkg>/files/games/com.mojang/minecraftWorlds
-            // 用 glob 一次匹配，避免 for 循环里逐个 test
-            val p = runShizukuCmd(arrayOf("sh", "-c",
-                "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>/dev/null; " +
-                "ls -d /storage/emulated/0/Android/data/*/files/minecraftWorlds 2>/dev/null"))
-            val text = BufferedReader(InputStreamReader(p.inputStream)).readText()
-            p.waitFor()
-            for (line in text.lines()) {
-                val pkg = PackageResolver.packageOfPath(line.trim())
-                if (!pkg.isNullOrBlank()) out.add(pkg)
-            }
 
-            if (includeInternal) {
-                // 内部私有目录只有 root 能看；Shizuku(shell) 不会有权限，
-                // 失败也无所谓，不影响外部结果。
-                val p2 = runShizukuCmd(arrayOf("sh", "-c",
-                    "ls -d /data/user/0/*/games/com.mojang/minecraftWorlds 2>/dev/null"))
-                val t2 = BufferedReader(InputStreamReader(p2.inputStream)).readText()
-                p2.waitFor()
-                for (line in t2.lines()) {
+        // 外部私有目录：Android/data/<pkg>/files/games/com.mojang/minecraftWorlds
+        // 用 glob 一次匹配，避免 for 循环里逐个 test
+        val text = execProbeReadOnly(
+            "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>/dev/null; " +
+            "ls -d /storage/emulated/0/Android/data/*/files/minecraftWorlds 2>/dev/null"
+        ) ?: run {
+            AppLogger.warn("PkgScan", "批量探测失败：su 与 Shizuku 都不可用")
+            return null          // 返回 null 让调用方退回逐条探测
+        }
+
+        for (line in text.lines()) {
+            val pkg = PackageResolver.packageOfPath(line.trim())
+            if (!pkg.isNullOrBlank()) out.add(pkg)
+        }
+
+        if (includeInternal) {
+            // 内部私有目录只有 root 能看；Shizuku(shell) 通常没权限，
+            // 失败也无所谓，不影响外部结果。
+            execProbeReadOnly("ls -d /data/user/0/*/games/com.mojang/minecraftWorlds 2>/dev/null")
+                ?.lines()
+                ?.forEach { line ->
                     val pkg = PackageResolver.packageOfPath(line.trim())
                     if (!pkg.isNullOrBlank()) out.add(pkg)
                 }
-            }
-        } catch (e: Exception) {
-            AppLogger.warn("PkgScan", "批量探测失败: ${e.message}")
-            return null
         }
-        // 命令成功但一个都没有时，返回空集合（不是 null）——
+
+        // 命令跑通但一个都没有时，返回空集合（不是 null）——
         // 说明「确实没有」，不该退回逐条探测把它变成几百次命令。
         return out
+    }
+
+    /**
+     * 「按应用选择」的诊断信息 —— 出问题时用来定位是哪一环断了。
+     *
+     * 输出三件事：当前模式、每条通道是否可用、ls 的实际结果。
+     * 只读，不改任何东西。
+     */
+    fun diagnosePackageScan(): String {
+        val sb = StringBuilder()
+        sb.append("运行模式: ").append(PrivilegedExec.mode()).append('\n')
+        sb.append("checkShizukuAvailable: ").append(checkShizukuAvailable()).append('\n')
+        sb.append("canProbeWithPrivilege: ").append(canProbeWithPrivilege()).append('\n')
+
+        val cmd = "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>&1"
+        sb.append('\n').append("--- ls 原始输出 ---").append('\n')
+        val out = execProbeReadOnly(cmd)
+        if (out == null) {
+            sb.append("(null = su 与 Shizuku 都没跑起来)").append('\n')
+        } else {
+            sb.append(out.take(1500)).append('\n')
+            if (out.isBlank()) sb.append("(空 = 命令跑了但没匹配到任何目录)").append('\n')
+        }
+
+        sb.append('\n').append("--- 解析结果 ---").append('\n')
+        val set = listPackagesWithWorlds(false)
+        sb.append(if (set == null) "null" else "${set.size} 个: $set").append('\n')
+        return sb.toString()
     }
 
     /** 列出一个根目录下的子文件夹名（优先 File API，失败退回 Shizuku） */

@@ -439,6 +439,23 @@ object PrivilegedExec {
     }
 
     /**
+     * **强制**用 Shizuku 执行，无视当前模式。
+     *
+     * 为什么需要单独一个入口：「按应用选择」只想读取目录列表，
+     * 属于纯只读探测。当前模式可能是 ROOT 而 su 恰好不可用，
+     * 但 Shizuku 是好的 —— 这时按模式走会白白失败，
+     * 应该允许调用方显式指定通道。
+     *
+     * ⚠️ 仍然经过 [validate]，安全校验不受影响。
+     */
+    fun execShizukuForced(cmd: String): Process? {
+        validate(cmd)?.let { reason ->
+            throw SecurityException("refused command ($reason): $cmd")
+        }
+        return execShizuku(cmd)
+    }
+
+    /**
      * 用 su 执行命令。
      *
      * ⚠️ 关键：必须把整条命令**当成一个参数**交给 su，
