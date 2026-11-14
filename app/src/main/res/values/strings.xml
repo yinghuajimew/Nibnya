@@ -1034,4 +1034,8 @@ If the game uses a non-standard location, use "Custom path" instead.</string>
     <string name="pkg_last_played">last save %1$s</string>
     <string name="toast_path_switched">Switched to:
 %1$s</string>
+    <string name="pkg_state_verified">save folder confirmed</string>
+    <string name="pkg_state_unverified">not verified (needs root)</string>
+    <string name="pkg_unverified_hint">Without root or Shizuku, Android 11+ does not let any app look inside Android/data. The apps below are listed because they look like Minecraft-related. If one has no saves, try another.</string>
+    <string name="pkg_search_requires_game">Only apps that look Minecraft-related are listed without root.</string>
 </resources>

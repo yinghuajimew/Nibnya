@@ -15,38 +15,60 @@ import java.io.File
  *   · 用户的整合包把数据放在别的包名目录下
  * 用户只能手工去「自定义路径」里敲一长串包名，很容易敲错。
  *
- * 这个类只做一件事：**列出本机上确实存在存档目录的应用**，
- * 让用户从列表里点，而不是背包名。
+ * 这个类只做一件事：**列出带存档目录的应用**，让用户从列表里点。
  *
- * 扫描范围（三条都试，命中任意一条即算「有存档」）
- *   /storage/emulated/0/Android/data/<pkg>/files/games/com.mojang/minecraftWorlds
- *   /data/user/0/<pkg>/games/com.mojang/minecraftWorlds
- *   /storage/emulated/0/Android/data/<pkg>/files/minecraftWorlds          （个别变体）
+ * ⚠️ 关于「权限」
+ * --------------
+ * 枚举应用列表**不需要任何权限**：包可见性限制（Android 11）只约束
+ * targetSdk >= 30 的应用，本项目是 28，getInstalledApplications() 直接可用。
+ * （这也是 Hail / 冰箱这类应用的做法。）
+ *
+ * 但「这个应用的存档目录里有没有东西」是另一回事：
+ * `/Android/data/<pkg>/...` 在 Android 11+ 上，普通应用连 stat 都不允许，
+ * 必须靠 Shizuku 或 root。所以 [scan] 把两者分开：
+ *   · 应用列表   —— 永远可靠，无权限
+ *   · 存档是否存在 —— 能验证就验证，不能验证就标成「未验证」仍然列出
+ * 绝不能因为验证不了，就把用户的存档藏起来。
  *
  * ⚠️ 只读本机 PackageManager，不联网、不上传任何东西。
  */
 object PackageResolver {
 
-    /** 一个候选应用 */
+    /**
+     * 一个候选应用。
+     *
+     * [worldState] 说明我们对「它是否真有存档」的把握程度 ——
+     * 这三态是本次改动最核心的部分，UI 必须如实呈现。
+     */
     data class Candidate(
         val packageName: String,
         val label: String,
         /** 安装时间（毫秒）；拿不到为 0 */
         val installedAt: Long,
-        /** 最近修改时间（毫秒）；用于判断「最近玩过」 */
+        /** 最近修改时间（毫秒）；无法验证时为 0 */
         val lastModified: Long,
-        /** 命中的外部路径（带尾斜杠）；没有则为 null */
-        val externalBase: String?,
-        /** 命中的内部路径（带尾斜杠）；没有则为 null */
-        val internalBase: String?,
-        /** 是否为当前正在使用的包名（打了「当前」标签） */
-        val isCurrent: Boolean = false
+        /** 外部路径（带尾斜杠） */
+        val externalBase: String,
+        /** 内部路径（带尾斜杠），仅 root 有意义 */
+        val internalBase: String,
+        /** 是否为当前正在使用的包名（打「当前」标签） */
+        val isCurrent: Boolean = false,
+        /** 对「是否真有存档」的把握 */
+        val worldState: WorldState = WorldState.UNKNOWN
     ) {
-        /** 优先外部路径：不需要 root，能直接读写 */
-        val preferredBase: String get() = externalBase ?: internalBase ?: ""
+        val preferredBase: String get() = externalBase
     }
 
-    /** 外部私有目录（Android/data 下，Android 11+ 需要提权） */
+    enum class WorldState {
+        /** 已确认：目录里确实有 level.dat + db/ */
+        VERIFIED,
+        /** 没法验证：无提权时 Android 11+ 看不到 Android/data，不代表没有 */
+        UNKNOWN,
+        /** 能验证但确实没有（目录不存在 / 空目录） */
+        ABSENT
+    }
+
+    /** 外部私有目录（Android/data 下，Android 11+ 需要提权才能读内容） */
     fun externalBase(pkg: String): String =
         "/storage/emulated/0/Android/data/$pkg/files/games/com.mojang/minecraftWorlds/"
 
@@ -59,33 +81,28 @@ object PackageResolver {
         "/storage/emulated/0/Android/data/$pkg/files/minecraftWorlds/"
 
     /**
-     * 枚举「本机所有应用」，筛出确实有存档目录的那些。
+     * 枚举本机应用，挑出「可能有存档」的那些。
+     *
+     * 返回规则（无提权时最容易出错的地方）：
+     *   · 提权可用 → 只返回 VERIFIED 的（精确，列表短）
+     *   · 提权不可用 → 返回 VERIFIED + 所有疑似游戏应用（标 UNKNOWN）
+     *     因为此时**根本没法验证**，若按「验证不了就丢掉」处理，
+     *     列表会永远是空的 —— 那正是上一版的 bug。
      *
      * @param includeInternal 是否也检查 /data/user/0 下的私有目录（需要 root）
-     * @return 按 A-Z（包名）排序
+     * @param prober         单点探测（走提权）；null 表示无提权
+     * @param bulkProber     批量探测（一条命令）；null 表示无提权
      */
     fun scan(
         context: Context,
         includeInternal: Boolean,
         excludeSelf: Boolean = true,
-        /**
-         * 「这个目录下有没有存档」的探测方式。
-         *
-         * 默认用 File API，但 Android 11+ 对 Android/data 会恒返回 false ——
-         * 那种情况下要由调用方传入一个**走提权**的实现（root/Shizuku）。
-         * 传 null 就退回 File API。
-         */
         prober: ((String) -> Boolean)? = null,
-        /**
-         * 批量探测：一次性返回「确实有存档目录的包名集合」。
-         *
-         * 有它就**不再逐条调用 [prober]** —— 这是性能关键：
-         * 一条命令 vs 几百条命令。
-         */
         bulkProber: (() -> Set<String>?)? = null
     ): List<Candidate> {
         val pm = context.packageManager
         val self = context.packageName
+        val privileged = prober != null && bulkProber != null
 
         val packages = try {
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
@@ -95,44 +112,37 @@ object PackageResolver {
 
         /*
          * 性能：不能对每个应用都跑一次提权命令。
-         * 普通手机装了 200+ 应用，每个查 2~3 次就是几百次进程创建，要几十秒。
-         *
-         * 做法：**先问一次**——把「哪些包名目录下确实有 minecraftWorlds」
-         * 一次性拿回来（一条 ls 命令），再和包列表求交集。
-         * 只有在批量探测不可用时，才逐条退回单点探测。
+         * 手机上通常 200+ 应用，逐个查就是几百次进程创建。
+         * 先跑一条 ls 把「哪些包名目录下确实有 minecraftWorlds」拿回来。
          */
-        // Kotlin 没有三元运算符（C 风格的 a ? b : c 不合法），用 if 表达式
-        var bulkHint: Set<String>? = if (prober == null) null else bulkProber?.invoke()
+        var bulkHint: Set<String>? = if (privileged) bulkProber?.invoke() else null
 
-        /*
-         * 自检：批量结果为空时先别急着信。
-         *
-         * 如果用户当前用的包名明明有存档，批量结果却一个都没给出来，
-         * 说明那条 ls 在某台机器上不可靠（SELinux / 路径变体等），
-         * 此时退回逐条探测——慢一点，但至少不会把列表变成空的。
-         */
+        // 批量结果为空时先别急着信：可能是命令在某台机器上不生效
         if (bulkHint != null && bulkHint.isEmpty()) {
             val probePkg = PackagePrefs.defaultPackage(context)
                 ?: packageOfPath(PackagePrefs.effectiveBase(context))
-            if (probePkg != null) {
-                val probePath = externalBase(probePkg)
-                val credible = prober?.invoke(probePath) ?: false
-                if (credible) {
-                    // 批量结果不可信：丢掉它，走逐条探测
-                    bulkHint = null
-                }
+            if (probePkg != null && prober?.invoke(externalBase(probePkg)) == true) {
+                bulkHint = null   // 批量不可信 → 退回逐条探测
             }
         }
 
-        val exists = { path: String ->
-            when {
-                // 有批量结果：直接按包名查表，不再发命令
-                bulkHint != null -> {
-                    val pkg = packageOfPath(path)
-                    pkg != null && bulkHint.contains(pkg)
-                }
-                prober != null -> prober.invoke(path)
-                else -> existsByFile(path)
+        /** 判定某个目录：VERIFIED / ABSENT / UNKNOWN */
+        fun stateOf(path: String): WorldState {
+            // ① 有批量结果：查表即可（快且准）
+            if (bulkHint != null) {
+                val pkg = packageOfPath(path)
+                return if (pkg != null && bulkHint!!.contains(pkg)) WorldState.VERIFIED
+                       else WorldState.ABSENT
+            }
+            // ② 单点提权探测
+            if (prober != null) {
+                return if (prober.invoke(path)) WorldState.VERIFIED else WorldState.ABSENT
+            }
+            // ③ 无提权：File API 能看见就用它，看不见就是「不知道」
+            return when (checkByFile(path)) {
+                true -> WorldState.VERIFIED
+                false -> WorldState.ABSENT
+                null -> WorldState.UNKNOWN
             }
         }
 
@@ -143,15 +153,37 @@ object PackageResolver {
 
             val ext = externalBase(pkg)
             val variant = externalVariantBase(pkg)
-            val hasExt = exists(ext) || exists(variant)
-            val hasInt = includeInternal && exists(internalBase(pkg))
-            if (!hasExt && !hasInt) continue
 
-            val hitExt = when {
-                exists(ext) -> ext
-                exists(variant) -> variant
-                else -> null
+            val sExt = stateOf(ext)
+            val sVariant = stateOf(variant)
+            val sInt = if (includeInternal) stateOf(internalBase(pkg)) else WorldState.ABSENT
+
+            val best = listOf(sExt, sVariant, sInt).let {
+                when {
+                    it.any { s -> s == WorldState.VERIFIED } -> WorldState.VERIFIED
+                    // 只有「全都确认不存在」才算 ABSENT；有一个不知道就是 UNKNOWN
+                    it.all { s -> s == WorldState.ABSENT } -> WorldState.ABSENT
+                    else -> WorldState.UNKNOWN
+                }
             }
+
+            /*
+             * 无提权时怎么筛？
+             *
+             * 不能只留 VERIFIED —— 那样在 Android 11+ 上恒为空。
+             * 也不该把所有 200+ 应用都列出来 —— 用户找不到重点。
+             *
+             * 折中：按「是不是游戏类应用」做粗筛（见 looksLikeGame），
+             * 把可能是游戏的标成 UNKNOWN 列出来，让用户自己点。
+             * 点错了也只是路径不对，不会损坏任何东西。
+             */
+            val keep = when {
+                best == WorldState.VERIFIED -> true
+                best == WorldState.ABSENT -> false
+                privileged -> false          // 提权可用却没验证到 → 确实没有
+                else -> looksLikeGame(info)  // 无提权 → 疑似游戏就列出来
+            }
+            if (!keep) continue
 
             val label = try {
                 pm.getApplicationLabel(info).toString()
@@ -164,8 +196,11 @@ object PackageResolver {
                 installedAt = pm.getPackageInfo(pkg, 0).firstInstallTime
             } catch (_: Exception) {}
 
-            val newest = listOfNotNull(hitExt, if (hasInt) internalBase(pkg) else null)
-                .maxOfOrNull { newestWorldTime(it) } ?: 0L
+            // 只有验证过的才读得出时间；UNKNOWN 保持 0，UI 会显示「未验证」
+            val newest = if (best == WorldState.VERIFIED) {
+                listOf(ext, variant, internalBase(pkg))
+                    .maxOfOrNull { newestWorldTime(it) } ?: 0L
+            } else 0L
 
             out.add(
                 Candidate(
@@ -173,43 +208,76 @@ object PackageResolver {
                     label = label,
                     installedAt = installedAt,
                     lastModified = newest,
-                    externalBase = hitExt,
-                    internalBase = if (hasInt) internalBase(pkg) else null,
-                    isCurrent = pkg == currentPackageName(PackagePrefs.effectiveBase(context))
+                    externalBase = ext,
+                    internalBase = internalBase(pkg),
+                    isCurrent = pkg == currentPackageName(PackagePrefs.effectiveBase(context)),
+                    worldState = best
                 )
             )
         }
-        out.sortWith(compareBy({ it.label.lowercase() }, { it.packageName }))
+
+        // 确认过的排前面，其余按名称
+        out.sortWith(
+            compareBy(
+                { if (it.worldState == WorldState.VERIFIED) 0 else 1 },
+                { it.label.lowercase() },
+                { it.packageName }
+            )
+        )
         return out
     }
 
     /**
-     * 该目录下是否真有存档。
+     * 无提权时用 File API 判断目录内容。
      *
-     * 只看目录在不在还不够 —— 有些应用会预建空目录。
-     * 这里要求「目录存在 且 里面至少有一个带 level.dat 的子目录」，
-     * 或者目录里至少有一个子目录（空目录不列出，免得列表里全是噪声）。
+     * @return true=确认真有存档；false=确认没有；null=看不到（权限受限，无法判断）
      *
-     * 注意：受分区存储限制，File.exists() 对 Android/data 下的路径
-     * 在 Android 11+ 会返回 false。此时退回「按路径约定推断」——
-     * 有 Shizuku/root 时上层会用提权去实际读取，这里不阻塞用户。
+     * ⚠️ 关键在于区分「空」和「看不见」：
+     *    Android 11+ 下 listFiles() 返回 null 可能是权限问题，
+     *    这时绝不能当成「没有」，否则会把用户的存档藏起来。
      */
-    /**
-     * 判定标准与 [WorldViewModel.scanAllWorlds] 的 looksLikeWorld 保持一致：
-     * 子目录里必须有 level.dat **和** db/ 才算存档。
-     *
-     * 只看 level.dat 会把「只剩 level.dat 的残档」也列出来，
-     * 用户点进去才发现打不开 —— 不如不列。
-     */
-    private fun existsByFile(path: String): Boolean {
+    private fun checkByFile(path: String): Boolean? {
         return try {
             val f = File(path)
-            if (!f.exists() || !f.isDirectory) return false
-            f.listFiles()?.any { dir ->
-                dir.isDirectory &&
-                    File(dir, "level.dat").exists() &&
-                    File(dir, "db").exists()
-            } == true
+            if (!f.exists()) {
+                // 父目录是否可见？可见才算「真的不存在」，否则是「看不到」
+                val parent = f.parentFile
+                if (parent != null && parent.exists()) false else null
+            } else if (!f.isDirectory) {
+                false
+            } else {
+                val kids = f.listFiles()
+                if (kids == null) null            // 列不出来 → 权限受限
+                else kids.any { dir ->
+                    dir.isDirectory &&
+                        File(dir, "level.dat").exists() &&
+                        File(dir, "db").exists()
+                }
+            }
+        } catch (_: SecurityException) {
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 粗筛「可能是 Minecraft」的应用（仅无提权时使用）。
+     *
+     * 目的不是精确，而是把 200+ 应用压到几十个以内让用户好找。
+     * 判据都用 PackageManager 能直接拿到的字段，不读任何文件。
+     */
+    private fun looksLikeGame(info: android.content.pm.ApplicationInfo): Boolean {
+        // ① 包名里带明显的 Minecraft 痕迹
+        val pkg = info.packageName.lowercase()
+        if (pkg.contains("minecraft") || pkg.contains("mojang")) return true
+
+        // ② 已知的存档相关包名
+        if (pkg.startsWith("com.mojang.")) return true
+
+        // ③ 这个应用自己是否声明了「游戏」类别
+        return try {
+            info.category == android.content.pm.ApplicationInfo.CATEGORY_GAME
         } catch (_: Exception) {
             false
         }

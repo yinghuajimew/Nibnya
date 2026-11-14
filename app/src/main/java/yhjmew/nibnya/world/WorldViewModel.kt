@@ -597,6 +597,35 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     }
 
     /**
+     * 现在能不能「真正看一眼」Android/data 下的内容。
+     *
+     * 有 root 或 Shizuku 时可以；都没有就返回 false，
+     * 此时「按应用选择」会退回「疑似游戏应用」列表（见 PackageResolver.scan）。
+     */
+    fun canProbeWithPrivilege(): Boolean {
+        // ① 先看当前模式是否已经能用（最省事，也是用户主动选的）
+        if (checkShizukuAvailable()) return true
+
+        // ② 再直接试 su。不能只依赖 ①：
+        //    当前模式若是 ROOT 但 su 恰好失败，① 会返回 NotRunning，
+        //    可用户其实装了 Shizuku 且已授权。反过来也一样。
+        //    这里两个都探一下，任一可用就够我们读 Android/data。
+        try {
+            val p = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+            val ok = p.waitFor() == 0
+            p.destroy()
+            if (ok) return true
+        } catch (_: Exception) {}
+
+        // ③ 只看 Shizuku 自身（不看当前模式）—— 见 checkShizukuOnly
+        return try {
+            checkShizukuOnly(appContext) == ShizukuStatus.Available
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * 一次性列出「所有带存档目录的包名」——给「按应用选择」用。
      *
      * 为什么需要批量版：手机上通常 200+ 应用，若逐个探测
@@ -2473,7 +2502,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     }
 
     /** 只检测 Shizuku 自身状态，与 root 完全无关 */
-    private fun checkShizukuOnly(context: Context?): ShizukuStatus {
+    fun checkShizukuOnly(context: Context?): ShizukuStatus {
         try {
             val c = Class.forName("rikka.shizuku.Shizuku")
             val ping = c.getMethod("pingBinder").invoke(null) as? Boolean ?: false

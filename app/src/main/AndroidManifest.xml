@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Shizuku 权限 -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -12,18 +11,16 @@
     </queries>
 
     <!--
-      包可见性（Android 11+）：
-      「按应用选择」需要枚举本机应用来找出带存档目录的那些。
+      ⚠️ 刻意**不**声明 QUERY_ALL_PACKAGES。
 
-      QUERY_ALL_PACKAGES 在 Google Play 需要申报理由，本项目不走商店分发，
-      但它属于「宽泛」权限。这里只声明我们真正需要的两类：
-        · 能查询到有游戏存档目录的应用 —— 无法用 queries 精确表达，
-          因为包名是任意的，所以仍需 QUERY_ALL_PACKAGES。
-      若将来上架，应改为让用户手动输入包名，或改用 MORE_SPECIFIC 的 queries。
+      包可见性（Android 11 引入）只约束 targetSdk >= 30 的应用。
+      本项目 targetSdk 28，getInstalledApplications() 本来就能拿到全部应用，
+      声明这个权限毫无收益，反而会让 MIUI/HyperOS 在「应用行为记录」里
+      记一笔「读取应用列表」，用户看到会以为我们在偷看装了哪些应用。
+
+      如果将来把 targetSdk 提到 30+，才需要重新评估：那时要么加这个权限，
+      要么改用「让用户手动输入包名」的方案。
     -->
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
 
     <!-- 注意看下面这一行 theme 的写法，千万别改错了 -->
     <application

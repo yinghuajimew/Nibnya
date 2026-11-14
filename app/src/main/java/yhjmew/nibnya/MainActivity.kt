@@ -1289,21 +1289,25 @@ class MainActivity : ComponentActivity() {
 
         toast(getString(R.string.pkg_scanning))
         Thread {
+            // 有提权就精确验证；没有就退回「疑似游戏应用」列表。
+            // 两者都返回东西 —— 无 root 时列表为空是上一版的 bug。
+            val privileged = worldVM.canProbeWithPrivilege()
             val list = PackageResolver.scan(
                 context = this,
                 includeInternal = rootAvailable,
-                // Android 11+ 下 File API 看不到 Android/data，
-                // 交给 ViewModel 用提权探测，否则列表会永远是空的。
-                prober = { path -> worldVM.hasWorldsUnder(path) },
-                // 批量探测优先：一条 ls 代替几百次单点查询
-                bulkProber = { worldVM.listPackagesWithWorlds(rootAvailable) }
+                prober = if (privileged) ({ path -> worldVM.hasWorldsUnder(path) }) else null,
+                bulkProber = if (privileged) ({ worldVM.listPackagesWithWorlds(rootAvailable) }) else null
             )
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 when {
                     list.isEmpty() -> showAppPickerEmpty()
-                    list.size == 1 -> {
-                        // 只有一个候选就别让用户多点一次
+                    // 只有一个「已确认」的候选时才自动进入。
+                    // 若那唯一一个是「未验证」的，说明列表可能不完整
+                    // （无 root 时只能按「疑似游戏」粗筛），
+                    // 自动跳过去会让用户以为已经找到了，实际可能是错的。
+                    list.size == 1 &&
+                        list[0].worldState == PackageResolver.WorldState.VERIFIED -> {
                         applyPackage(list[0].packageName, rootAvailable, announce = true)
                     }
                     else -> showAppListDialog(list, rootAvailable)
@@ -1336,6 +1340,18 @@ class MainActivity : ComponentActivity() {
 
         // 容器：搜索框 + 排序行 + 列表
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        // 有「未验证」项时，必须在最上面说清楚为什么 ——
+        // 否则用户会以为这些应用确实有存档，点进去发现是空的。
+        if (all.any { it.worldState == PackageResolver.WorldState.UNKNOWN }) {
+            val hint = TextView(this).apply {
+                text = getString(R.string.pkg_unverified_hint)
+                textSize = 12f
+                setPadding(28, 20, 28, 12)
+                setLineSpacing(0f, 1.25f)
+            }
+            root.addView(hint)
+        }
 
         val search = EditText(this).apply {
             hint = getString(R.string.pkg_search_hint)
@@ -1412,7 +1428,7 @@ class MainActivity : ComponentActivity() {
                         textSize = 15f
                         setLineSpacing(0f, 1.15f)
                     }
-                    // 第一行：名称 + 标签；第二行：包名；第三行：时间
+                    // 第一行：名称 + 标签；第二行：包名；第三行：时间 / 验证状态
                     val tags = mutableListOf<String>()
                     if (c.isCurrent) tags.add(getString(R.string.pkg_tag_current))
                     if (c.packageName == savedDefault) tags.add(getString(R.string.pkg_tag_default))
@@ -1424,6 +1440,16 @@ class MainActivity : ComponentActivity() {
                     }
                     if (c.lastModified > 0) {
                         timeBits.add(getString(R.string.pkg_last_played, shortDate(c.lastModified)))
+                    }
+
+                    // 「未验证」必须如实说出来。
+                    // 无 root/Shizuku 时 Android 11+ 根本读不到 Android/data 的内容，
+                    // 我们只是按「疑似游戏」把它列出来，并不确定里面有没有存档。
+                    // 若把这种不确定性藏起来，用户点进去发现是空的会一头雾水。
+                    if (c.worldState == PackageResolver.WorldState.UNKNOWN) {
+                        timeBits.add(getString(R.string.pkg_state_unverified))
+                    } else if (c.worldState == PackageResolver.WorldState.VERIFIED) {
+                        timeBits.add(getString(R.string.pkg_state_verified))
                     }
 
                     tv.text = buildString {
