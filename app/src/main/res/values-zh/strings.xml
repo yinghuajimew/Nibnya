@@ -1044,4 +1044,9 @@ ID：%3$s
     <string name="pkg_diag">诊断</string>
     <string name="pkg_diag_running">正在收集诊断信息…</string>
     <string name="btn_ok">确定</string>
+    <string name="msg_no_saves_detail">在这个路径下没有找到存档：
+
+%1$s
+
+如果路径不对，请用「自定义路径」。点「诊断」可以看到为什么读不到该目录。</string>
 </resources>

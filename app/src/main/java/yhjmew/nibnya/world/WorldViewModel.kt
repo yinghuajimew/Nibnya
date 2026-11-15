@@ -383,7 +383,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      */
     fun repairWorldOwnership(path: String) {
         if (PrivilegedExec.mode() != PrivilegedExec.Mode.ROOT) return
-        if (!checkShizukuAvailable()) return
+        if (!canReadRestrictedDirs()) return
         try {
             val pkg = packageNameFromPath(path) ?: return
             val appOwner = statOwner("/data/user/0/$pkg")
@@ -410,7 +410,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
 
     /** 用提权方式读取路径的 owner:group（形如 "10460:10460"）；失败返回空串 */
     private fun statOwner(path: String): String = try {
-        if (!checkShizukuAvailable()) ""
+        if (!canReadRestrictedDirs()) ""
         else {
             val p = runShizukuCmd(
                 arrayOf("sh", "-c", "stat -c %u:%g \"$path\" 2>/dev/null")
@@ -430,7 +430,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      * File.exists() 会恒为 false，导致「存档明明在却提示找不到」。
      */
     fun dirExists(path: String): Boolean {
-        if (!checkShizukuAvailable()) return false
+        if (!canReadRestrictedDirs()) return false
         return try {
             runShizukuCmd(arrayOf("sh", "-c", "test -d \"$path\"")).waitFor() == 0
         } catch (_: Exception) {
@@ -440,7 +440,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
 
     /** 同 [dirExists]，但判断的是文件 */
     fun fileExists(path: String): Boolean {
-        if (!checkShizukuAvailable()) return false
+        if (!canReadRestrictedDirs()) return false
         return try {
             runShizukuCmd(arrayOf("sh", "-c", "test -f \"$path\"")).waitFor() == 0
         } catch (_: Exception) {
@@ -451,7 +451,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     /**
      * 用 Shizuku 真实探测「能否往这个目录写」。
      *
-     * 为什么要实测而不是只看 checkShizukuAvailable()：
+     * 为什么要实测而不是只看 canReadRestrictedDirs()：
      *  · 小米 HyperOS / MIUI 上，「USB 调试（安全设置）」没开时，
      *    Shizuku 会显示「已连接」，但 shell 命令实际被降权 ——
      *    表现就是 cp 一直失败、却看不出原因。
@@ -533,7 +533,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                     val exists = try {
                         File(root).let { it.exists() && it.canRead() }
                     } catch (_: Exception) { false }
-                    val rootUsable = exists || checkShizukuAvailable()
+                    val rootUsable = exists || canReadRestrictedDirs()
                     if (!rootUsable) continue
 
                     val names = listWorldFolders(root)
@@ -591,48 +591,87 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     }
 
     /**
-     * 只读探测专用：执行一条 shell 命令并取回 stdout。
+     * 「现在到底有没有一条能读受限目录的通道」——
+     * **全应用只准用这一个判断**。
      *
-     * 与 [runShizukuCmd] 的区别：那里按**当前模式**走（ROOT 就只用 su），
-     * 这里两条通道都试 —— 因为「读目录列表」是纯只读操作，
-     * 只要有一条路能走通就该走通。
+     * 为什么必须统一
+     * --------------
+     * 以前各地各写一套：
+     *   · checkShizukuAvailable() 按**当前模式**判断
+     *     （模式=ROOT 时 su 一失败就返回 false，哪怕 Shizuku 好好的）
+     *   · canProbeWithPrivilege() 又单独看 Shizuku
+     * 结果同一个问题有两个相反答案：
+     *   "按应用选择"认为能读 → 列出应用；
+     *   真正去扫存档时却认为不能读 → 返回空。
      *
-     * 实际踩到的问题：用户模式是 ROOT 但 su 失败，
-     * 而 Shizuku 明明可用（设置页也显示"已检测到 Shizuku"）。
-     * 按模式走会直接放弃，导致「按应用选择」永远是空的。
+     * 这个函数把三条通道都探一遍，任一可用即为 true，并缓存结果。
+     */
+    @Volatile
+    private var privilegeProbeCache: Boolean? = null
+
+    fun canReadRestrictedDirs(forceRefresh: Boolean = false): Boolean {
+        if (!forceRefresh) privilegeProbeCache?.let { return it }
+        val ok = canProbeWithPrivilege()
+        privilegeProbeCache = ok
+        return ok
+    }
+
+    /**
+     * 执行一条**只读**探测命令，返回 stdout；三条通道都拿不到东西才返回 null。
      *
-     * @return stdout（失败返回 null）
+     * ⚠️ 只有拿到非空输出才算成功。
+     *
+     * 之前写成「命令跑完就 return out」，即使 out 是空字符串。
+     * 实际后果：Shizuku 进程能启动，但 shell 用户被 SELinux 挡住读
+     * Android/data，stdout 为空、退出码非 0 —— 于是第 ① 条"成功"
+     * 返回了空串，后两条根本不会执行，上层看到的就是"没有存档"，
+     * 用户看到的是"未找到保存内容"。
+     *
+     * 现在：空输出 = 这条通道没给出答案，继续试下一条。
      */
     fun execProbeReadOnly(shell: String): String? {
-        // ① 当前模式能用就用（最省事）
+        // ① 当前模式（最省事，用户主动选的）
         try {
             if (checkShizukuAvailable()) {
-                val p = runShizukuCmd(arrayOf("sh", "-c", shell))
-                val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
-                p.waitFor()
-                return out
+                readAll(runShizukuCmd(arrayOf("sh", "-c", shell)))
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { return it }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLogger.warn("Probe", "通道 mode 失败: ${e.message}")
+        }
 
         // ② 强制走 Shizuku（无视当前模式）
         try {
-            val p = PrivilegedExec.execShizukuForced(shell)
-            if (p != null) {
-                val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
-                val code = p.waitFor()
-                if (code == 0 || out.isNotEmpty()) return out
+            PrivilegedExec.execShizukuForced(shell)?.let { p ->
+                readAll(p)?.takeIf { it.isNotBlank() }?.let { return it }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLogger.warn("Probe", "通道 shizuku 失败: ${e.message}")
+        }
 
         // ③ 最后试 su
         try {
-            val p = Runtime.getRuntime().exec(arrayOf("su", "-c", shell))
-            val out = BufferedReader(InputStreamReader(p.inputStream)).readText()
-            p.waitFor()
-            return out
-        } catch (_: Exception) {}
+            readAll(Runtime.getRuntime().exec(arrayOf("su", "-c", shell)))
+                ?.takeIf { it.isNotBlank() }
+                ?.let { return it }
+        } catch (e: Exception) {
+            AppLogger.warn("Probe", "通道 su 失败: ${e.message}")
+        }
 
         return null
+    }
+
+    /** 读完 stdout 并等进程结束；失败返回 null */
+    private fun readAll(p: Process): String? {
+        return try {
+            val out = BufferedReader(InputStreamReader(p.inputStream)).use { it.readText() }
+            p.waitFor()
+            out
+        } catch (_: Exception) {
+            try { p.destroy() } catch (_: Exception) {}
+            null
+        }
     }
 
     /**
@@ -642,6 +681,10 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      * 此时「按应用选择」会退回「疑似游戏应用」列表（见 PackageResolver.scan）。
      */
     fun canProbeWithPrivilege(): Boolean {
+        return canProbeWithPrivilegeInner().also { privilegeProbeCache = it }
+    }
+
+    private fun canProbeWithPrivilegeInner(): Boolean {
         // ① 先看当前模式是否已经能用（最省事，也是用户主动选的）
         if (checkShizukuAvailable()) return true
 
@@ -744,7 +787,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 dir.listFiles()?.forEach { if (it.isDirectory) out.add(it.name) }
             }
         } catch (_: Exception) {}
-        if (out.isEmpty() && checkShizukuAvailable()) {
+        if (out.isEmpty() && canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "ls \"$root\""))
                 val r = BufferedReader(InputStreamReader(p.inputStream))
@@ -763,7 +806,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val level = File(worldPath, "level.dat")
         val db = File(worldPath, "db")
         if (level.exists() && db.exists()) return true
-        if (!checkShizukuAvailable()) return false
+        if (!canReadRestrictedDirs()) return false
         return try {
             val c1 = runShizukuCmd(arrayOf("sh", "-c", "ls \"${level.absolutePath}\"")).waitFor()
             val c2 = runShizukuCmd(arrayOf("sh", "-c", "ls -d \"${db.absolutePath}\"")).waitFor()
@@ -798,7 +841,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                     dir.listFiles()?.forEach { if (it.isDirectory) rawFolders.add(it.name) }
                 }
 
-                if (rawFolders.isEmpty() && checkShizukuAvailable()) {
+                if (rawFolders.isEmpty() && canReadRestrictedDirs()) {
                     try {
                         val p = runShizukuCmd(arrayOf("sh", "-c", "ls \"${_currentPath.value}\""))
                         val r = BufferedReader(InputStreamReader(p.inputStream))
@@ -818,7 +861,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                     var isValid = false
 
                     if (checkLevel.exists() && checkDb.exists()) isValid = true
-                    else if (checkShizukuAvailable()) {
+                    else if (canReadRestrictedDirs()) {
                         try {
                             val c1 = runShizukuCmd(arrayOf("sh", "-c", "ls \"${checkLevel.absolutePath}\"")).waitFor()
                             val c2 = runShizukuCmd(arrayOf("sh", "-c", "ls -d \"${checkDb.absolutePath}\"")).waitFor()
@@ -973,7 +1016,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 if (!name.isNullOrBlank()) return name
             } catch (_: Exception) {}
         }
-        if (checkShizukuAvailable()) {
+        if (canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "cat \"$fullPath\""))
                 val name = BufferedReader(InputStreamReader(p.inputStream)).readLine()
@@ -991,7 +1034,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 return java.io.BufferedReader(java.io.InputStreamReader(java.io.FileInputStream(file))).readLine()
             } catch (_: Exception) {}
         }
-        if (checkShizukuAvailable()) {
+        if (canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "cat \"${file.absolutePath}\""))
                 val name = java.io.BufferedReader(java.io.InputStreamReader(p.inputStream)).readLine()
@@ -1168,7 +1211,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 if (destFile.exists()) destFile.delete()
 
                 var success = copyFileNative(File(src), destFile)
-                if (!success && checkShizukuAvailable()) {
+                if (!success && canReadRestrictedDirs()) {
                     val bridgeDir = File(MainActivity.BRIDGE_ROOT)
                     if (!bridgeDir.exists()) bridgeDir.mkdirs()
                     val bridgeFile = MainActivity.BRIDGE_ROOT + "level.dat"
@@ -1301,7 +1344,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 repairWorldOwnership(srcPath)
 
 
-                val canUseShizuku = checkShizukuAvailable()
+                val canUseShizuku = canReadRestrictedDirs()
                 var useNative = false
                 if (srcDirFile.exists() && srcDirFile.canRead() && srcDirFile.listFiles() != null) {
                     useNative = true
@@ -2176,7 +2219,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val src = File(resolveWorldPath(folder))
         val parent = src.parentFile
         val canNative = parent != null && canWriteDirectly(parent)
-        val canShizuku = checkShizukuAvailable()
+        val canShizuku = canReadRestrictedDirs()
 
         // ⚠️ 不能用 src.exists() 判断「档在不在」——
         //    /data/user/0/... 只有 root 能看见，File.exists() 恒为 false，
@@ -2324,7 +2367,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             }
         } catch (_: Exception) {
         }
-        if (!ok && checkShizukuAvailable()) {
+        if (!ok && canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c",
                     "mv \"${src.absolutePath}\" \"${target.absolutePath}\""))
@@ -2799,7 +2842,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         } catch (_: Exception) {}
 
         // ② 直读失败：用 Shizuku 探测（有权限就能读到，UI 层同样走 Shizuku 解码）
-        if (checkShizukuAvailable()) {
+        if (canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "test -s '${f.absolutePath}'"))
                 if (p.waitFor() == 0) return f.absolutePath
@@ -2814,7 +2857,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             if (lf.exists() && lf.canRead()) return lf.lastModified()
         } catch (_: Exception) {
         }
-        if (checkShizukuAvailable()) {
+        if (canReadRestrictedDirs()) {
             try {
                 val p = runShizukuCmd(arrayOf("sh", "-c", "stat -c %Y \"${lf.absolutePath}\" 2>/dev/null"))
                 val out = BufferedReader(InputStreamReader(p.inputStream)).readLine()?.trim()
@@ -3030,7 +3073,7 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val dir = File(worldPath)
         val exists = if (dir.exists()) true else {
             // 走 Shizuku 的目录，File 看不见，但命令能访问
-            if (!checkShizukuAvailable()) false else try {
+            if (!canReadRestrictedDirs()) false else try {
                 runShizukuCmd(arrayOf("sh", "-c", "ls -d \"$worldPath\"")).waitFor() == 0
             } catch (_: Exception) { false }
         }

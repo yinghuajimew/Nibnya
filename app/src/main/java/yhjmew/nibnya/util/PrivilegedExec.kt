@@ -131,6 +131,22 @@ object PrivilegedExec {
         }
     }
 
+    /**
+     * 降级前的一点点保护：Shizuku 真的可用才降级。
+     * 缓存 3 秒，避免每条命令都做一次 binder ping。
+     */
+    private var shizukuOkAt = 0L
+    private var shizukuOk = false
+
+    private fun canFallbackToShizuku(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - shizukuOkAt < 3000L) return shizukuOk
+        val ok = detectShizuku()
+        shizukuOkAt = now
+        shizukuOk = ok
+        return ok
+    }
+
     /** 真实探测 Shizuku 是否可用（连上且已授权） */
     fun detectShizuku(): Boolean {
         return try {
@@ -431,11 +447,37 @@ object PrivilegedExec {
             throw SecurityException("refused command ($reason): $cmd")
         }
 
-        return when (currentMode) {
-            Mode.ROOT -> execRoot(context, cmd)
+        val primary: Process? = when (currentMode) {
+            // ROOT 分支：su 可能「装了但用不了」（授权没给、模板写错）。
+            // 起进程就失败时，悄悄降级到 Shizuku —— 否则整条链路瘫痪。
+            // 实际故障：设置页显示"已检测到 Shizuku"，但模式是 ROOT，
+            // 所有命令都走 su 并失败，「按应用选择」永远是空的。
+            Mode.ROOT -> try {
+                execRoot(context, cmd)
+            } catch (e: Exception) {
+                if (canFallbackToShizuku()) {
+                    AppLogger.warn("PrivilegedExec",
+                        "su 启动失败，降级到 Shizuku: ${e.message}")
+                    execShizuku(cmd)
+                } else throw e
+            }
             Mode.SHIZUKU -> execShizuku(cmd)
             Mode.NORMAL -> null
         }
+
+        /*
+         * ROOT 模式下 su 可能"装了但用不了"（su 二进制在、授权没给、
+         * 或模板写错）。这时不要立刻失败 —— 如果 Shizuku 好用，就降级过去。
+         *
+         * 实际故障：设置页显示"已检测到 Shizuku"，但模式是 ROOT，
+         * 于是所有命令都走 su 并失败，整条链路（扫描/读取）全部瘫痪。
+         *
+         * 注意：只在 **ROOT 分支** 降级。写操作若在 root 下失败后
+         * 偷偷用 Shizuku 重试，可能造成"部分以 root、部分以 shell 完成"的
+         * 混合状态，比直接失败更危险。所以仅当 su 进程根本起不来
+         * （异常）时才降级，进程已启动但退出码非 0 的情况交给调用方处理。
+         */
+        return primary
     }
 
     /**

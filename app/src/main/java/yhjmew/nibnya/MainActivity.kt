@@ -1615,7 +1615,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showWorldSelectorDialog(list: List<WorldItem>) {
-        if (list.isEmpty()) { toast(getString(R.string.toast_no_saves_found)); return }
+        if (list.isEmpty()) {
+            // 原来只弹一个一闪而过的 toast，用户和我们都拿不到线索。
+            // 改成可交互的对话框：把当前路径显示出来，并给「诊断」入口。
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.toast_no_saves_found))
+                .setMessage(
+                    getString(R.string.msg_no_saves_detail, worldVM.currentPath.value)
+                )
+                .setNeutralButton(getString(R.string.pkg_diag)) { _, _ -> showPackageDiag() }
+                .setPositiveButton(getString(R.string.path_custom)) { _, _ -> showCustomPathDialog() }
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show()
+            return
+        }
         val trashCount = TrashStore.count(this)
         showTabbedListDialog(
             title = getString(R.string.select_world_count, list.size),

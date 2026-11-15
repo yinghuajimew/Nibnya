@@ -1041,4 +1041,9 @@ If the game uses a non-standard location, use "Custom path" instead.</string>
     <string name="pkg_diag">Diagnostics</string>
     <string name="pkg_diag_running">Collecting diagnostics…</string>
     <string name="btn_ok">OK</string>
+    <string name="msg_no_saves_detail">No saves were found under:
+
+%1$s
+
+If this path is wrong, use "Custom path". Tap Diagnostics to see why the folder could not be read.</string>
 </resources>
