@@ -300,7 +300,10 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
     // 路径管理
     // ============================================
     fun switchPath(newPath: String) {
-        _currentPath.value = newPath
+        // 所有路径变更都从这里走 —— 校正必须在这层做，
+        // 只在校正 restorePath 一个入口是不够的：之后任何一次
+        // switchPath(内部路径) 都会把坏路径重新塞回来。
+        _currentPath.value = normalizePathForAccess(newPath)
         // 用户主动换了根目录：之前那条存档的来源记录已经失效，
         // 留着会让下一次保存往旧位置写。
         clearCurrentWorldBase()
@@ -820,6 +823,9 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val sb = StringBuilder()
         val cur = _currentPath.value
         sb.append("运行模式: ").append(PrivilegedExec.mode()).append('\n')
+        sb.append("detectRoot: ").append(
+            appContext?.let { PrivilegedExec.detectRoot(it) } ?: "?"
+        ).append('\n')
         sb.append("checkShizukuAvailable: ").append(checkShizukuAvailable()).append('\n')
         sb.append("canReadRestrictedDirs: ").append(canReadRestrictedDirs()).append('\n')
         sb.append("当前路径: ").append(cur).append('\n')
@@ -847,6 +853,23 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
         val set = listPackagesWithWorlds(false)
         sb.append(if (set == null) "null" else "${set.size} 个: $set").append('\n')
         return sb.toString()
+    }
+
+    /**
+     * 给一个路径，找出「同一包名、但能读」的等价根目录。
+     *
+     * 目前只覆盖一种情况：/data/user/0/<pkg>/games/com.mojang/minecraftWorlds
+     * 换成 /storage/emulated/0/Android/data/<pkg>/files/games/com.mojang/minecraftWorlds。
+     * 其它形态返回 null（不做猜测）。
+     */
+    private fun fallbackExternalRoot(path: String): String? {
+        val marker = "/data/user/0/"
+        if (!path.startsWith(marker)) return null
+        val rest = path.removePrefix(marker)
+        val pkg = rest.substringBefore('/')
+        if (pkg.isBlank()) return null
+        if (!rest.contains("/games/com.mojang/minecraftWorlds")) return null
+        return PackageResolver.externalBase(pkg)
     }
 
     /** 列出一个根目录下的子文件夹名（优先 File API，失败退回 Shizuku） */
@@ -892,7 +915,13 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
             _isLoading.value = true
             _loadingMessage.value = getString(R.string.status_scanning)
             try {
-                val dir = File(_currentPath.value)
+                // 防御性：即使上游写进了当前模式读不了的路径，这里也拉回来
+                val rootPath = normalizePathForAccess(_currentPath.value)
+                if (rootPath != _currentPath.value) {
+                    AppLogger.warn("Path", "扫描前纠正路径: ${_currentPath.value} -> $rootPath")
+                    _currentPath.value = rootPath
+                }
+                val dir = File(rootPath)
                 val rawFolders = mutableListOf<String>()
 
                 // === 新增：检查当前路径本身是否就是一个世界文件夹 ===
@@ -913,36 +942,74 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
                 }
 
                 if (rawFolders.isEmpty() && canReadRestrictedDirs()) {
-                    try {
-                        val p = runShizukuCmd(arrayOf("sh", "-c", "ls \"${_currentPath.value}\""))
-                        val r = BufferedReader(InputStreamReader(p.inputStream))
-                        var line: String?
-                        while (r.readLine().also { line = it } != null) {
-                            line?.trim()?.let { if (it.isNotEmpty()) rawFolders.add(it) }
+                    execProbeReadOnly("ls \"$rootPath\" 2>/dev/null")
+                        ?.lines()
+                        ?.forEach { line ->
+                            line.trim().takeIf { it.isNotEmpty() }?.let { rawFolders.add(it) }
                         }
-                        p.waitFor()
-                    } catch (_: Exception) {}
                 }
 
                 val result = mutableListOf<WorldItem>()
                 for (name in rawFolders) {
-                    val fullPath = _currentPath.value + name
+                    val fullPath = rootPath + name
                     val checkLevel = File(fullPath, "level.dat")
                     val checkDb = File(fullPath, "db")
                     var isValid = false
 
-                    if (checkLevel.exists() && checkDb.exists()) isValid = true
-                    else if (canReadRestrictedDirs()) {
-                        try {
-                            val c1 = runShizukuCmd(arrayOf("sh", "-c", "ls \"${checkLevel.absolutePath}\"")).waitFor()
-                            val c2 = runShizukuCmd(arrayOf("sh", "-c", "ls -d \"${checkDb.absolutePath}\"")).waitFor()
-                            if (c1 == 0 && c2 == 0) isValid = true
-                        } catch (_: Exception) {}
+                    if (checkLevel.exists() && checkDb.exists()) {
+                        isValid = true
+                    } else if (canReadRestrictedDirs()) {
+                        // 一次调用确认两者，且走三条通道而非只按模式
+                        val t2 = execProbeReadOnly(
+                            "ls \"${checkLevel.absolutePath}\" 2>/dev/null >/dev/null && " +
+                            "ls -d \"${checkDb.absolutePath}\" 2>/dev/null >/dev/null && echo YES"
+                        )
+                        if (t2?.contains("YES") == true) isValid = true
                     }
 
                     if (isValid) {
                         val realName = getWorldRealName(context, name) ?: "Unknown"
                         result.add(WorldItem(name, realName, levelDatTime(File(fullPath)), worldIconPath(File(fullPath))))
+                    }
+                }
+
+                /*
+                 * 最后一道保险：当前路径一个存档都没找到时，
+                 * 再试一次同包名的外部路径。
+                 *
+                 * 用户已经撞过太多次「路径看着没问题、就是扫不出东西」。
+                 * 与其让他自己去菜单里一个个试，不如这里自动兜一次 ——
+                 * 外部路径有货就直接切过去，并把结果给他。
+                 *
+                 * 只在当前路径是 Android/data 形态时兜底，
+                 * 避免用户自定义/SAF 路径被意外改掉。
+                 */
+                if (result.isEmpty() && canReadRestrictedDirs()) {
+                    val fallback = fallbackExternalRoot(rootPath)
+                    if (fallback != null && fallback != rootPath) {
+                        val names2 = listWorldFolders(fallback)
+                        val result2 = mutableListOf<WorldItem>()
+                        for (name in names2) {
+                            val full = fallback + name
+                            val t2 = execProbeReadOnly(
+                                "ls \"${File(full, "level.dat").absolutePath}\" 2>/dev/null >/dev/null && " +
+                                "ls -d \"${File(full, "db").absolutePath}\" 2>/dev/null >/dev/null && echo YES"
+                            )
+                            if (t2?.contains("YES") == true) {
+                                val realName = getWorldRealName(context, name) ?: "Unknown"
+                                result2.add(WorldItem(name, realName,
+                                    levelDatTime(File(full)), worldIconPath(File(full))))
+                            }
+                        }
+                        if (result2.isNotEmpty()) {
+                            AppLogger.info("Path", "当前路径为空，自动改用: $fallback")
+                            _currentPath.value = fallback
+                            _pathCorrected.value = fallback
+                            result2.sortByDescending { it.lastModified }
+                            _worldList.value = result2
+                            _scanResultChannel.trySend(ScanResult(result2))
+                            return@launch
+                        }
                     }
                 }
 

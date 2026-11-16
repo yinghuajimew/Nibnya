@@ -411,6 +411,12 @@ class MainActivity : ComponentActivity() {
         // issue #6：恢复上次使用的路径（避免重启后回退到需 Shizuku 的 Android/data）
         prefs!!.getString("last_path", null)?.let { saved ->
             worldVM.restorePath(saved)
+            // 校正过就回写，否则下次启动又会从 prefs 里读出那条坏路径，
+            // 每次都校正一遍 —— 看起来像"改了又变回去"。
+            val now = worldVM.currentPath.value
+            if (now != saved && !saved.startsWith("content://")) {
+                prefs!!.edit().putString("last_path", now).apply()
+            }
             // 若是 SAF 路径，同步恢复 tree uri 状态
             if (saved.startsWith("content://")) {
                 try {
@@ -1266,6 +1272,14 @@ class MainActivity : ComponentActivity() {
                     iCustom -> showCustomPathDialog()
                     iSaf -> safPathLauncher.launch(null)
                     iInternal -> {
+                        // ⚠️ 必须实测 su 能否真的以 uid=0 执行。
+                        // 「模式标成 ROOT」不等于「有 root」：日志里出现过
+                        // resolved=ROOT 但 `su: No such file or directory` 的情况，
+                        // 一旦在这种状态下切到内部路径，扫描必然 Permission denied，
+                        // 而且会把全局模式污染成 ROOT，连 Shizuku 也一起避开。
+                        if (!PrivilegedExec.detectRoot(this)) {
+                            toast(getString(R.string.toast_no_root_for_internal))
+                        } else {
                         prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
                         worldVM.safTreeUri = null
                         prefs?.edit()?.remove("saf_tree_uri")?.apply()
@@ -1275,6 +1289,7 @@ class MainActivity : ComponentActivity() {
                         worldVM.setUseShizuku(true)
                         applyPath(PATH_INTERNAL)
                         showWorldSelector()
+                        }
                     }
                     iByApp -> showAppPicker(rootAvailable)
                 }
