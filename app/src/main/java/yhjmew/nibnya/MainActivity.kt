@@ -1216,35 +1216,33 @@ class MainActivity : ComponentActivity() {
         // 所以按实测结果决定是否展示这一项，而不是按用户选的模式。
         val rootAvailable = PrivilegedExec.detectRoot(this)
 
-        // 「显示所有」放在最上面：一次性看到三条路径的全部存档，
-        // 不用在菜单里来回切。顺序即优先级，也符合「先给全局视角」的直觉。
-        val labels = mutableListOf(
-            getString(R.string.path_all),
-            getString(R.string.path_standard),
-            getString(R.string.path_legacy),
-            getString(R.string.path_custom),
-            getString(R.string.path_saf)
-        )
-        if (rootAvailable) labels.add(getString(R.string.path_internal))
-        // 「按应用选择」放最后：它是「先定包名、再定位存档」这条链路的起点，
-        // 但不该抢在前面 —— 多数人还是直接用默认路径。
-        labels.add(getString(R.string.path_by_app))
-
-        // 因为「显示所有」占了第 0 位，下面所有索引整体后移一位。
-        // 用变量算出来，避免以后再加项时又要手工数一遍。
-        val iAll = 0
-        val iStandard = 1
-        val iLegacy = 2
-        val iCustom = 3
-        val iSaf = 4
-        val iInternal = 5
-        // 内部存储是否出现取决于 root，所以「按应用」的位置是浮动的
-        val iByApp = labels.size - 1
+        /*
+         * 索引必须跟着 labels 实际内容算，不能写死。
+         *
+         * 踩过的坑：「软件内部」只在有 root 时才 add，但 iInternal 被写成常量 5。
+         * 无 root 时 labels.size == 6（显示所有/标准/旧版/自定义/SAF/按应用），
+         * 于是 iInternal == iByApp == 5 —— 点「按应用选择」命中 iInternal 分支，
+         * 只弹一个「这个目录需要真正的 root」，看起来像功能没了。
+         *
+         * 现在改成在构建 labels 的同时记录每个动作的下标。
+         */
+        val labels = mutableListOf<String>()
+        val idxAll = labels.size.also { labels.add(getString(R.string.path_all)) }
+        val idxStandard = labels.size.also { labels.add(getString(R.string.path_standard)) }
+        val idxLegacy = labels.size.also { labels.add(getString(R.string.path_legacy)) }
+        val idxCustom = labels.size.also { labels.add(getString(R.string.path_custom)) }
+        val idxSaf = labels.size.also { labels.add(getString(R.string.path_saf)) }
+        val idxInternal = if (rootAvailable) {
+            labels.size.also { labels.add(getString(R.string.path_internal)) }
+        } else {
+            -1                      // 不会命中任何 w
+        }
+        val idxByApp = labels.size.also { labels.add(getString(R.string.path_by_app)) }
 
         AlertDialog.Builder(this).setTitle(getString(R.string.dialog_path_title))
             .setItems(labels.toTypedArray()) { _, w ->
                 when (w) {
-                    iAll -> {
+                    idxAll -> {
                         // 三条固定路径合并。内部存储只有 root 进得去，
                         // 所以按实测结果决定要不要一并扫。
                         worldVM.safTreeUri = null
@@ -1255,23 +1253,23 @@ class MainActivity : ComponentActivity() {
                         pendingWorldSelector = true
                         worldVM.scanAllWorlds(this, rootAvailable)
                     }
-                    iStandard -> {
+                    idxStandard -> {
                         prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
                         worldVM.safTreeUri = null
                         prefs?.edit()?.remove("saf_tree_uri")?.apply()
                         applyPath(PATH_STANDARD)
                         showWorldSelector()
                     }
-                    iLegacy -> {
+                    idxLegacy -> {
                         prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
                         worldVM.safTreeUri = null
                         prefs?.edit()?.remove("saf_tree_uri")?.apply()
                         applyPath(PATH_LEGACY)
                         showWorldSelector()
                     }
-                    iCustom -> showCustomPathDialog()
-                    iSaf -> safPathLauncher.launch(null)
-                    iInternal -> {
+                    idxCustom -> showCustomPathDialog()
+                    idxSaf -> safPathLauncher.launch(null)
+                    idxInternal -> {
                         // ⚠️ 必须实测 su 能否真的以 uid=0 执行。
                         // 「模式标成 ROOT」不等于「有 root」：日志里出现过
                         // resolved=ROOT 但 `su: No such file or directory` 的情况，
@@ -1280,18 +1278,18 @@ class MainActivity : ComponentActivity() {
                         if (!PrivilegedExec.detectRoot(this)) {
                             toast(getString(R.string.toast_no_root_for_internal))
                         } else {
-                        prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
-                        worldVM.safTreeUri = null
-                        prefs?.edit()?.remove("saf_tree_uri")?.apply()
-                        // 软件内部只能用 root 读写；顺手把运行模式切到 ROOT，
-                        // 否则保存时又会去找 Shizuku，白白失败一次。
-                        PrivilegedExec.setMode(PrivilegedExec.Mode.ROOT)
-                        worldVM.setUseShizuku(true)
-                        applyPath(PATH_INTERNAL)
-                        showWorldSelector()
+                            prefs?.edit()?.putBoolean("path_all_mode", false)?.apply()
+                            worldVM.safTreeUri = null
+                            prefs?.edit()?.remove("saf_tree_uri")?.apply()
+                            // 软件内部只能用 root 读写；顺手把运行模式切到 ROOT，
+                            // 否则保存时又会去找 Shizuku，白白失败一次。
+                            PrivilegedExec.setMode(PrivilegedExec.Mode.ROOT)
+                            worldVM.setUseShizuku(true)
+                            applyPath(PATH_INTERNAL)
+                            showWorldSelector()
                         }
                     }
-                    iByApp -> showAppPicker(rootAvailable)
+                    idxByApp -> showAppPicker(rootAvailable)
                 }
             }.setNegativeButton(getString(R.string.btn_cancel), null).show()
     }
