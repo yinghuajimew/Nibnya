@@ -1049,4 +1049,6 @@ ID：%3$s
 %1$s
 
 如果路径不对，请用「自定义路径」。点「诊断」可以看到为什么读不到该目录。</string>
+    <string name="toast_path_auto_corrected">该目录需要 root 才能读，已自动改用外部路径：
+%1$s</string>
 </resources>

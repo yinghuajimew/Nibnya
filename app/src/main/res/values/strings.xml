@@ -1046,4 +1046,6 @@ If the game uses a non-standard location, use "Custom path" instead.</string>
 %1$s
 
 If this path is wrong, use "Custom path". Tap Diagnostics to see why the folder could not be read.</string>
+    <string name="toast_path_auto_corrected">That folder needs root, so the external path was used instead:
+%1$s</string>
 </resources>

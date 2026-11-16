@@ -398,6 +398,16 @@ class MainActivity : ComponentActivity() {
         // 当前选的包名。必须在恢复路径之前调用。
         PackagePrefs.attach(this)
 
+        // 路径被自动校正时提示一句（例如上次停在只有 root 能读的内部目录）
+        lifecycleScope.launch {
+            worldVM.pathCorrected.collect { corrected ->
+                if (corrected != null) {
+                    toast(getString(R.string.toast_path_auto_corrected, corrected))
+                    worldVM.consumePathCorrected()
+                }
+            }
+        }
+
         // issue #6：恢复上次使用的路径（避免重启后回退到需 Shizuku 的 Android/data）
         prefs!!.getString("last_path", null)?.let { saved ->
             worldVM.restorePath(saved)

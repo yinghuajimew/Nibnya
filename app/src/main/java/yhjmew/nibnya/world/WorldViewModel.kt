@@ -127,6 +127,14 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      */
     private val _currentPath = MutableStateFlow(MainActivity.PATH_STANDARD)
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
+
+    /**
+     * 启动时路径被自动校正过（原路径在当前模式下读不了）时，这里带着新路径。
+     * UI 观察它并提示用户一句，别默默换掉。
+     */
+    private val _pathCorrected = MutableStateFlow<String?>(null)
+    val pathCorrected: StateFlow<String?> = _pathCorrected.asStateFlow()
+    fun consumePathCorrected() { _pathCorrected.value = null }
     var pendingSidebarTask: Runnable? = null
 
     private var useMultiThread = true
@@ -303,14 +311,66 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      */
     fun restorePath(savedPath: String?) {
         if (!savedPath.isNullOrBlank()) {
-            _currentPath.value = savedPath
-            AppLogger.info("Path", R.string.log_path_restored, savedPath)
+            // 上次可能停在「软件内部」路径（/data/user/0/...），
+            // 但那个目录只有 root 能进。无 root 时换成本包名的外部路径，
+            // 否则会一直"恢复到一个读不了的路径"，扫描永远为空。
+            val usable = normalizePathForAccess(savedPath)
+            _currentPath.value = usable
+            AppLogger.info("Path", R.string.log_path_restored, usable)
+            // 被换掉了就要让用户知道，否则他会以为路径没变、只是"又坏了"
+            if (usable != savedPath) _pathCorrected.value = usable
         }
     }
 
     // ============================================
     // 路径可写性判断（issue #6）
     // ============================================
+
+    /**
+     * 把「当前模式下根本读不了」的路径，换成本包名的等价格式。
+     *
+     * 为什么需要
+     * ----------
+     * /data/user/0/<pkg>/games/com.mojang/minecraftWorlds 是应用的**私有目录**，
+     * 只有 uid=0 能进。Shizuku 以 shell（uid 2000）身份运行，永远读不了 ——
+     * 这不是授权问题，是内核 DAC 直接挡下的，任何权限声明都绕不过。
+     *
+     * 实际故障：用户早先选过「软件内部」，那个路径被存进 last_path，
+     * 之后每次启动都恢复它。于是：
+     *   · 「按应用选择」能列出应用（走 Android/data，Shizuku 读得了）
+     *   · 但扫描存档时用内部路径 → 永远为空 → "未找到保存内容"
+     * 而界面上还显示"ROOT 不可用"，用户根本猜不到是路径本身选错了。
+     *
+     * 对应的外部路径是同一份数据的另一个入口：
+     *   /storage/emulated/0/Android/data/<pkg>/files/games/com.mojang/minecraftWorlds
+     * 两者的 games/com.mojang/minecraftWorlds 之下内容相同，换过去即可用。
+     *
+     * @return 校正后的路径；不需要校正时返回原值
+     */
+    fun normalizePathForAccess(path: String): String {
+        // 只有「没有 root」时才需要校正 —— 有 root 时内部路径本来就能读
+        if (PrivilegedExec.mode() == PrivilegedExec.Mode.ROOT &&
+            PrivilegedExec.detectRoot(appContext ?: return path)
+        ) {
+            return path
+        }
+
+        val marker = "/data/user/0/"
+        if (!path.startsWith(marker)) return path
+
+        val rest = path.removePrefix(marker)
+        val pkg = rest.substringBefore('/')
+        if (pkg.isBlank()) return path
+
+        // 只认「存档根目录」这一种形态，其它 /data 路径不做猜测
+        if (!rest.contains("/games/com.mojang/minecraftWorlds")) return path
+
+        val ext = PackageResolver.externalBase(pkg)
+        if (ext != path) {
+            AppLogger.info("Path", "内部路径在无 root 时不可读，改用外部路径: $ext")
+        }
+        return ext
+    }
 
     /**
      * 该路径是否走 Android/data 受限目录（Android 11+ 需要 Shizuku 或 MANAGE_EXTERNAL_STORAGE）
@@ -758,21 +818,32 @@ class WorldViewModel : ViewModel(), DraftAutoSaver.Provider {
      */
     fun diagnosePackageScan(): String {
         val sb = StringBuilder()
+        val cur = _currentPath.value
         sb.append("运行模式: ").append(PrivilegedExec.mode()).append('\n')
         sb.append("checkShizukuAvailable: ").append(checkShizukuAvailable()).append('\n')
-        sb.append("canProbeWithPrivilege: ").append(canProbeWithPrivilege()).append('\n')
+        sb.append("canReadRestrictedDirs: ").append(canReadRestrictedDirs()).append('\n')
+        sb.append("当前路径: ").append(cur).append('\n')
 
-        val cmd = "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>&1"
-        sb.append('\n').append("--- ls 原始输出 ---").append('\n')
-        val out = execProbeReadOnly(cmd)
-        if (out == null) {
-            sb.append("(null = su 与 Shizuku 都没跑起来)").append('\n')
-        } else {
-            sb.append(out.take(1500)).append('\n')
-            if (out.isBlank()) sb.append("(空 = 命令跑了但没匹配到任何目录)").append('\n')
-        }
+        // 最关键的一条：当前路径在这个模式下到底读不读得到
+        sb.append("当前路径可读: ").append(
+            when {
+                !cur.startsWith("/data/user/0/") -> "文件API或提权"
+                PrivilegedExec.mode() == PrivilegedExec.Mode.ROOT -> "需 root"
+                else -> "否 —— /data/user/0 只有 root 能进，Shizuku 也不行"
+            }
+        ).append('\n')
 
-        sb.append('\n').append("--- 解析结果 ---").append('\n')
+        sb.append('\n').append("--- 当前路径 ls ---").append('\n')
+        val outCur = execProbeReadOnly("ls \"" + cur + "\" 2>&1")
+        sb.append(if (outCur == null) "(null = 没有可用通道)" else outCur.take(800)).append('\n')
+
+        sb.append('\n').append("--- 应用枚举 ls ---").append('\n')
+        val out = execProbeReadOnly(
+            "ls -d /storage/emulated/0/Android/data/*/files/games/com.mojang/minecraftWorlds 2>&1"
+        )
+        sb.append(if (out == null) "(null = 三条通道都没跑起来)" else out.take(1000)).append('\n')
+
+        sb.append('\n').append("--- 解析出的包名 ---").append('\n')
         val set = listPackagesWithWorlds(false)
         sb.append(if (set == null) "null" else "${set.size} 个: $set").append('\n')
         return sb.toString()
