@@ -111,7 +111,7 @@
 > [!TIP]
 > 确保您**具有基础[Shizuku](https://github.com/RikkaApps/Shizuku)使用**，此应用会在启动时索要<br/>
 > 否则会**无法访问Android/data** Minecraft 文件<br/>
-> **目前支持Android 6 ~ 13**<br/>
+> **支持 Android 6.0 及以上**（Android 6+）<br/>
 > 获取所有文件权限是为了，下载目录与旧目录读写和私有目录往返
 
 ## 📄 更新日志
