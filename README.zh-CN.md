@@ -18,6 +18,7 @@
 [![Bilibili][bilibili-shield]][bilibili-link]
 [![QQ Group][qq-shield]][qq-link]
 [![Telegram][tg-shield]][tg-link]
+[![Discord][discord-shield]][discord-link]
 
 [English](./README.md) · 简体中文 · [变更日志](./CHANGELOG.zh-CN.md)
 
@@ -267,6 +268,10 @@ Nibnya 通过 **[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-
 [license-link]: https://www.gnu.org/licenses/agpl-3.0
 
 <!-- 社交链接定义 -->
+
+<!-- Discord: 官方紫 #5865F2 -->
+[discord-shield]: https://img.shields.io/badge/Discord-5865F2?style=flat-square&labelColor=black&logo=discord&logoColor=white
+[discord-link]: https://discord.gg/JpUMJYyxcE
 
 <!-- Bilibili: 少女粉 #FB7299 -->
 [bilibili-shield]: https://img.shields.io/badge/Bilibili-FB7299?style=flat-square&labelColor=black&logo=bilibili&logoColor=white
