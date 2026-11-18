@@ -109,8 +109,8 @@
 [![Watch the video](./Screenshots/Minecraft_安卓_NBT编辑器.png)](https://www.bilibili.com/video/BV1mkfnBnEKC)
 
 > [!TIP]
-> 确保您**具有基础[Shizuku](https://github.com/RikkaApps/Shizuku)使用**，此应用会在启动时索要<br/>
-> 否则会**无法访问Android/data** Minecraft 文件<br/>
+> 请确保您**已掌握 [Shizuku](https://github.com/RikkaApps/Shizuku) 的基础用法**，应用启动时会请求授权。
+> 否则将**无法访问 Android/data** 下的 Minecraft 文件<br/>
 > **支持 Android 6.0 及以上**（Android 6+）<br/>
 > 获取所有文件权限是为了，下载目录与旧目录读写和私有目录往返
 
