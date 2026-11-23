@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  开关 chip 的「开启」底色。
+
+  为什么不用 Material Chip：
+  · 本项目没有引 material 组件库，为一个按钮加依赖不划算
+  · TextView + 背景能精确控制内边距，和旁边的半径选择器高度对齐
+
+  颜色：强调色 18% 透明度填充 + 圆角。
+  在深色 / 浅色主题下都能读出来，因为底下是 app_surface。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#2E2196F3" />
+    <corners android:radius="14dp" />
+</shape>

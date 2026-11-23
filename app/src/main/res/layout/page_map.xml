@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  「地图」页 —— 只读地形预览（2026-11-02）。
+  「地图」页 —— 只读地形瓦片预览。
 
-  设计要点（按用户反馈调整）：
-    1. **不再单独选世界** —— 直接用主页当前打开的世界，
-       切到地图页自动开始加载，不需要再点一次。
-    2. **没有「生成地形」按钮** —— 进页面就渲染，换世界自动重渲染。
-    3. **范围用下拉选择**，不是点一下循环。可以选预设或自定义。
+  设计要点（2026-11-02 立，2026-11-19 瓦片化后修订）：
+    1. **不再单独选世界** —— 直接用主页当前打开的世界。
+    2. **没有「生成地形」按钮** —— 进页面就加载，换世界自动重来。
+    3. **范围 = 预加载半径** —— 不再是「图能画多大」，图没有边界。
+    4. **开关要有明确的开/关外观** —— 旧版只靠文字颜色区分，
+       在浅色主题下几乎看不出来（用户 2026-11-10 反馈过）。
+       现在用 chip：开启时带底色 + 强调色文字，关闭时透明 + 次要色。
 
   布局：
-    顶部：世界名 + 范围选择器
-    中间：MapView
-    底部：状态
+    工具条：世界名 | 网格 chip | 半径 chip
+    中间  ：MapView（左上角浮一层坐标/缩放读数）
+    底部  ：状态行
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/page_map"
@@ -28,7 +30,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
-        android:paddingEnd="8dp"
+        android:paddingEnd="10dp"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
         android:background="@color/app_surface">
@@ -44,44 +46,42 @@
             android:maxLines="1"
             android:ellipsize="middle" />
 
-        <!-- 区块网格开关：点击切换，选中时用强调色 -->
+        <!--
+          开关 chip。开启态由 MapPageController 用 background + textColor 切换，
+          这里给的是关闭态默认值，避免首帧闪一下高亮。
+        -->
         <TextView
             android:id="@+id/tv_map_grid"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
-            android:text="@string/map_grid_on"
-            android:textColor="@color/c_link_lang"
+            android:text="@string/map_grid_off"
+            android:textColor="@color/app_text_secondary"
             android:textSize="13sp"
             android:clickable="true"
             android:focusable="true"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- 范围选择：点击弹出下拉，而不是循环 -->
+        <!-- 范围选择：点一下弹列表，不是循环切换 -->
         <TextView
             android:id="@+id/tv_map_radius"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:text="@string/map_radius_auto"
-            android:textColor="@color/c_link_lang"
+            android:textColor="@color/app_text_primary"
             android:textSize="13sp"
             android:clickable="true"
             android:focusable="true"
             android:background="?android:attr/selectableItemBackground" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=" ▾"
-            android:textColor="@color/c_link_lang"
-            android:textSize="11sp" />
 
     </LinearLayout>
 
@@ -90,12 +90,42 @@
         android:layout_height="1dp"
         android:background="@color/app_divider" />
 
-    <!-- ── 地形图 ── -->
-    <yhjmew.nibnya.map.MapView
-        android:id="@+id/map_view"
+    <!--
+      ── 地形图 ──
+      用 FrameLayout 是为了叠读数；MapView 吃满剩余高度。
+    -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <yhjmew.nibnya.map.MapView
+            android:id="@+id/map_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!--
+          坐标 / 缩放读数。
+          ⚠️ 不能设 clickable，否则会把拖动事件从 MapView 抢走。
+        -->
+        <TextView
+            android:id="@+id/tv_map_readout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="10dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:background="#B3141C26"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:clickable="false"
+            android:focusable="false" />
+
+    </FrameLayout>
 
     <!-- ── 状态行 ── -->
     <TextView

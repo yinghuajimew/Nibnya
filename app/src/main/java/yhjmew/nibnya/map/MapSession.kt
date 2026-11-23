@@ -1,14 +1,13 @@
 package yhjmew.nibnya.map
 
 import android.content.Context
-import android.graphics.Bitmap
 import yhjmew.nibnya.db.PlayerDbManager
 import yhjmew.nibnya.util.AppLogger
 import yhjmew.nibnya.world.WorldViewModel
 import java.io.File
 
 /**
- * 只读打开一个世界，渲染它的一块地形图。
+ * 只读打开一个世界，提供它的地形瓦片。
  *
  * ## 为什么还是要拷贝
  * [PlayerDbManager] 打开前会删 `LOCK` / `LOG` / `LOG.old`。
@@ -19,9 +18,10 @@ import java.io.File
  * 好处是将来要做地形编辑时，读写用的是同一个工作副本，
  * 不需要换一套 API。
  *
- * ## 范围
- * 第一版只渲染固定区块矩形（默认半径 [DEFAULT_RADIUS_CHUNKS]），
- * 不做全图扫描。理由：全图要遍历整库求包围盒，大存档会慢到不可用。
+ * ## 范围（2026-11-19 改）
+ * 以前 [render] 一次性画固定半径的一张图，超出就滑不出去。
+ * 现在改由 [createTiles] 返回一个 [SaveTiles]，**滑到哪渲染到哪**，
+ * 没有边界。[render] 保留给「导出整图」之类的场景用。
  */
 class MapSession private constructor(
     val workDir: File,
@@ -30,14 +30,9 @@ class MapSession private constructor(
     private val worldDir: File,
 ) {
     private var db: PlayerDbManager? = null
+    private var seedSource: SeedTerrainSource? = null
 
     companion object {
-        /** 默认渲染半径（区块）。8 → 128×128 方块。 */
-        const val DEFAULT_RADIUS_CHUNKS = 8
-
-        /** 单个方向的区块数上限，防止一次画太大 OOM。 */
-        const val MAX_CHUNKS_PER_SIDE = 64
-
         /**
          * 读世界出生点对应的区块坐标。
          *
@@ -69,9 +64,22 @@ class MapSession private constructor(
             // 同理挡掉明显不合理的坐标（超出世界边界几个数量级）
             if (sx !in -30_000_000..30_000_000 || sz !in -30_000_000..30_000_000) return null
             // 方块坐标 → 区块坐标（向下取整，负数不能直接整除）
-            Pair(Math.floorDiv(sx, 16), Math.floorDiv(sz, 16))
+            Pair(floorDiv(sx, 16), floorDiv(sz, 16))
         } catch (_: Throwable) {
             null
+        }
+
+        /**
+         * 向下取整除法。
+         *
+         * ⚠️ 不用 `Math.floorDiv` —— 它是 **API 24** 才有的，
+         * 而本项目 minSdk = 23。出生点坐标多半是负数，
+         * 直接用 `/` 会向零取整得到错误的区块（-113/16 = -7，而正确答案是 -8），
+         * 地图中心会偏一格区块，且只在特定存档复现。
+         */
+        fun floorDiv(a: Int, b: Int): Int {
+            val q = a / b
+            return if (a % b != 0 && (a xor b) < 0) q - 1 else q
         }
 
         /**
@@ -220,6 +228,102 @@ class MapSession private constructor(
         }
     }
 
+    /** 瓦片图层。第一次 [createTiles] 时建立，[close] 时销毁。 */
+    private var tiles: SaveTiles? = null
+
+    /**
+     * 取本会话的瓦片图层（单例）。
+     *
+     * 同一个世界只应该有一套瓦片缓存 —— 每次切页面都新建的话
+     * 20 MB 的位图缓存会反复分配/回收，明显掉帧。
+     */
+    @Synchronized
+    fun createTiles(ctx: Context): SaveTiles {
+        tiles?.let { return it }
+        val reader = ChunkReader(database().rawDb())
+        val created = SaveTiles(reader, BlockColorTable.get(ctx))
+        tiles = created
+        return created
+    }
+
+    /**
+     * 读世界种子和存档版本，建出种子地形层。
+     *
+     * 读不到种子（老存档、损坏的 level.dat）时返回 null，
+     * 调用方应当把底图留空 —— 而不是画一张随机地形骗人。
+     */
+    @Synchronized
+    fun createSeedSource(): SeedTerrainSource? {
+        seedSource?.let { return it }
+        if (!SeedTerrainSource.available) return null
+
+        val meta = readLevelMeta() ?: return null
+        val created = SeedTerrainSource(meta.seed, meta.mcLevel, 0)
+        seedSource = created
+        return created
+    }
+
+    /**
+     * 切维度：存档层和种子层要一起切，否则一个还画着主世界、
+     * 一个已经画下界，两层叠在一起完全是错位的地形。
+     */
+    @Synchronized
+    fun setDimension(dim: Int) {
+        tiles?.dimension = dim
+        seedSource?.setDimension(dim)
+    }
+
+    /** level.dat 里地图需要的两个字段。 */
+    private class LevelMeta(val seed: Long, val mcLevel: Int)
+
+    private fun readLevelMeta(): LevelMeta? = try {
+        val json = yhjmew.nibnya.nbt.BedrockParser.parse(File(worldDir, "level.dat").absolutePath)
+            ?: return null
+
+        fun primitive(key: String) = json.get(key)?.takeIf { it.isJsonObject }
+            ?.asJsonObject?.get("v")?.takeIf { it.isJsonPrimitive }
+
+        /*
+         * ⚠️ RandomSeed 是 Long，但 BedrockParser 把 t=4 解成 JSON number，
+         * 超出 2^53 时双击精度会丢。Minecraft 的世界种子是任意 64 位值，
+         * 所以这里直接用 asString 再转 Long，避免经过 double。
+         */
+        val seedEl = primitive("RandomSeed") ?: return null
+        val seed = runCatching { seedEl.asString.toLong() }.getOrNull() ?: return null
+
+        // InventoryVersion 是实际存档版本（"1.26.52"）；
+        // 老存档可能只有 lastOpenedWithVersion（int[5]），那种情况退回最新档。
+        val verEl = json.get("InventoryVersion")?.takeIf { it.isJsonObject }
+            ?.asJsonObject?.get("v")?.takeIf { it.isJsonPrimitive }
+        val version = verEl?.asString
+
+        LevelMeta(seed, SeedTerrainSource.fromVersionString(version))
+    } catch (_: Throwable) {
+        null
+    }
+
+    /** 该维度有没有任何区块数据（用于「这个维度是空的」提示）。 */
+    fun hasChunkData(dim: Int): Boolean {
+        val dbRef = database().rawDb()
+        return !ChunkIndex(dbRef).scan(dim).isEmpty
+    }
+
+    /**
+     * 地图打开时应该居中到哪。
+     *
+     * 顺序与 [render] 一致：**出生点 → 包围盒中心**。
+     * 实测存档的原点周围常常是空的，用包围盒中心也会偏，
+     * 所以出生点优先。
+     *
+     * @return 区块坐标；这个维度完全没有数据时返回 null
+     */
+    fun anchorChunk(dim: Int = 0): Pair<Int, Int>? {
+        spawnChunkOf(worldDir)?.let { return it }
+        val bounds = ChunkIndex(database().rawDb()).scan(dim)
+        if (bounds.isEmpty) return null
+        return Pair(bounds.centerCx, bounds.centerCz)
+    }
+
     /** 打开数据库。已有连接时直接返回。 */
     @Synchronized
     fun database(): PlayerDbManager {
@@ -231,71 +335,15 @@ class MapSession private constructor(
 
     @Synchronized
     fun close() {
+        // 先停瓦片线程（它会读库 / 调 JNI），再停种子线程，最后关库
+        tiles?.shutdown()
+        tiles = null
+        seedSource?.shutdown()
+        seedSource = null
         try {
             db?.close()
         } catch (_: Exception) {
         }
         db = null
-    }
-
-    /**
-     * 渲染一块地形。
-     *
-     * 中心优先用**出生点**，读不到才退回包围盒中心 ——
-     * 实测存档的原点周围常常是空的，用包围盒中心也会偏。
-     *
-     * @param radiusChunks 半径（区块）。null = 自动取存档包围盒的一半
-     *                     （上限 [MAX_CHUNKS_PER_SIDE]/2）。
-     */
-    suspend fun render(
-        ctx: Context,
-        dim: Int = 0,
-        radiusChunks: Int? = null,
-        onProgress: (Int, Int) -> Unit = { _, _ -> },
-    ): Bitmap {
-        val dbRef = database().rawDb()
-
-        // ① 出生点优先
-        val spawn = spawnChunkOf(worldDir)
-        val scanned = if (spawn == null) ChunkIndex(dbRef).scan(dim) else null
-
-        /*
-         * 诊断日志（2026-11-10 加）：用户反馈「换哪个世界地图都是空的」，
-         * 而崩溃/报错发生在区块枚举之前，需要看清到底是哪一环断了：
-         *   · level.dat 读不到 → spawn 为 null
-         *   · db 是空的 / 复制失败 → scan 的 chunkCount 为 0
-         * 这两条信息在一次失败里必须同时可见，否则只能靠猜。
-         */
-        AppLogger.info(
-            "MapDiag",
-            "world=${worldDir.absolutePath} db=${workDir.absolutePath} " +
-                "levelDatExists=${File(worldDir, "level.dat").exists()} " +
-                "spawn=$spawn scan=" +
-                (scanned?.let { "count=${it.chunkCount} x=${it.minCx}..${it.maxCx} z=${it.minCz}..${it.maxCz}" }
-                    ?: "(未触发)")
-        )
-
-        val center = spawn
-            ?: scanned?.takeUnless { it.isEmpty }?.let { Pair(it.centerCx, it.centerCz) }
-
-        if (center == null) {
-            throw IllegalStateException("这个维度没有任何区块数据")
-        }
-
-        // ② 半径
-        val r = radiusChunks?.coerceIn(0, MAX_CHUNKS_PER_SIDE / 2)
-            ?: DEFAULT_RADIUS_CHUNKS
-        val colors = BlockColorTable.get(ctx)
-        val reader = ChunkReader(dbRef)
-        val builder = TerrainMapBuilder(reader, colors)
-
-        return builder.render(
-            minCx = center.first - r,
-            minCz = center.second - r,
-            chunkCountX = r * 2 + 1,
-            chunkCountZ = r * 2 + 1,
-            dim = dim,
-            onProgress = onProgress,
-        )
     }
 }

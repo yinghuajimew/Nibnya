@@ -3,28 +3,42 @@ package yhjmew.nibnya.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * 可拖动、可缩放的地形图视图。
+ * 可拖动、可缩放的地形图视图（瓦片版）。
  *
- * 第一版刻意**不做瓦片缓存**：整张图就是一块 Bitmap，直接在 Canvas 上缩放绘制。
- * 128×128 只有 64 KB，放大到 64×64 区块也才 1 MB，没必要为此引入视口裁剪。
- * 等以后支持全图再考虑分块。
+ * ## 与旧版（单 Bitmap）的区别
+ * 旧版：`setMap(bitmap)` → 整张图画一次，`clampOffset()` 不让它滑出边界。
+ * 新版：`setTileSource(src)` → 视图自己算「视野内需要哪几块瓦片」，
+ * 缺的异步补，**没有任何边界** —— 滑到哪渲染到哪。
  *
- * 交互：
- * - 单指拖动 → 平移
- * - 双指 → 缩放（以两指中点为锚）
- * - 双击 → 在 1x 与 2x 之间切换
+ * ## 坐标模型（照 SeedCraft）
+ * 不存 offset，存 **中心方块坐标** `centerX / centerZ` + **缩放 `bpp`**
+ * （blocks per pixel，每屏幕像素覆盖多少方块）。
+ *
+ * 这样比 offset 模型好在：缩放时只要改 bpp，中心不动就自然对准；
+ * 用 offset 的话每次缩放都要反算锚点，很容易累积误差。
+ *
+ * ```
+ * 屏幕 x → 方块 x :  centerX + (px - width/2) * bpp
+ * 方块 x → 屏幕 x :  width/2 + (blockX - centerX) / bpp
+ * ```
+ *
+ * ## 缩放层级（T3）
+ * `bpp` 是连续的，但瓦片按 [SCALES] 量化，避免每个像素都生成一套图。
+ * 切换策略**不对称**，理由见 [scaleFor]。
  */
 class MapView @JvmOverloads constructor(
     context: Context,
@@ -32,42 +46,84 @@ class MapView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     companion object {
-        private const val MIN_SCALE = 0.5f
-        private const val MAX_SCALE = 24f
+        /*
+         * bpp 范围：0.2 ~ 64。
+         *   0.2 → 一个方块占 5 像素，能看清单方块
+         *   64  → 一个屏幕像素 64 方块，一屏约 2 万方块（1250 区块）
+         */
+        private const val MIN_BPP = 0.2f
+        private const val MAX_BPP = 64f
 
-        /** 方块→屏幕像素的默认倍率。1px 一个方块在手机上看太小，默认放大 3 倍。 */
-        private const val DEFAULT_SCALE = 3f
-
-        /** 1 区块 = 16 方块 = Bitmap 上的 16 像素。 */
-        private const val CHUNK_PX = 16
+        /** 默认 bpp：一屏约 500 方块（30 区块），比旧版 3px/方块差不多。 */
+        private const val DEFAULT_BPP = 1.6f
 
         /**
-         * 细网格（每区块一条）可读的最小屏幕间距。
-         * 低于这个值时线条会挤成一片白雾，反而看不清地形 —— 这时只画粗线。
+         * 采样档位（blocks per cell），相邻相差 4 倍。
+         *
+         * ## 为什么最小档是 1 而不是 4
+         * SeedCraft 的表是 `{4, 16, 64, 256}`，照抄会有一个死角：
+         * 放大到 `bpp = 0.2`（一个方块占 5 屏幕像素）时，
+         * 一个**采样点**仍然覆盖 4 个方块 = 20 屏幕像素 ——
+         * 画面是 4×4 的大色块，根本看不清单个方块。
+         *
+         * 加一档 `1` 之后，`bpp ∈ [0.2, 0.66]` 走 1 方块/采样点，
+         * 采样点占 5~1.5 像素，方块边缘清晰。
+         *
+         * ## 上限为什么是 256
+         * BedrockMap 只到 32 是因为它有 overview 图兜底；
+         * 我们缩到底没有替代图，所以要能显示 32768 方块/瓦片的稀疏数据。
          */
+        private val SCALES = intArrayOf(1, 4, 16, 64, 256)
+
+        /** 细网格可读的最小屏幕间距（px）。低于此值只画粗线。 */
         private const val MIN_MINOR_GAP_PX = 10f
 
-        /**
-         * 粗网格的间隔（区块数）。
-         *
-         * 取自 BedrockMap：它每 32 区块画一条 3px 粗线、每区块一条 1px 细线
-         * （`mapoverlayquickitem.cpp:updateGridNode`）。我们一屏通常只画
-         * 17×17 区块，32 太大，缩到 4 —— 正好 4×4 个「大格」，
-         * 数格子时不容易数花眼。
-         */
-        private const val MAJOR_CHUNKS = 4
+        /** 粗网格间隔（区块）。 */
+        private const val MAJOR_CHUNKS = 8
 
-        /** 细线在屏幕上的宽度（px）。 */
         private const val MINOR_STROKE_PX = 1f
-
-        /** 粗线在屏幕上的宽度（px）。 */
         private const val MAJOR_STROKE_PX = 2f
+
+        /** 块边缘超出视野多少像素时仍算「需要」——预取一圈，滑动时不露白。 */
+        private const val PREFETCH_MARGIN_PX = 96f
     }
 
-    private var bitmap: Bitmap? = null
+    // ── 数据源 ──
+
+    /** 主图层（存档地表）。 */
+    private var source: TileSource? = null
+
+    /**
+     * 底图层（种子地形）。
+     *
+     * T4 之前一直是 null；接口先留着，实况模式接上时只需要
+     * `setBaseSource(seedTiles)`，视图不用改。
+     */
+    private var baseSource: TileSource? = null
+
+    // ── 视口 ──
+
+    /** 屏幕中心对应的方块坐标。 */
+    private var centerX = 0.0
+    private var centerZ = 0.0
+
+    /** 每屏幕像素多少方块。 */
+    private var bpp = DEFAULT_BPP
+
+    /** 上一次算出的采样档位，用来触发重新请求。 */
+    private var activeScale = SCALES[0]
+
+    /** 上一次请求的瓦片签名，避免每帧都重建 wanted 集合。 */
+    private var wantedSigSource = ""
+    private var wantedSigBase = ""
+
+    /** 没画出来的瓦片数，>0 时显示加载提示。 */
+    private var missingTiles = 0
+    private var loadTotal = 0
+    private var loadDone = 0
 
     /** 是否显示区块网格。 */
-    var showChunkGrid: Boolean = true
+    var showChunkGrid: Boolean = false
         set(value) {
             if (field != value) {
                 field = value
@@ -75,44 +131,78 @@ class MapView @JvmOverloads constructor(
             }
         }
 
-    /** 缩放倍率（相对 Bitmap 的原始像素）。 */
-    private var scale = DEFAULT_SCALE
+    /** 视口变化回调（用于顶部坐标显示）。 */
+    var onViewportChanged: ((centerX: Int, centerZ: Int, bpp: Float) -> Unit)? = null
 
-    /** 平移量：Bitmap 左上角相对 View 左上角的偏移。 */
-    private var offsetX = 0f
-    private var offsetY = 0f
+    /**
+     * 哪些区块是真实存在的。
+     *
+     * 用它给「已探索区域」描一圈边 —— 只画线，不参与取色，
+     * 所以即使 mask 不全（比如只扫了包围盒）也不会画错颜色。
+     */
+    interface ChunkMask {
+        fun hasChunk(cx: Int, cz: Int): Boolean
+    }
 
-    private val paint = Paint().apply {
+    /** 区块边界描边用的数据源；null = 不描边。 */
+    private var chunkMask: ChunkMask? = null
+
+    private val boundaryPaint = Paint().apply {
+        color = 0xE6FF7AB8.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        isAntiAlias = false
+    }
+
+    fun setChunkMask(mask: ChunkMask?) {
+        chunkMask = mask
+        invalidate()
+    }
+
+    // ── 画笔 ──
+
+    private val mapPaint = Paint().apply {
         isFilterBitmap = false   // 像素画风格，放大不要糊
         isAntiAlias = false
     }
 
-    /**
-     * 区块网格画笔。
-     *
-     * ⚠️ 线宽按**屏幕像素**给，所以画之前要把画布缩回去
-     * （见 [drawChunkGrid]）—— 否则线宽会被 scale 放大，
-     * 放大到 8 倍时 1px 的线会变成 8px 的白带子。
-     */
     private val minorGridPaint = Paint().apply {
-        color = 0x66FFFFFF.toInt()   // 白，40% 透明
+        color = 0x66FFFFFF
         style = Paint.Style.STROKE
         strokeWidth = MINOR_STROKE_PX
         isAntiAlias = false
     }
 
-    /** 粗网格（每 [MAJOR_CHUNKS] 区块一条），用不透明的白，方便数格子。 */
     private val majorGridPaint = Paint().apply {
-        color = 0xCCFFFFFF.toInt()   // 白，80% 透明
+        color = 0xCCFFFFFF.toInt()
         style = Paint.Style.STROKE
         strokeWidth = MAJOR_STROKE_PX
         isAntiAlias = false
     }
 
     private val emptyPaint = Paint().apply {
-        color = context.getColor(android.R.color.darker_gray)
+        color = 0xFF1A1A1A.toInt()   // 未探索区域：深灰，和「有数据」区分
+        style = Paint.Style.FILL
+        isAntiAlias = false
+    }
+
+    private val textPaint = Paint().apply {
+        color = 0xCCFFFFFF.toInt()
+        textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
+
+    private val pillPaint = Paint().apply {
+        color = 0xE6141C26.toInt()
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    /** 复用的矩形，避免每帧 new。 */
+    private val dst = RectF()
+    private val srcRect = Rect()
+
+    // ── 手势 ──
 
     private val gesture by lazy {
         GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -122,17 +212,17 @@ class MapView @JvmOverloads constructor(
                 e1: MotionEvent?, e2: MotionEvent,
                 distanceX: Float, distanceY: Float,
             ): Boolean {
-                offsetX -= distanceX
-                offsetY -= distanceY
-                clampOffset()
+                // 手指往左移（distanceX>0）→ 视野往右走
+                centerX += distanceX * bpp
+                centerZ += distanceY * bpp
+                notifyViewport()
                 invalidate()
                 return true
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                // 在默认倍率和 2 倍之间切换，以双击点为中心
-                val target = if (abs(scale - DEFAULT_SCALE) < 0.01f) DEFAULT_SCALE * 2f else DEFAULT_SCALE
-                zoomAround(e.x, e.y, target / scale)
+                val target = if (abs(bpp - DEFAULT_BPP) < 0.05f) DEFAULT_BPP / 4f else DEFAULT_BPP
+                zoomAround(e.x, e.y, target / bpp)
                 invalidate()
                 return true
             }
@@ -142,217 +232,389 @@ class MapView @JvmOverloads constructor(
     private val scaleGesture by lazy {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                zoomAround(detector.focusX, detector.focusY, detector.scaleFactor)
+                // detector.scaleFactor > 1 表示两指分开（放大），bpp 要变小
+                zoomAround(detector.focusX, detector.focusY, 1f / detector.scaleFactor)
                 invalidate()
                 return true
             }
         })
     }
 
-    /**
-     * 以 ([px], [py]) 为锚点缩放 [factor] 倍。
-     * 锚点在屏幕上的位置保持不变，符合直觉。
-     */
-    private fun zoomAround(px: Float, py: Float, factor: Float) {
-        val old = scale
-        val target = (scale * factor).coerceIn(MIN_SCALE, MAX_SCALE)
+    /** 以屏幕点 ([px], [py]) 为锚点缩放：该点下方的方块保持不动。 */
+    private fun zoomAround(px: Float, py: Float, bppFactor: Float) {
+        val old = bpp
+        val target = (old * bppFactor).coerceIn(MIN_BPP, MAX_BPP)
         if (target == old) return
-        val ratio = target / old
-        offsetX = px - (px - offsetX) * ratio
-        offsetY = py - (py - offsetY) * ratio
-        scale = target
-        clampOffset()
+
+        // 锚点当前对应的方块坐标
+        val anchorBlockX = centerX + (px - width / 2f) * old
+        val anchorBlockZ = centerZ + (py - height / 2f) * old
+
+        bpp = target
+
+        // 反解新的中心，让同一个方块仍落在 (px,py)
+        centerX = anchorBlockX - (px - width / 2f) * target
+        centerZ = anchorBlockZ - (py - height / 2f) * target
+        notifyViewport()
     }
 
-    /** 图比视图小的时候居中，比视图大时不让它完全滑出屏幕。 */
-    private fun clampOffset() {
-        val bmp = bitmap ?: return
-        val scaledW = bmp.width * scale
-        val scaledH = bmp.height * scale
+    // ── 数据接口 ──
 
-        offsetX = if (scaledW <= width) {
-            (width - scaledW) / 2f
-        } else {
-            offsetX.coerceIn(width - scaledW, 0f)
-        }
-        offsetY = if (scaledH <= height) {
-            (height - scaledH) / 2f
-        } else {
-            offsetY.coerceIn(height - scaledH, 0f)
-        }
-    }
-
-    /** 设置要显示的图，并重置到默认缩放、居中。 */
-    fun setMap(bmp: Bitmap?) {
-        bitmap = bmp
-        scale = DEFAULT_SCALE
-        if (bmp != null) {
-            /*
-             * ⚠️ 只有 View 已经测量过才能算居中偏移。
-             *
-             * 渲染是异步的，结果回来时 View 通常已经有尺寸；
-             * 但如果 width/height 还是 0（页面刚切换、还没 layout），
-             * 算出来的 offsetX 会是 -bmp.width*scale/2，图片就贴到左上角外。
-             * 这种情况先标脏，等 onSizeChanged 再居中。
-             */
-            if (width > 0 && height > 0) {
-                offsetX = (width - bmp.width * scale) / 2f
-                offsetY = (height - bmp.height * scale) / 2f
-                clampOffset()
-            } else {
-                needsCenter = true
-            }
-        }
+    /** 设置主图层。会自动订阅它的完成回调。 */
+    fun setTileSource(src: TileSource?) {
+        source?.setInvalidation(null)
+        source = src
+        src?.setInvalidation { post { invalidate() } }
+        wantedSigSource = ""
         invalidate()
     }
 
-    /** View 尺寸还没准备好时，等 layout 完成再居中。 */
-    private var needsCenter = false
+    /** 设置底图层（种子地形）。可为 null。 */
+    fun setBaseSource(src: TileSource?) {
+        baseSource?.setInvalidation(null)
+        baseSource = src
+        src?.setInvalidation { post { invalidate() } }
+        wantedSigBase = ""
+        invalidate()
+    }
 
-    /** 当前缩放倍率，UI 上显示用。 */
-    val currentScale: Float get() = scale
+    /** 把视口移到指定方块。 */
+    fun centerOn(blockX: Int, blockZ: Int) {
+        centerX = blockX.toDouble()
+        centerZ = blockZ.toDouble()
+        notifyViewport()
+        invalidate()
+    }
+
+    /** 手动设缩放（blocks per pixel）。 */
+    fun setBpp(value: Float) {
+        bpp = value.coerceIn(MIN_BPP, MAX_BPP)
+        notifyViewport()
+        invalidate()
+    }
+
+    val currentBpp: Float get() = bpp
+    val centerBlockX: Int get() = centerX.toInt()
+    val centerBlockZ: Int get() = centerZ.toInt()
+
+    private fun notifyViewport() {
+        onViewportChanged?.invoke(centerX.toInt(), centerZ.toInt(), bpp)
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (needsCenter && w > 0 && h > 0) {
-            bitmap?.let { bmp ->
-                offsetX = (w - bmp.width * scale) / 2f
-                offsetY = (h - bmp.height * scale) / 2f
-            }
-            needsCenter = false
-        }
-        clampOffset()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        val bmp = bitmap
-        if (bmp == null || bmp.isRecycled) {
-            canvas.drawText(
-                "暂无地形数据", width / 2f, height / 2f, emptyPaint.apply {
-                    textSize = 32f
-                    textAlign = Paint.Align.CENTER
-                }
-            )
-            return
-        }
-        canvas.save()
-        canvas.translate(offsetX, offsetY)
-        canvas.scale(scale, scale)
-        canvas.drawBitmap(bmp, 0f, 0f, paint)
-        canvas.restore()
-
-        if (showChunkGrid) drawChunkGrid(canvas, bmp)
-    }
-
-    /**
-     * 画区块网格。
-     *
-     * 1 区块 = 16 方块 = Bitmap 上 16px，所以每 16px 一条线。
-     *
-     * 分两级（参考 BedrockMap 的 `updateGridNode`）：
-     * - **细线**：每区块一条，白色 40%。缩得太小时（屏幕间距 < [MIN_MINOR_GAP_PX]）
-     *   直接不画，否则整块图会糊成一片白。
-     * - **粗线**：每 [MAJOR_CHUNKS] 区块一条，白色 80%、2px。缩得再小也画，
-     *   保证任何时候都还能看出「大格」。
-     *
-     * ## ⚠️ 坐标系必须和 onDraw 里画地形图的那段一致
-     *
-     * onDraw 是这么画的：
-     * ```
-     * canvas.translate(offsetX, offsetY)
-     * canvas.scale(scale, scale)      ← 关键
-     * canvas.drawBitmap(bmp, 0f, 0f)
-     * ```
-     * 地形图因此被放大了 scale 倍。
-     *
-     * 第一版这里只 translate 没 scale，于是网格按 1:1 的 Bitmap 像素画，
-     * 而地形按 scale 放大 —— 网格只覆盖了图片左上角 1/scale 的一块，
-     * 屏幕上表现为「网格只画了左上角一小片」。
-     *
-     * 现在两种做法里选了更简单的一种：
-     * **线的坐标自己乘 scale，全部用屏幕坐标画**。
-     * 这样线宽就是屏幕像素，不用再除以 scale。
-     */
-    private fun drawChunkGrid(canvas: Canvas, bmp: Bitmap) {
-        // 可见区域换算成 **Bitmap 像素**坐标，用来决定要画哪些线
-        val leftBmp = (-offsetX / scale).coerceIn(0f, bmp.width.toFloat())
-        val topBmp = (-offsetY / scale).coerceIn(0f, bmp.height.toFloat())
-        val rightBmp = ((width - offsetX) / scale).coerceIn(0f, bmp.width.toFloat())
-        val bottomBmp = ((height - offsetY) / scale).coerceIn(0f, bmp.height.toFloat())
-        if (rightBmp <= leftBmp || bottomBmp <= topBmp) return
-
-        // 块数向上取整：1950px 的图有 122 个区块（最后一个是半截），
-        // 用整数除法会算成 121，少画一条右边的边界线。
-        val chunkW = (bmp.width + CHUNK_PX - 1) / CHUNK_PX
-        val chunkH = (bmp.height + CHUNK_PX - 1) / CHUNK_PX
-
-        // 只画可见范围内的线：一屏几十条，没必要遍历整张图
-        val firstCol = max(0, (leftBmp / CHUNK_PX).toInt())
-        val lastCol = min(chunkW, (rightBmp / CHUNK_PX).toInt() + 1)
-        val firstRow = max(0, (topBmp / CHUNK_PX).toInt())
-        val lastRow = min(chunkH, (bottomBmp / CHUNK_PX).toInt() + 1)
-        if (firstCol > lastCol || firstRow > lastRow) return
-
-        // 屏幕上的区块间距 = 16 * scale
-        val gapPx = CHUNK_PX * scale
-        val drawMinor = gapPx >= MIN_MINOR_GAP_PX
-
-        // 线的端点用**屏幕坐标**，和地形图的绘制范围一致
-        // 图片可能比 View 小（居中显示），所以还要和 View 边界取交集，
-        // 否则线会画到图片外面、落到灰底上。
-        val clipLeft = max(leftBmp * scale + offsetX, 0f)
-        val clipRight = min(rightBmp * scale + offsetX, width.toFloat())
-        val clipTop = max(topBmp * scale + offsetY, 0f)
-        val clipBottom = min(bottomBmp * scale + offsetY, height.toFloat())
-
-        // 线宽就是屏幕像素（不缩放画布，所以不用除 scale）
-        minorGridPaint.strokeWidth = MINOR_STROKE_PX
-        majorGridPaint.strokeWidth = MAJOR_STROKE_PX
-
-        // ① 细线（每区块）
-        if (drawMinor) {
-            for (c in firstCol..lastCol) {
-                if (c % MAJOR_CHUNKS == 0) continue   // 粗线位置跳过，避免重叠发灰
-                val x = c * CHUNK_PX * scale + offsetX
-                canvas.drawLine(x, clipTop, x, clipBottom, minorGridPaint)
-            }
-            for (r in firstRow..lastRow) {
-                if (r % MAJOR_CHUNKS == 0) continue
-                val y = r * CHUNK_PX * scale + offsetY
-                canvas.drawLine(clipLeft, y, clipRight, y, minorGridPaint)
-            }
-        }
-
-        // ② 粗线（每 MAJOR_CHUNKS 区块）。缩得再小也画。
-        for (c in firstCol..lastCol) {
-            if (c % MAJOR_CHUNKS != 0) continue
-            val x = c * CHUNK_PX * scale + offsetX
-            canvas.drawLine(x, clipTop, x, clipBottom, majorGridPaint)
-        }
-        for (r in firstRow..lastRow) {
-            if (r % MAJOR_CHUNKS != 0) continue
-            val y = r * CHUNK_PX * scale + offsetY
-            canvas.drawLine(clipLeft, y, clipRight, y, majorGridPaint)
-        }
-
-        // 图边缘补一条线：最后一个区块可能不满 16px，上面的循环到不了图的右/下边缘
-        if (chunkW * CHUNK_PX > bmp.width) {
-            val x = bmp.width * scale + offsetX
-            canvas.drawLine(x, clipTop, x, clipBottom, majorGridPaint)
-        }
-        if (chunkH * CHUNK_PX > bmp.height) {
-            val y = bmp.height * scale + offsetY
-            canvas.drawLine(clipLeft, y, clipRight, y, majorGridPaint)
-        }
+        notifyViewport()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleGesture.onTouchEvent(event)
-        // 缩放中不要同时平移，否则两手会互相打架
         if (!scaleGesture.isInProgress) gesture.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             parent?.requestDisallowInterceptTouchEvent(true)
         }
         return true
+    }
+
+    // ── 绘制 ──
+
+    override fun onDraw(canvas: Canvas) {
+        canvas.drawColor(0xFF0E141B.toInt())
+
+        val w = width
+        val h = height
+        if (w <= 0 || h <= 0) return
+
+        val src = source
+        if (src == null || !src.isReady()) {
+            drawCenteredText(canvas, "等待数据…", w / 2f, h / 2f)
+            return
+        }
+
+        val px = w / 2f
+        val py = h / 2f
+        activeScale = scaleFor(bpp)
+
+        // 底图层先画，主图层盖上去
+        baseSource?.let { if (it.isReady()) drawLayer(canvas, px, py, it, activeScale, isBase = true) }
+        drawLayer(canvas, px, py, src, activeScale, isBase = false)
+
+        if (showChunkGrid) drawChunkGrid(canvas, px, py)
+        // 边界描边独立于网格开关：网格关掉时更需要它来分辨「探索到哪」
+        drawChunkBoundary(canvas, px, py)
+
+        if (missingTiles > 0) drawLoading(canvas, w, h)
+    }
+
+    /**
+     * 画一层瓦片。
+     *
+     * 与 SeedCraft `MapView.drawLayer` 对齐，但去掉了「向父级回退」那段：
+     * 父级回退靠 `scale / 4` 命中更粗的缓存，只有在缩放切换瞬间有用，
+     * 而我们的 [scaleFor] 已经保证不会出现空档（见那里的注释）。
+     * 少一段代码就少一处内存泄漏点。
+     */
+    private fun drawLayer(
+        canvas: Canvas,
+        px: Float,
+        py: Float,
+        layer: TileSource,
+        scale: Int,
+        isBase: Boolean,
+    ) {
+        val cells = layer.tileCells()
+        val cellScale = max(1, layer.blocksPerCell(scale))
+        val tileBlocks = cells.toDouble() * cellScale
+
+        // 视野对应的方块范围（含预取边距）
+        val halfW = (width / 2f + PREFETCH_MARGIN_PX) * bpp
+        val halfH = (height / 2f + PREFETCH_MARGIN_PX) * bpp
+        val left = centerX - halfW
+        val right = centerX + halfW
+        val top = centerZ - halfH
+        val bottom = centerZ + halfH
+
+        val tx0 = floor(left / tileBlocks).toInt()
+        val tx1 = floor(right / tileBlocks).toInt()
+        val tz0 = floor(top / tileBlocks).toInt()
+        val tz1 = floor(bottom / tileBlocks).toInt()
+
+        // 更新 wanted（签名没变就不动，避免每帧分配）
+        val sig = "${layer.generationId()}:$scale:$cellScale:$tx0:$tx1:$tz0:$tz1"
+        if (isBase) {
+            if (sig != wantedSigBase) {
+                wantedSigBase = sig
+                layer.setWanted(buildKeys(layer, scale, tx0, tx1, tz0, tz1))
+            }
+        } else {
+            if (sig != wantedSigSource) {
+                wantedSigSource = sig
+                layer.setWanted(buildKeys(layer, scale, tx0, tx1, tz0, tz1))
+            }
+        }
+
+        var missing = 0
+        var total = 0
+        val oldAlpha = mapPaint.alpha
+        if (isBase) mapPaint.alpha = 204   // 推演地形当背景，略透明
+
+        for (tz in tz0..tz1) {
+            for (tx in tx0..tx1) {
+                val blockX = tx * tileBlocks
+                val blockZ = tz * tileBlocks
+                val sx = px + ((blockX - centerX) / bpp).toFloat()
+                val sy = py + ((blockZ - centerZ) / bpp).toFloat()
+                val size = (tileBlocks / bpp).toFloat()
+                dst.set(sx, sy, sx + size, sy + size)
+
+                /*
+                 * 先判断是否在屏幕内，再决定「画不画」和「算不算进度」。
+                 *
+                 * ⚠️ 注意顺序：**预取边距内的瓦片必须照常 request**，
+                 * 只是不画。
+                 * 早期版本在这里写 `if (屏幕外) continue`，结果预取区永远
+                 * 不会发起请求 —— 边距形同虚设，一滑动就整屏空白再等半天。
+                 */
+                val onScreen = dst.right >= 0f && dst.bottom >= 0f &&
+                        dst.left <= width && dst.top <= height
+
+                val bmp = layer.get(scale, tx, tz)
+                if (bmp != null) {
+                    if (onScreen) canvas.drawBitmap(bmp, null, dst, mapPaint)
+                    if (onScreen && !isBase) total++
+                    continue
+                }
+
+                // 没缓存 → 投递。屏内屏外都要投，屏外那群正是预取
+                layer.request(scale, tx, tz)
+                if (isBase || !onScreen) continue
+
+                total++
+                // 没画出来：统一刷成未探索色，避免闪烁的空白
+                canvas.drawRect(dst, emptyPaint)
+                missing++
+            }
+        }
+
+        if (isBase) mapPaint.alpha = oldAlpha
+        if (!isBase) {
+            missingTiles = missing
+            loadTotal = total
+            loadDone = total - missing
+        }
+    }
+
+    private fun buildKeys(
+        layer: TileSource,
+        scale: Int,
+        tx0: Int, tx1: Int,
+        tz0: Int, tz1: Int,
+    ): List<String> {
+        val out = ArrayList<String>((tx1 - tx0 + 1) * (tz1 - tz0 + 1))
+        for (tz in tz0..tz1) {
+            for (tx in tx0..tx1) out.add(layer.key(scale, tx, tz))
+        }
+        return out
+    }
+
+    /**
+     * 当前应使用的采样档位。
+     *
+     * ## 为什么是 4 的幂
+     * 相邻档位正好 4 倍，一块 128 采样的瓦片在粗档覆盖 4 倍边长，
+     * 于是粗档的 1 块 = 细档的 4×4 块。缩放时视觉上是「逐渐变粗」，
+     * 不会有 2 倍那种半粗不细的中间态。
+     *
+     * ## 阈值为什么是 bpp × 1.5
+     * 目标：**一个采样点落在 1.5~6 个屏幕像素上**。
+     *   · 小于 1.5px → 采样点比像素还密，白算
+     *   · 大于 6px  → 能看出明显的方块感，像马赛克
+     * 取 1.5 而不再往上，是为了让「放大」尽早上更细的档（更清晰）；
+     * 代价是瓦片生成更频繁，由 LRU + wanted 过滤兜住。
+     *
+     * ## 与 BedrockMap 的关系
+     * BedrockMap 的档位是 2 的幂，且**缩小立即切、放大等 120ms**。
+     * 这里只有同步的状态判断（`onDraw` 用了新档位就立刻请求），
+     * 即「两个方向都立即」——
+     * 因为我们的瓦片来自 LevelDB 而不是 GPU 图集，
+     * 没有「旧图集露出灰块」的问题：没画出来的那块直接刷未探索色，
+     * 反而比留着旧档更清楚。
+     *
+     * 如果以后接了 T4 的种子层（CPU 推演，较慢），
+     * 再把「放大延迟切换」加进 [SaveTiles.request] 侧即可。
+     */
+    private fun scaleFor(bpp: Float): Int {
+        var s = SCALES[0]
+        while (s < SCALES[SCALES.size - 1] && s < bpp * 1.5f) {
+            s *= 4
+        }
+        return s
+    }
+
+    /**
+     * 区块边界：只描「已存在区块 与 不存在区块 之间」那条线。
+     *
+     * ## 为什么不用网格代替
+     * 网格是均匀的（每 16 方块一条），看不出存档的**形状**；
+     * 描边是沿着数据的轮廓走的，一眼就能看出探索到哪、
+     * 哪一块是断开的飞地。
+     *
+     * ## 为什么要有 60000 上限
+     * 缩得很远时，一屏可能盖住几十万个区块，
+     * 每个都要做 4 次 mask 查询 —— 那是几百万次调用，必然卡顿。
+     * 超过上限就直接不画：那个尺度下线条也糊成一片了。
+     */
+    private fun drawChunkBoundary(canvas: Canvas, px: Float, py: Float) {
+        val mask = chunkMask ?: return
+        val chunkPx = 16f / bpp
+        if (chunkPx < 2f) return
+
+        val halfW = width / 2f * bpp
+        val halfH = height / 2f * bpp
+        val cx0 = floor((centerX - halfW) / 16.0).toInt() - 1
+        val cx1 = floor((centerX + halfW) / 16.0).toInt() + 1
+        val cz0 = floor((centerZ - halfH) / 16.0).toInt() - 1
+        val cz1 = floor((centerZ + halfH) / 16.0).toInt() + 1
+
+        val count = (cx1 - cx0 + 1).toLong() * (cz1 - cz0 + 1)
+        if (count > 60_000L) return
+
+        val size = 16f / bpp
+        for (cz in cz0..cz1) {
+            for (cx in cx0..cx1) {
+                if (!mask.hasChunk(cx, cz)) continue
+                val l = px + ((cx * 16.0 - centerX) / bpp).toFloat()
+                val tp = py + ((cz * 16.0 - centerZ) / bpp).toFloat()
+                val r = l + size
+                val b = tp + size
+
+                // 只在「自己在外、邻居不在」的那一侧画线
+                if (!mask.hasChunk(cx - 1, cz)) canvas.drawLine(l, tp, l, b, boundaryPaint)
+                if (!mask.hasChunk(cx + 1, cz)) canvas.drawLine(r, tp, r, b, boundaryPaint)
+                if (!mask.hasChunk(cx, cz - 1)) canvas.drawLine(l, tp, r, tp, boundaryPaint)
+                if (!mask.hasChunk(cx, cz + 1)) canvas.drawLine(l, b, r, b, boundaryPaint)
+            }
+        }
+    }
+
+    /**
+     * 区块网格。
+     *
+     * 与旧版的三点区别：
+     * 1. **不再依赖 Bitmap**——线只画在视野内，与瓦片无关
+     * 2. **分级降噪**——细线间距 < [MIN_MINOR_GAP_PX] 时整级跳过
+     * 3. **粗线每 [MAJOR_CHUNKS] 区块一条**，缩得再小也保留
+     *
+     * 与 SeedCraft `MapView.drawGrid` 的差别：它把「区块边界」和「网格」
+     * 分成两个方法（前者按 mask 描边，后者画线），
+     * 这里暂时只做网格；边界描边等 T2 接 ChunkMask 时再加。
+     */
+    private fun drawChunkGrid(canvas: Canvas, px: Float, py: Float) {
+        val chunkPx = 16f / bpp
+        if (chunkPx < 1f) return   // 一个区块不到 1px，画了也没信息
+
+        val drawMinor = chunkPx >= MIN_MINOR_GAP_PX
+
+        // 视野内的区块范围
+        val halfW = width / 2f * bpp
+        val halfH = height / 2f * bpp
+        val cx0 = floor((centerX - halfW) / 16.0).toInt()
+        val cx1 = floor((centerX + halfW) / 16.0).toInt() + 1
+        val cz0 = floor((centerZ - halfH) / 16.0).toInt()
+        val cz1 = floor((centerZ + halfH) / 16.0).toInt() + 1
+
+        // 线越多越慢，给个上限。一屏最多约 200×200 区块，够用
+        if ((cx1 - cx0).toLong() * (cz1 - cz0) > 250_000L) return
+
+        // ① 细线
+        if (drawMinor) {
+            for (c in cx0..cx1) {
+                if (c % MAJOR_CHUNKS == 0) continue
+                val x = px + ((c * 16.0 - centerX) / bpp).toFloat()
+                if (x < 0 || x > width) continue
+                canvas.drawLine(x, 0f, x, height.toFloat(), minorGridPaint)
+            }
+            for (r in cz0..cz1) {
+                if (r % MAJOR_CHUNKS == 0) continue
+                val y = py + ((r * 16.0 - centerZ) / bpp).toFloat()
+                if (y < 0 || y > height) continue
+                canvas.drawLine(0f, y, width.toFloat(), y, minorGridPaint)
+            }
+        }
+
+        // ② 粗线
+        for (c in cx0..cx1) {
+            if (c % MAJOR_CHUNKS != 0) continue
+            val x = px + ((c * 16.0 - centerX) / bpp).toFloat()
+            if (x < 0 || x > width) continue
+            canvas.drawLine(x, 0f, x, height.toFloat(), majorGridPaint)
+        }
+        for (r in cz0..cz1) {
+            if (r % MAJOR_CHUNKS != 0) continue
+            val y = py + ((r * 16.0 - centerZ) / bpp).toFloat()
+            if (y < 0 || y > height) continue
+            canvas.drawLine(0f, y, width.toFloat(), y, majorGridPaint)
+        }
+    }
+
+    /** 右上角加载提示。 */
+    private fun drawLoading(canvas: Canvas, w: Int, h: Int) {
+        val label = if (loadTotal > 0) "加载 $loadDone/$loadTotal" else "加载中"
+        textPaint.textSize = 26f
+        val tw = textPaint.measureText(label)
+        val padH = 22f
+        val padV = 12f
+        val bw = tw + padH * 2
+        val bh = textPaint.textSize + padV * 2
+        val left = w - bw - 28f
+        val top = 28f
+        dst.set(left, top, left + bw, top + bh)
+        canvas.drawRoundRect(dst, bh / 2f, bh / 2f, pillPaint)
+        val baseline = top + bh / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
+        canvas.drawText(label, left + bw / 2f, baseline, textPaint)
+    }
+
+    private fun drawCenteredText(canvas: Canvas, text: String, cx: Float, cy: Float) {
+        textPaint.textSize = 32f
+        canvas.drawText(text, cx, cy, textPaint)
     }
 }
