@@ -238,6 +238,10 @@ the native build refuses to open.
 To rebuild the jars: `python build_leveldb_java.py` (fetches the source
 automatically; pass `--src` to use a local checkout).
 
+The seed-terrain layer uses **[cubiomes](https://github.com/Cubitect/cubiomes)**
+(MIT License, Copyright © 2020 Cubitect) to derive biomes. The source copy lives
+in `app/src/main/cpp/cubiomes/` and is built into `libnibnya.so` by the NDK.
+
 ---
 
 ## 📜 Open source agreement

@@ -236,6 +236,10 @@ Nibnya 通过 **[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-
 重新构建 jar：`python build_leveldb_java.py`
 （会自动拉取源码，也可以用 `--src` 指定本地副本）。
 
+地图的种子地形层使用 **[cubiomes](https://github.com/Cubitect/cubiomes)**
+（MIT License, Copyright © 2020 Cubitect）推演生物群系，源码副本在
+`app/src/main/cpp/cubiomes/`，经 NDK 编译进 `libnibnya.so`。
+
 ---
 
 ## 📜 开源协议
