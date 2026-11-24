@@ -41,16 +41,25 @@ import kotlin.math.min
 class SaveTiles(
     private val reader: ChunkReader,
     private val colors: BlockColorTable,
+    /**
+     * 缓存上限（字节）与线程数 —— 来自 [MapSettings]。
+     *
+     * 由 [MapSession] 在构造时传入，而不是这里自己去读 prefs：
+     * 这类对象会被后台线程访问，少一次 Context 依赖少一份出错机会。
+     */
+    cacheBytes: Int = 20 * 1024 * 1024,
+    threadCount: Int = 2,
+    chunkEntries: Int = 4096,
 ) : TileSource {
 
     companion object {
         /** 一块瓦片 128×128 采样点。 */
         const val CELLS = 128
 
-        /** 缓存上限：20 MB ≈ 40 块瓦片（ARGB_8888 128²=64 KB）。 */
-        private const val CACHE_BYTES = 20 * 1024 * 1024
+        /* 缓存上限与线程数改为运行时参数，见构造参数。 */
 
         private const val TAG = "SaveTiles"
+
 
         /**
          * 浮雕明暗范围。
@@ -87,15 +96,27 @@ class SaveTiles(
             }
         }
 
-    private val pool: ExecutorService = Executors.newFixedThreadPool(2)
+    private val pool: ExecutorService = Executors.newFixedThreadPool(threadCount)
 
     /** 按字节计的 LRU。键是 [key] 的结果。 */
-    private val cache = object : android.util.LruCache<String, Bitmap>(CACHE_BYTES) {
+    private val cache = object : android.util.LruCache<String, Bitmap>(cacheBytes) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
-    /** 正在生成中的瓦片键。 */
-    private val pending: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    /**
+     * 请求调度器（照 BedrockMap 的 RegionRenderScheduler）。
+     *
+     * 之前是「拿到 key 就 pool.execute」，缩放一次投递几十块、旧的还不停，
+     * 队列无限增长 —— 这是「缩放几下静默崩溃」的直接嫌疑。
+     * 现在改成：优先级队列 + 视口变化丢弃 + 版本号校验。
+     */
+    private val scheduler = TileScheduler(threadCount) { r -> pool.execute(r) }
+
+    /** 视野中心（瓦片坐标），用于给请求排优先级。 */
+    @Volatile
+    private var viewCenterTx = 0
+    @Volatile
+    private var viewCenterTz = 0
 
     /** 视图当前真正需要的瓦片键。不在里面的生成结果直接丢。 */
     @Volatile
@@ -113,7 +134,18 @@ class SaveTiles(
     /** 有颜色的瓦片计数。0 且 [generatedTiles] 也够多 → 说明这个维度没数据。 */
     private val coloredTiles = AtomicInteger(0)
 
-    private val surfaces = ChunkSurfaceCache(reader, colors)
+    private val surfaces = ChunkSurfaceCache(reader, colors, chunkEntries)
+
+    /**
+     * 更新视野中心（瓦片坐标），供 [request] 计算优先级。
+     *
+     * 由 MapView 在每帧算完视口后调用 —— 不这么做的话，
+     * 「近的先出」就无从判断远近。
+     */
+    fun setViewCenter(tileX: Int, tileZ: Int) {
+        viewCenterTx = tileX
+        viewCenterTz = tileZ
+    }
 
     override fun tileCells(): Int = CELLS
 
@@ -131,31 +163,62 @@ class SaveTiles(
     override fun request(scale: Int, tileX: Int, tileZ: Int) {
         val k = key(scale, tileX, tileZ)
         if (cache.get(k) != null) return
-        if (!pending.add(k)) return
-        val gen = generation
-        pool.execute {
-            try {
-                if (gen != generation) return@execute
-                // 视图已经滑走了就跳过 —— 否则快速拖动时会积压一堆没人要的瓦片
-                if (!wanted.contains(k)) return@execute
 
-                val bmp = render(scale, tileX, tileZ) ?: return@execute
+        /*
+         * 距离决定优先级：用户正看着的地方先出图，
+         * 预取边距里的那圈排在后面。这样快速滑动时视野中心不会长时间空白。
+         */
+        val dx = (tileX - viewCenterTx).toLong()
+        val dz = (tileZ - viewCenterTz).toLong()
+        val dist = dx * dx + dz * dz
+
+        // wanted 里的一定在视野内；不在的属于预取
+        val inView = wanted.contains(k)
+
+        scheduler.submit(k, scale, tileX, tileZ, inView, dist)
+    }
+
+    init {
+        /*
+         * 实际的瓦片生成。
+         *
+         * 三重校验后才写缓存：
+         *   ① generation —— 换世界/切维度了，这块作废
+         *   ② wanted    —— 视图已经滑走，没人要了
+         *   ③ cache     —— 别的线程已经生成过
+         * 任何一条不满足就把 Bitmap 回收掉，绝不留在内存里。
+         */
+        scheduler.onRun = run@{ scale, tileX, tileZ, k ->
+            val gen = generation
+            try {
+                if (gen != generation) return@run
+                if (!wanted.contains(k)) return@run
+                if (cache.get(k) != null) return@run
+
+                val bmp = render(scale, tileX, tileZ) ?: return@run
                 if (gen != generation) {
                     bmp.recycle()
-                    return@execute
+                    return@run
                 }
                 cache.put(k, bmp)
                 invalidation?.invoke()
             } catch (e: Throwable) {
                 AppLogger.warn(TAG, "瓦片 $k 生成失败: ${e.message}")
-            } finally {
-                pending.remove(k)
             }
         }
     }
 
     override fun setWanted(keys: Collection<String>) {
-        wanted = keys.toHashSet()
+        val set = keys.toHashSet()
+        wanted = set
+
+        /*
+         * 视口变了 → 队列里已经没人要的任务立刻丢掉。
+         *
+         * 这是「缩放时不累积」的关键：上一档的几十块瓦片如果继续排队，
+         * 会把用户当前想看的那批挤到后面，而且白白吃掉 CPU 和内存。
+         */
+        scheduler.retainOnly { it in set }
     }
 
     override fun key(scale: Int, tileX: Int, tileZ: Int): String =
@@ -175,7 +238,7 @@ class SaveTiles(
     /** 切世界：清缓存、作废在途任务。 */
     fun bumpGeneration() {
         generation++
-        pending.clear()
+        scheduler.reset()
         wanted = emptySet()
         cache.evictAll()
         surfaces.clear()
@@ -201,6 +264,8 @@ class SaveTiles(
      * 宁可冒一点风险也不能卡死 UI（真卡死就是 ANR）。
      */
     fun shutdown() {
+        // 先让调度器停止接受新任务，否则 shutdownNow 之后还会有人往里投
+        scheduler.close()
         pool.shutdownNow()
         try {
             if (!pool.awaitTermination(2, TimeUnit.SECONDS)) {
@@ -227,6 +292,11 @@ class SaveTiles(
      * 视觉上表现为「加载到哪，边就画到哪」，滑动时边界会逐渐外扩。
      * 这个语义对「这地方我还没看过」的提示反而更直接。
      */
+    /** 查过吗（不管有没有地形）—— 描边用这个。 */
+    fun isChunkKnown(cx: Int, cz: Int): Boolean =
+        surfaces.isKnown(cx, cz, dimension)
+
+    /** 有地形吗。 */
     fun isChunkPopulated(cx: Int, cz: Int): Boolean =
         surfaces.isPopulated(cx, cz, dimension)
 

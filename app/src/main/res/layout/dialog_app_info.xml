@@ -548,6 +548,14 @@
 
             <!-- 保存前自动备份（策略对齐草稿箱；放在草稿箱上面） -->
 
+            <!-- 地图渲染设置（整块由 MapSettingsUi 代码构建） -->
+            <LinearLayout
+                android:id="@+id/layout_map_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
         </LinearLayout>
 
         <!-- ===== 分类：数据 ===== -->

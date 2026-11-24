@@ -32,7 +32,7 @@ package yhjmew.nibnya.map
 class ChunkSurfaceCache(
     private val reader: ChunkReader,
     private val colors: BlockColorTable,
-    /** 最多缓存多少个区块。1.5 KB/个 → 4096 个约 6 MB。 */
+    /** 最多缓存多少个区块。1.5 KB/个 → 4096 个约 6 MB。来自 [MapSettings]。 */
     private val maxEntries: Int = 4096,
 ) {
 
@@ -83,19 +83,56 @@ class ChunkSurfaceCache(
     private var misses = 0
 
     /**
-     * 打包成 64 位键。
+     * 打包成 64 位键 —— **无冲突**。
      *
-     * ⚠️ 不能用 `cx shl 40 xor cz`：区块坐标可能到 ±3000 万，
-     * 两者异或之后会互相覆盖（A 的 x 进位到 z 的位里），
-     * 表现为「某个区块画出来的颜色和实际不符」——极难查。
-     * 这里用 **质数混合**，冲突率与 HashMap 的整数散列同级。
+     * ## 为什么不能用哈希
+     *
+     * 早期版本用质数混合：
+     * ```
+     * k = cx*73856093 xor cz*19349663 xor dim*83492791
+     * ```
+     * 注释里写「冲突率与 HashMap 的整数散列同级」，**这是错的**：
+     * HashMap 撞了有链表兜底，这里撞了就是**同一个缓存项**。
+     *
+     * 实测（Python 复现同一算式）：在 ±40 的 80×80 区块范围内
+     * 就冲突 1062 次，例如 `(-1, 39)` 与 `(1, -39)` 完全同键。
+     * 后果是 LRU 把 A 区块当成 B 区块，画出来的颜色和高度张冠李戴 ——
+     * 而且只在特定坐标出现，极难复现。
+     *
+     * ## 现在的做法
+     *
+     * 位打包，各字段不重叠：
+     * ```
+     *  [ 22 位 cx ][ 22 位 cz ][ 20 位 dim ]
+     *     ↑ 加 2^21 偏移，让负坐标也能放进去
+     * ```
+     * 有效范围 **±2,097,151 区块 = ±33,554,384 方块**，
+     * 超出 Minecraft 世界边界（±30,000,000），够用。
+     *
+     * ⚠️ 端点 `-2^21` 要排除：`(-2097152,-2097152)` 打包后正好是 0，
+     * 与「未初始化」无法区分。合法世界坐标远达不到这里，但
+     * 万一有脏数据进来，会静默变成 key=0。所以 [sane] 拦一道。
+     *
+     * ⚠️ 结果**可能是负数**（最高位被 cx 占满），`HashMap<Long, _>` 不在意
+     * 符号。调试时看到 `-6170657...` 这种值别当成溢出 bug。
+     *
+     * 与 [isPopulated] 用的 [packKey] 保持同一套位布局 ——
+     * 两处必须一致，否则「缓存有」和「已探索」会对不上。
      */
-    private fun keyOf(cx: Int, cz: Int, dim: Int): Long {
-        var k = cx * 73856093L
-        k = k xor (cz * 19349663L)
-        k = k xor (dim * 83492791L)
-        return k
-    }
+    /**
+     * 坐标是否在可打包范围内。
+     *
+     * 超出范围时位掩码会回绕，两个不同坐标可能打包成同一个键 ——
+     * 那是真冲突，不是理论问题。这里直接拒绝，让上层当作「没数据」，
+     * 比悄悄画错颜色好。
+     */
+    private fun sane(cx: Int, cz: Int, dim: Int): Boolean =
+        cx > -OFFSET && cx < OFFSET && cz > -OFFSET && cz < OFFSET && dim in 0..1023
+
+    private fun keyOf(cx: Int, cz: Int, dim: Int): Long =
+        (((cx.toLong() + OFFSET) and MASK22) shl 42) or
+                (((cz.toLong() + OFFSET) and MASK22) shl 20) or
+                (dim.toLong() and MASK20)
 
     /**
      * 取一个区块的地表；没有缓存时解析。
@@ -113,14 +150,44 @@ class ChunkSurfaceCache(
      */
     private val lock = Any()
 
-    /** 长期记录「哪些区块见过地表」，不受 LRU 淘汰影响。见 [isPopulated]。 */
+    /**
+     * 长期记录「哪些区块**有地表**」，不受 LRU 淘汰影响。见 [isPopulated]。
+     */
     private val populated = HashSet<Long>()
 
+    /**
+     * 长期记录「哪些区块**查过了**」（包含查过但没有地形的）。
+     *
+     * ## 为什么要和 [populated] 分开
+     *
+     * 描边的语义是「有数据和没数据之间的那条线」。如果只记 [populated]，
+     * 那么「查过、确认没地形」的区块和「根本没查过」的区块表现一样 ——
+     * 描边会沿着**查过的顺序**而不是**数据的边界**走。
+     *
+     * ## 为什么不能只靠 LRU 命中来登记
+     *
+     * 早期版本在 [get] 的「解析成功」分支里加 `populated`，而 LRU 命中
+     * 直接 return —— 于是同一个区块第一次登记、之后再也不登记。
+     * 加上 `EMPTY` 从不登记，结果是相邻区块一个在一个不在，
+     * 四条边全部显形，画出来就是用户看到的**棋盘状 X**。
+     *
+     * BedrockMap 的做法是 `invalid_cache_` 单独存「确认没有」的区块，
+     * 这里用 [known] 达到同样效果。
+     */
+    private val known = HashSet<Long>()
+
     fun get(cx: Int, cz: Int, dim: Int): Surface {
+        // 越界坐标直接当空：位打包会回绕成别人的缓存项
+        if (!sane(cx, cz, dim)) return EMPTY
+
         val k = keyOf(cx, cz, dim)
         synchronized(lock) {
             lru[k]?.let {
                 hits++
+                // ⚠️ 命中也要登记：否则「查过但没地形」的区块会漏掉，
+                // 描边就会沿着查过的顺序画，而不是数据边界
+                known.add(k)
+                if (it !== EMPTY) populated.add(k)
                 return it
             }
             misses++
@@ -136,8 +203,9 @@ class ChunkSurfaceCache(
         val surface = parsed?.let { build(it) } ?: EMPTY
         synchronized(lock) {
             lru[k] = surface
+            known.add(k)
             // 顺手登记「这里有地表」，供描边使用（见 isPopulated）
-            if (surface !== EMPTY) populated.add(packKey(cx, cz, dim))
+            if (surface !== EMPTY) populated.add(k)
         }
         return surface
     }
@@ -228,8 +296,17 @@ class ChunkSurfaceCache(
      * 每个区块只占 8 字节（Long 打包），10 万个也才 0.8 MB，
      * 比把 Surface 全部留在内存里便宜得多。
      */
-    fun isPopulated(cx: Int, cz: Int, dim: Int): Boolean =
-        synchronized(lock) { populated.contains(packKey(cx, cz, dim)) }
+    /** 这个区块查过吗？（不管有没有地形） */
+    fun isKnown(cx: Int, cz: Int, dim: Int): Boolean {
+        if (!sane(cx, cz, dim)) return false
+        return synchronized(lock) { known.contains(packKey(cx, cz, dim)) }
+    }
+
+    /** 这个区块查过**并且**有地形吗？ */
+    fun isPopulated(cx: Int, cz: Int, dim: Int): Boolean {
+        if (!sane(cx, cz, dim)) return false
+        return synchronized(lock) { populated.contains(packKey(cx, cz, dim)) }
+    }
 
     /**
      * 把 (cx, cz, dim) 打成一个 Long，省内存。
@@ -246,15 +323,15 @@ class ChunkSurfaceCache(
      * 这是正常的，`HashSet<Long>` 不在意符号。只是调试时会看到
      * `-6170657...` 这种值，别当成溢出 bug。
      */
-    private fun packKey(cx: Int, cz: Int, dim: Int): Long =
-        (((cx.toLong() + OFFSET) and MASK22) shl 42) or
-                (((cz.toLong() + OFFSET) and MASK22) shl 20) or
-                (dim.toLong() and MASK20)
+    /* 与 [keyOf] 用同一套位布局 —— 两处必须一致，
+     * 否则「缓存里有」和「已探索」会指向不同区块。 */
+    private fun packKey(cx: Int, cz: Int, dim: Int): Long = keyOf(cx, cz, dim)
 
 
     fun clear() = synchronized(lock) {
         lru.clear()
         populated.clear()
+        known.clear()
         hits = 0
         misses = 0
     }

@@ -252,7 +252,7 @@ class MapPageController(
                  */
                 val prepared = withContext(Dispatchers.IO) {
                     // 种子层：先建出来（读 level.dat），失败就算了，不影响存档层
-                    val seedSrc = runCatching { s.createSeedSource() }.getOrNull()
+                    val seedSrc = runCatching { s.createSeedSource(activity) }.getOrNull()
                     val anchor = s.anchorChunk(0)
                         // 存档里一个区块都没有时，用种子层的出生点兜底 ——
                         // 否则新存档打开地图会直接「没有数据」
@@ -271,7 +271,13 @@ class MapPageController(
                     mapView?.setBaseSource(seedSrc)
                     mapView?.setTileSource(tiles)
                     // 描边：只知道「已渲染到哪」，够用且零 IO
-                    mapView?.setChunkMask(object : MapView.ChunkMask {
+                    // 描边可在设置里关掉（有人嫌乱）
+                    if (!MapSettings.boundaryEnabled(activity)) {
+                        mapView?.setChunkMask(null)
+                    } else mapView?.setChunkMask(object : MapView.ChunkMask {
+                        override fun isKnown(cx: Int, cz: Int): Boolean =
+                            tiles.isChunkKnown(cx, cz)
+
                         override fun hasChunk(cx: Int, cz: Int): Boolean =
                             tiles.isChunkPopulated(cx, cz)
                     })

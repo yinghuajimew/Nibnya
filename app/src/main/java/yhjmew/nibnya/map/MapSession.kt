@@ -241,7 +241,13 @@ class MapSession private constructor(
     fun createTiles(ctx: Context): SaveTiles {
         tiles?.let { return it }
         val reader = ChunkReader(database().rawDb())
-        val created = SaveTiles(reader, BlockColorTable.get(ctx))
+        val created = SaveTiles(
+            reader = reader,
+            colors = BlockColorTable.get(ctx),
+            cacheBytes = MapSettings.cacheMb(ctx) * 1024 * 1024,
+            threadCount = MapSettings.threads(ctx),
+            chunkEntries = MapSettings.chunkEntries(ctx),
+        )
         tiles = created
         return created
     }
@@ -253,9 +259,11 @@ class MapSession private constructor(
      * 调用方应当把底图留空 —— 而不是画一张随机地形骗人。
      */
     @Synchronized
-    fun createSeedSource(): SeedTerrainSource? {
+    fun createSeedSource(ctx: Context): SeedTerrainSource? {
         seedSource?.let { return it }
         if (!SeedTerrainSource.available) return null
+        // 用户可以在设置里关掉（低端机省 CPU）
+        if (!MapSettings.seedLayerEnabled(ctx)) return null
 
         val meta = readLevelMeta() ?: return null
         val created = SeedTerrainSource(meta.seed, meta.mcLevel, 0)

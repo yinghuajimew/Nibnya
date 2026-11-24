@@ -58,28 +58,61 @@ class MapView @JvmOverloads constructor(
         private const val DEFAULT_BPP = 1.6f
 
         /**
-         * 采样档位（blocks per cell），相邻相差 4 倍。
+         * 采样档位（blocks per cell），**2 的幂**。
          *
-         * ## 为什么最小档是 1 而不是 4
-         * SeedCraft 的表是 `{4, 16, 64, 256}`，照抄会有一个死角：
-         * 放大到 `bpp = 0.2`（一个方块占 5 屏幕像素）时，
-         * 一个**采样点**仍然覆盖 4 个方块 = 20 屏幕像素 ——
-         * 画面是 4×4 的大色块，根本看不清单个方块。
+         * ## 为什么从 4 的幂改成 2 的幂
          *
-         * 加一档 `1` 之后，`bpp ∈ [0.2, 0.66]` 走 1 方块/采样点，
-         * 采样点占 5~1.5 像素，方块边缘清晰。
+         * 原来是 `{1, 4, 16, 64, 256}`（相邻差 4 倍）。问题不是档位本身，
+         * 而是**一个采样点占多少屏幕像素**会随档位突跳：
+         *
+         * | bpp  | 选中档 | 采样点屏幕尺寸 |
+         * |------|--------|----------------|
+         * | 1.4  | 1      | 1.4 px         |
+         * | 1.5  | **4**  | **6.0 px**  ← 突跳 |
+         * | 5.9  | 4      | 23.6 px（马赛克）|
+         * | 6.0  | **16** | **24 px**   ← 突跳 |
+         *
+         * 2 的幂后每次只变 2 倍，不会有「6 px 突然变 24 px」的断层。
+         *
+         * ## 为什么最小档是 1
+         * SeedCraft 的表是 `{4, 16, 64, 256}`，放大到 `bpp = 0.2`
+         * （一方块占 5 屏幕像素）时，一个采样点仍覆盖 4 方块 = 20 px，
+         * 是 4×4 的大色块。加 `1` 档之后才能看清单方块。
          *
          * ## 上限为什么是 256
          * BedrockMap 只到 32 是因为它有 overview 图兜底；
          * 我们缩到底没有替代图，所以要能显示 32768 方块/瓦片的稀疏数据。
+         *
+         * ⚠️ **种子层只支持 1/4/16/64/256**（cubiomes 的硬限制）。
+         * 2/8/32/128 这几个中间档由 [SeedTerrainSource.blocksPerCell]
+         * 向上钳到最近的合法档，见那里的注释。
          */
-        private val SCALES = intArrayOf(1, 4, 16, 64, 256)
+        private val SCALES = intArrayOf(1, 2, 4, 8, 16, 32, 64, 128, 256)
 
-        /** 细网格可读的最小屏幕间距（px）。低于此值只画粗线。 */
-        private const val MIN_MINOR_GAP_PX = 10f
+        /**
+         * 细网格可读的最小屏幕间距（px）。
+         *
+         * 原来是 10px，意味着 `bpp <= 1.6` 就整级不画细线 ——
+         * 而 1:3 这个**最常用的浏览区间** `chunkPx ≈ 5.3`，
+         * 细网格正好被排除，用户只能看到每 8 区块一条的粗线。
+         *
+         * 4px 是「1px 线 + 3px 空隙」，仍然能分辨，不会糊成一片。
+         */
+        private const val MIN_MINOR_GAP_PX = 4f
 
         /** 粗网格间隔（区块）。 */
         private const val MAJOR_CHUNKS = 8
+
+        /**
+         * 粗网格可读的最小屏幕间距（px）。
+         *
+         * 粗线间距 = 8 区块 × chunkPx。缩得很远时这个值会小于 1px，
+         * 那时画出来的只是一条糊掉的实心线，不如不画。
+         */
+        private const val MIN_MAJOR_GAP_PX = 4f
+
+        /** 区块描边可读的最小屏幕尺寸（px）。独立阈值，不与网格混用。 */
+        private const val MIN_BOUNDARY_CHUNK_PX = 2f
 
         private const val MINOR_STROKE_PX = 1f
         private const val MAJOR_STROKE_PX = 2f
@@ -141,6 +174,20 @@ class MapView @JvmOverloads constructor(
      * 所以即使 mask 不全（比如只扫了包围盒）也不会画错颜色。
      */
     interface ChunkMask {
+        /**
+         * 这个区块是否**查过**（不管有没有地形）。描边用它。
+         *
+         * 与 [hasChunk] 的区别很重要：
+         *   · isKnown   = 扫描过这个区块（纯海面、空区块也算）
+         *   · hasChunk  = 这个区块有可显示的地形
+         *
+         * 用 hasChunk 判断边界的后果是「一格有、一格没有」的棋盘状描边，
+         * 因为纯水区块会被当成「没数据」，和周围有数据的区块相邻处
+         * 四条边全部显形。
+         */
+        fun isKnown(cx: Int, cz: Int): Boolean
+
+        /** 这个区块是否**有地形**。 */
         fun hasChunk(cx: Int, cz: Int): Boolean
     }
 
@@ -378,6 +425,20 @@ class MapView @JvmOverloads constructor(
         val tz0 = floor(top / tileBlocks).toInt()
         val tz1 = floor(bottom / tileBlocks).toInt()
 
+        /*
+         * 告诉数据源视野中心，供它给请求排优先级（近的先出）。
+         *
+         * 只对存档层有意义 —— 种子层是 CPU 推演、每块耗时相近，
+         * 且都在主线程之外排队，排序收益不明显。
+         * 这里统一调用，种子层忽略即可（它没实现 setViewCenter）。
+         */
+        if (!isBase) {
+            (layer as? SaveTiles)?.setViewCenter(
+                (tx0 + tx1) / 2,
+                (tz0 + tz1) / 2,
+            )
+        }
+
         // 更新 wanted（签名没变就不动，避免每帧分配）
         val sig = "${layer.generationId()}:$scale:$cellScale:$tx0:$tx1:$tz0:$tz1"
         if (isBase) {
@@ -485,7 +546,7 @@ class MapView @JvmOverloads constructor(
     private fun scaleFor(bpp: Float): Int {
         var s = SCALES[0]
         while (s < SCALES[SCALES.size - 1] && s < bpp * 1.5f) {
-            s *= 4
+            s *= 2
         }
         return s
     }
@@ -506,7 +567,7 @@ class MapView @JvmOverloads constructor(
     private fun drawChunkBoundary(canvas: Canvas, px: Float, py: Float) {
         val mask = chunkMask ?: return
         val chunkPx = 16f / bpp
-        if (chunkPx < 2f) return
+        if (chunkPx < MIN_BOUNDARY_CHUNK_PX) return
 
         val halfW = width / 2f * bpp
         val halfH = height / 2f * bpp
@@ -521,17 +582,29 @@ class MapView @JvmOverloads constructor(
         val size = 16f / bpp
         for (cz in cz0..cz1) {
             for (cx in cx0..cx1) {
-                if (!mask.hasChunk(cx, cz)) continue
+                if (!mask.isKnown(cx, cz)) continue
                 val l = px + ((cx * 16.0 - centerX) / bpp).toFloat()
                 val tp = py + ((cz * 16.0 - centerZ) / bpp).toFloat()
                 val r = l + size
                 val b = tp + size
 
-                // 只在「自己在外、邻居不在」的那一侧画线
-                if (!mask.hasChunk(cx - 1, cz)) canvas.drawLine(l, tp, l, b, boundaryPaint)
-                if (!mask.hasChunk(cx + 1, cz)) canvas.drawLine(r, tp, r, b, boundaryPaint)
-                if (!mask.hasChunk(cx, cz - 1)) canvas.drawLine(l, tp, r, tp, boundaryPaint)
-                if (!mask.hasChunk(cx, cz + 1)) canvas.drawLine(l, b, r, b, boundaryPaint)
+                /*
+                 * 只在「自己在外、邻居不在」的那一侧画线。
+                 *
+                 * ⚠️ 用 isKnown 而不是 hasChunk。
+                 *
+                 * hasChunk 问的是「有没有地形」。如果拿它判边界，那么
+                 * 「查过但没地形」（纯海面 / 空区块）和「根本没查过」
+                 * 表现一样 —— 相邻区块一个在一个不在，四条边全画，
+                 * 画出来就是一格一格的**棋盘状 X**。
+                 *
+                 * isKnown 问的是「查过没有」，边界因此跟着**扫描范围**走，
+                 * 连续探索的区域内部不会出现任何线。
+                 */
+                if (!mask.isKnown(cx - 1, cz)) canvas.drawLine(l, tp, l, b, boundaryPaint)
+                if (!mask.isKnown(cx + 1, cz)) canvas.drawLine(r, tp, r, b, boundaryPaint)
+                if (!mask.isKnown(cx, cz - 1)) canvas.drawLine(l, tp, r, tp, boundaryPaint)
+                if (!mask.isKnown(cx, cz + 1)) canvas.drawLine(l, b, r, b, boundaryPaint)
             }
         }
     }
@@ -581,7 +654,8 @@ class MapView @JvmOverloads constructor(
             }
         }
 
-        // ② 粗线
+        // ② 粗线 —— 同样过密就不画
+        if (chunkPx * MAJOR_CHUNKS < MIN_MAJOR_GAP_PX) return
         for (c in cx0..cx1) {
             if (c % MAJOR_CHUNKS != 0) continue
             val x = px + ((c * 16.0 - centerX) / bpp).toFloat()

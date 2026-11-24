@@ -814,6 +814,21 @@ fun MainActivity.showAppInfoDialog() {
     // ============================================
     // 色槽清单来自 ColorSlots 注册表，加一项不需要改布局。
     // 每次切标签 / 调完颜色都重建一次，保证显示的是当前值。
+    // ============================================
+    // 地图渲染设置（编辑器页底部）
+    // ============================================
+    dialogView.findViewById<LinearLayout?>(R.id.layout_map_settings)?.let { box ->
+        prefs?.let { p ->
+            fun rebuild() {
+                MapSettingsUi.build(this, p, box) {
+                    // 值变了只刷新这块，不重建整个页面
+                    box.post { rebuild() }
+                }
+            }
+            rebuild()
+        }
+    }
+
     dialogView.findViewById<LinearLayout?>(R.id.layout_color_settings)?.let { box ->
         prefs?.let { p ->
             fun rebuild() {
