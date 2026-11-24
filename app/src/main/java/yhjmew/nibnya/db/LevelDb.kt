@@ -1,6 +1,7 @@
 package yhjmew.nibnya.db
 
 import com.litl.leveldb.DB
+import yhjmew.nibnya.util.AppLogger
 import java.io.File
 
 /**
@@ -74,25 +75,80 @@ interface DbIterator : java.io.Closeable {
  */
 class LitlLevelDb(private val db: DB, override val engineName: String = "C++") : LevelDb {
 
-    override fun get(key: ByteArray): ByteArray? = db.get(key)
+
+    /*
+     * ⚠️ 这里的每个方法都可能触发 native 崩溃。
+     *
+     * libleveldbjni.so 是预编译的第三方 .so，我们改不了它的内部。
+     * 它能保证的错误只有 Java 异常（IOError 等），而**内存损坏 / 空指针
+     * 这类问题会直接 SIGSEGV**，进程瞬间消失、日志里什么都没有。
+     *
+     * 所以这里能做的是：
+     *   ① 把每个 Java 异常都记下来（带 op 名和 key 长度，不记内容）
+     *   ② 记下出错时的操作类型，配合 native-crash.log 能定位到是哪一步
+     *   ③ close() 不再静默吞异常，至少留一行 warn
+     *
+     * 真正的 SIGSEGV 由 nibnya_seed.c 里的信号处理器兜底 —— 它写的是
+     * 全局崩溃文件，两边的日志拼起来才能还原现场。
+     */
+
+    override fun get(key: ByteArray): ByteArray? =
+        try {
+            db.get(key)
+        } catch (t: Throwable) {
+            logDbError("get", key, t)
+            throw t
+        }
 
     override fun put(key: ByteArray, value: ByteArray?) {
         if (value == null) return
-        db.put(key, value)
+        try {
+            db.put(key, value)
+        } catch (t: Throwable) {
+            logDbError("put", key, t)
+            throw t
+        }
     }
 
-    override fun delete(key: ByteArray) = db.delete(key)
+    override fun delete(key: ByteArray) =
+        try {
+            db.delete(key)
+        } catch (t: Throwable) {
+            logDbError("delete", key, t)
+            throw t
+        }
 
-    override fun iterator(): DbIterator = LitlIterator(db.iterator())
+    override fun iterator(): DbIterator =
+        try {
+            LitlIterator(db.iterator())
+        } catch (t: Throwable) {
+            AppLogger.error(TAG, "iterator() 失败", t)
+            throw t
+        }
 
     override fun close() {
         try {
             db.close()
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            // 不再静默：关闭失败往往意味着之前的读写已经出问题
+            AppLogger.warn(TAG, "close() 失败: ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 
+    /** 记录一次 LevelDB 操作失败。key 只记长度和首字节，避免刷屏。 */
+    private fun logDbError(op: String, key: ByteArray, t: Throwable) {
+        val preview = if (key.isEmpty()) "-"
+        else key.take(4).joinToString("") { "%02x".format(it) } + "…(${key.size}B)"
+        AppLogger.error(
+            TAG,
+            "LevelDB $op 失败 key=$preview: ${t.javaClass.simpleName}: ${t.message}",
+            t,
+        )
+    }
+
     companion object {
+        private const val TAG = "LitlLevelDb"
+
         /**
          * 打开（带重试）。
          *

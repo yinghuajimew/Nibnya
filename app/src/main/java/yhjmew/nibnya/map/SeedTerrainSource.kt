@@ -2,6 +2,7 @@ package yhjmew.nibnya.map
 
 import android.graphics.Bitmap
 import android.util.Log
+import yhjmew.nibnya.util.AppLogger
 import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.concurrent.Executors
@@ -100,6 +101,73 @@ class SeedTerrainSource(
         var available: Boolean = false
             private set
 
+        /** 日志级别：1=info 2=warn 3=error（与 C 侧约定） */
+        private const val LVL_ERROR = 3
+
+        /**
+         * C 侧回调入口。
+         *
+         * ⚠️ 由 native 线程直接调用，可能在任意时刻进来。
+         * 只做「打日志」，不要碰 UI、不要加锁、不要 throw。
+         */
+        @JvmStatic
+        fun onNativeLog(level: Int, msg: String) {
+            try {
+                when {
+                    level >= LVL_ERROR -> Log.e(TAG, msg)
+                    level == 2 -> Log.w(TAG, msg)
+                    else -> Log.i(TAG, msg)
+                }
+                // 只把 warn/error 进 AppLogger：info 是逐块统计，
+                // 一秒几十条会把 500 条环形缓冲刷满，把真正的错误挤掉。
+                if (level >= 2) {
+                    AppLogger.warn(TAG, msg)
+                }
+            } catch (_: Throwable) {
+                // 日志本身失败不能反过来引发崩溃
+            }
+        }
+
+        /*
+         * 这两个是 static native（C 侧第二个参数是 jclass）。
+         * 声明必须带 @JvmStatic 且在 companion 里，否则 Kotlin 会把它们
+         * 编译成实例方法，JNI 就找不到对应的 Java_yhjmew_..._nativeXxx。
+         */
+        @JvmStatic
+        private external fun nativeInstallCrashHandler(path: String): Int
+
+        @JvmStatic
+        private external fun nativeStats(): LongArray?
+
+        /**
+         * 安装 native 崩溃捕获。
+         *
+         * Java 的 UncaughtExceptionHandler 抓不到 SIGSEGV —— 内核直接杀进程，
+         * 一行 Java 都执行不到。所以必须在 native 里装信号处理器。
+         *
+         * @param path 崩溃日志绝对路径（App 私有目录，保证可写）
+         * @return 0 成功；-1 so 未加载；-2 调用异常；其他见 C 侧
+         */
+        fun installNativeCrashHandler(path: String): Int {
+            if (!available) return -1
+            return try {
+                nativeInstallCrashHandler(path)
+            } catch (t: Throwable) {
+                Log.w(TAG, "安装 native 崩溃捕获失败", t)
+                -2
+            }
+        }
+
+        /** native 统计：{成功瓦片数, 失败瓦片数, 累计毫秒}。失败返回 null。 */
+        fun stats(): LongArray? {
+            if (!available) return null
+            return try {
+                nativeStats()
+            } catch (_: Throwable) {
+                null
+            }
+        }
+
         init {
             available = try {
                 System.loadLibrary("nibnya")
@@ -130,6 +198,27 @@ class SeedTerrainSource(
     ): Int
 
     private external fun nativeSpawn(seed: Long, mcLevel: Int): IntArray?
+
+    /*
+     * 以下两个是 static —— 由 C 侧用 CallStaticVoidMethod 调用，
+     * 不依赖具体实例（崩溃可能发生在任何一块瓦片上）。
+     */
+
+
+    // ── C → Java 的日志桥 ──
+
+    /** 错误码 → 用户能看懂的原因。 */
+    private fun describeRc(rc: Int): String = when (rc) {
+        0 -> "成功"
+        -1 -> "参数非法"
+        -2 -> "版本档位不支持"
+        -3 -> "内存不足"
+        -4 -> "缓存尺寸计算失败"
+        -5 -> "群系生成失败"
+        -6 -> "JNI 数组访问失败"
+        -7 -> "维度非法"
+        else -> "未知错误 $rc"
+    }
 
     // ── 状态 ──
 
@@ -166,13 +255,39 @@ class SeedTerrainSource(
     override fun tileCells(): Int = CELLS
 
     /**
-     * 种子层固定按视图给的档位采样。
+     * 把视图档位映射到 cubiomes 接受的值。
      *
-     * 与 [SaveTiles] 不同：那边放大到极限会用 1 方块/采样点以看清单方块，
-     * 而这层只是底图，用 1 方块采样会显著变慢（256 倍的点数）却看不出差别。
-     * 所以这里把下限钳到 4。
+     * ## 为什么需要映射
+     *
+     * 视图用 2 的幂（1/2/4/8/16/32/64/128/256），相邻只差 2 倍，
+     * 缩放时采样点尺寸平滑。但 **cubiomes 只接受 1/4/16/64/256**
+     * （`generator.c` 里按 4 的幂查层叠表），传 2/8/32/128 会算错甚至除零。
+     *
+     * ## 为什么向上取整
+     *
+     * `2 → 4`、`8 → 16`、`32 → 64`、`128 → 256`。
+     * 取更粗的那一档意味着**采样点变稀、瓦片覆盖变大**：
+     * 请求 2 档时按 4 档生成，画面比期望粗一点，但**内容完整**。
+     *
+     * 如果向下取整（`2 → 1`），覆盖范围会小一半 ——
+     * 一块瓦片只画出应有面积的 1/4，边缘露白，看起来像缺图。
+     * 宁可粗，不可缺。
+     *
+     * ## 为什么下限是 4 而不是 1
+     *
+     * 这层是远景底图。1 方块/采样点时点数会翻 16 倍，
+     * 生成明显变慢，而这个缩放级别下存档层已经盖在上面，
+     * 种子层根本看不见。存档层（[SaveTiles]）才需要 1 档。
      */
-    override fun blocksPerCell(scale: Int): Int = scale.coerceIn(4, 256)
+    override fun blocksPerCell(scale: Int): Int {
+        val s = scale.coerceIn(1, 256)
+        return when {
+            s <= 4 -> 4      // 1、2 → 4
+            s <= 16 -> 16    // 8 → 16
+            s <= 64 -> 64    // 32 → 64
+            else -> 256      // 128、256 → 256
+        }
+    }
 
     /**
      * 缓存键用**实际采样档位**而不是视图传来的 scale。
@@ -213,20 +328,33 @@ class SeedTerrainSource(
         val bpc = blocksPerCell(scale)
 
         pool.execute {
+            /*
+             * ⚠️ inflight 的移除必须在 finally 里。
+             *
+             * 原先是「成功分支删一次、catch 分支删一次」，但中间有个
+             * `if (gen != generation) return@execute` —— 换世界/切维度时
+             * 从那里返回，**两个分支都没走到**，这个键就永久留在 inflight
+             * 里了。之后同名的瓦片再也不会被请求（`inflight.add` 返回 false），
+             * 表现为「那块区域永远是空的，怎么滑都不出现」。
+             */
             try {
                 val bmp = render(scale, tileX, tileZ, bpc, dim)
-                // 换世界了 → 这块钱作废
-                if (gen != generation) return@execute
+
+                // 换世界了 → 这块钱作废（Bitmap 也要回收，否则泄漏 native 内存）
+                if (gen != generation) {
+                    bmp?.recycle()
+                    return@execute
+                }
 
                 if (bmp != null) {
                     cache[k] = bmp
                 }
-                // 空瓦片也留个记录：不缓存的话，滑回来会再算一遍
-                synchronized(lock) { inflight.remove(k) }
-
                 if (wanted.contains(k)) invalidation?.invoke()
             } catch (t: Throwable) {
+                // 这里只能抓到 Java 异常；native 崩溃由信号处理器负责
                 Log.w(TAG, "渲染失败 $k", t)
+                AppLogger.warn(TAG, "渲染失败 $k: ${t.message}")
+            } finally {
                 synchronized(lock) { inflight.remove(k) }
             }
         }
@@ -252,10 +380,19 @@ class SeedTerrainSource(
             pixels,
         )
         if (rc != 0) {
-            // -2 是版本不支持，属于「环境问题」，打一次就够，别刷屏
-            if (rc == -2 && !warnedVersion) {
-                warnedVersion = true
-                Log.w(TAG, "cubiomes 不支持该版本（档位 $mcLevel），种子层停用")
+            /*
+             * 每个码单独处理，不要把「版本不支持」和「内存不足」混在一起。
+             * 版本不支持是环境问题（打一次就够），其余是异常（要能追）。
+             */
+            when (rc) {
+                -2 -> if (!warnedVersion) {
+                    warnedVersion = true
+                    val msg = "cubiomes 不支持版本档位 $mcLevel（${mcName(mcLevel)}），种子层停用"
+                    Log.w(TAG, msg)
+                    AppLogger.warn(TAG, msg)
+                }
+                -3 -> Log.w(TAG, "瓦片内存不足（cells=$CELLS bpc=$bpc）")
+                else -> Log.w(TAG, "nativeTile 失败 rc=$rc: ${describeRc(rc)}")
             }
             return null
         }

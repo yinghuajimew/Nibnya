@@ -325,6 +325,28 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
+    /**
+     * 安装 native 崩溃捕获（SIGSEGV / SIGABRT / SIGBUS / SIGFPE / SIGILL）。
+     *
+     * 日志写到 App 私有目录，保证可写（公共目录在 Android 11+ 可能要权限，
+     * 而崩溃现场没有机会申请权限）。
+     */
+    private fun installNativeCrashHandler() {
+        if (!yhjmew.nibnya.map.SeedTerrainSource.available) return
+        try {
+            val dir = File(getExternalFilesDir(null), "CrashLogs")
+            if (!dir.exists()) dir.mkdirs()
+            val f = File(dir, "native-crash.log")
+            val rc = yhjmew.nibnya.map.SeedTerrainSource.installNativeCrashHandler(f.absolutePath)
+            if (rc != 0) {
+                AppLogger.warn("NativeCrash", "安装 native 崩溃捕获失败 rc=$rc")
+            }
+        } catch (t: Throwable) {
+            // 绝不能让崩溃捕获本身把 App 搞挂
+            AppLogger.warn("NativeCrash", "安装异常: ${t.message}")
+        }
+    }
+
     // ============================================
     // onCreate
     // ============================================
@@ -334,6 +356,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 日志头部要带设备信息、且文案跟随应用语言，需要 Context
         AppLogger.init(this)
+
+        /*
+         * native 崩溃捕获。
+         *
+         * Java 的 UncaughtExceptionHandler 只对 Java 异常有效。libnibnya.so /
+         * libleveldbjni.so 里一旦 SIGSEGV，内核直接杀掉进程 —— Java 一行都执行不到，
+         * crash-*.log 里什么都不会有，用户只看到 App 凭空消失。
+         *
+         * 这里让 native 装一个信号处理器，把崩溃现场写进独立文件，
+         * 下次启动时由 AppLogger 读回来给用户看。
+         *
+         * 失败不影响启动（老设备可能禁止 sigaltstack），只记一笔。
+         */
+        installNativeCrashHandler()
 
         NbtTranslator.init(this)
         createNoMedia()
