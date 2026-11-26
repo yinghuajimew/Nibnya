@@ -426,7 +426,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/label_crop_min_size"
                         android:textColor="@color/app_text_primary"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        android:layout_marginEnd="10dp" />
 
                     <Spinner
                         android:id="@+id/sp_puzzle_crop_min"
@@ -548,13 +549,217 @@
 
             <!-- 保存前自动备份（策略对齐草稿箱；放在草稿箱上面） -->
 
-            <!-- 地图渲染设置（整块由 MapSettingsUi 代码构建） -->
-            <LinearLayout
-                android:id="@+id/layout_map_settings"
+            <!-- ===== 地图渲染 ===== -->
+
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="8dp" />
+                android:text="@string/map_section_title"
+                android:textColor="@color/app_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_section_hint"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="10dp" />
+
+            <!-- 瓦片缓存 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_label_tile_cache"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_map_tile_cache"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="96dp" />
+
+                <Button
+                    android:id="@+id/btn_custom_map_tile_cache"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_tile_cache"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- 区块缓存 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_label_chunk_cache"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_map_chunk_cache"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="96dp" />
+
+                <Button
+                    android:id="@+id/btn_custom_map_chunk_cache"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_chunk_cache"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- 渲染线程 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_label_threads"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_map_threads"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="96dp" />
+
+                <Button
+                    android:id="@+id/btn_custom_map_threads"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_custom"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="#2196F3"
+                    android:backgroundTint="#00000000" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_threads"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <CheckBox
+                android:id="@+id/cb_map_seed_layer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_box_seed_layer"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_seed_layer"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <CheckBox
+                android:id="@+id/cb_map_boundary_loaded"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_box_boundary_loaded"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_boundary_loaded"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/cb_map_boundary_visited"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_box_boundary_visited"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_boundary_visited"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="8dp" />
+
+            <!-- native 统计 -->
+            <TextView
+                android:id="@+id/tv_map_native_stats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="@color/app_text_secondary"
+                android:paddingTop="4dp" />
 
         </LinearLayout>
 
@@ -1156,7 +1361,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/label_db_engine"
                         android:textColor="@color/app_text_primary"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        android:layout_marginEnd="10dp" />
 
                     <Spinner
                         android:id="@+id/sp_db_engine"

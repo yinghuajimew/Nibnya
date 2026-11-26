@@ -1048,4 +1048,28 @@ If this path is wrong, use "Custom path". Tap Diagnostics to see why the folder 
     <string name="toast_path_auto_corrected">That folder needs root, so the external path was used instead:
 %1$s</string>
     <string name="toast_no_root_for_internal">This folder needs real root access. ROOT is selected but "su" is not usable on this device.</string>
+    <string name="map_section_title">Map rendering</string>
+    <string name="map_section_hint">Changes take effect after reopening the map page.</string>
+    <string name="map_label_tile_cache">Tile cache</string>
+    <string name="map_desc_tile_cache">Larger means less recomputation, at the cost of memory.</string>
+    <string name="map_label_chunk_cache">Chunk cache</string>
+    <string name="map_desc_chunk_cache">About 1.5 KB each; revisiting an area needs no re-parsing.</string>
+    <string name="map_label_threads">Render threads</string>
+    <string name="map_desc_threads">Lower-end devices: try 1. 3-4 is faster on large worlds.</string>
+    <string name="map_box_seed_layer">Seed terrain layer</string>
+    <string name="map_desc_seed_layer">Derives biomes from the world seed where unexplored. Disabling saves CPU.</string>
+    <string name="map_box_boundary_loaded">Outline loaded areas (pink)</string>
+    <string name="map_desc_boundary_loaded">Traces the edge of the terrain you have actually loaded.</string>
+    <string name="map_box_boundary_visited">Outline visited areas (cyan)</string>
+    <string name="map_desc_boundary_visited">Traces the range you have panned across, including unloaded chunks.</string>
+    <string name="unit_mb"> MB</string>
+    <string name="unit_chunks"> chunks</string>
+    <string name="unit_threads"> threads</string>
+    <string name="map_title_tile_cache">Custom tile cache</string>
+    <string name="map_msg_tile_cache_invalid">Enter a value between %1$d and %2$d MB</string>
+    <string name="map_title_chunk_cache">Custom chunk cache</string>
+    <string name="map_msg_chunk_cache_invalid">Enter a value between %1$d and %2$d</string>
+    <string name="map_title_threads">Custom render threads</string>
+    <string name="map_msg_threads_invalid">Enter a value between %1$d and %2$d</string>
+    <string name="map_stats_native">Seed layer: %1$d tiles generated, %2$d failed, %3$d ms total</string>
 </resources>

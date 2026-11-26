@@ -1051,4 +1051,28 @@ ID：%3$s
     <string name="toast_path_auto_corrected">该目录需要 root 才能读，已自动改用外部路径：
 %1$s</string>
     <string name="toast_no_root_for_internal">这个目录需要真正的 root。当前模式虽是 ROOT，但本机 su 无法执行。</string>
+    <string name="map_section_title">地图渲染</string>
+    <string name="map_section_hint">改动在重新打开地图页后生效。</string>
+    <string name="map_label_tile_cache">瓦片缓存</string>
+    <string name="map_desc_tile_cache">越大越不容易反复重算，占内存也越多</string>
+    <string name="map_label_chunk_cache">区块缓存</string>
+    <string name="map_desc_chunk_cache">每个区块约 1.5 KB；滑回看过的区域时不用重新解析</string>
+    <string name="map_label_threads">渲染线程</string>
+    <string name="map_desc_threads">低端机设 1 可减少卡顿；设 3~4 在大存档上更快</string>
+    <string name="map_box_seed_layer">种子地形层</string>
+    <string name="map_desc_seed_layer">没探索过的地方用世界种子推演群系。关掉能省一半 CPU</string>
+    <string name="map_box_boundary_loaded">已加载区域描边（粉色）</string>
+    <string name="map_desc_boundary_loaded">沿玩家真正加载过的地形边界画线</string>
+    <string name="map_box_boundary_visited">浏览足迹描边（青色）</string>
+    <string name="map_desc_boundary_visited">沿你拖动看过的范围画线，包含尚未加载的区块</string>
+    <string name="unit_mb"> MB</string>
+    <string name="unit_chunks"> 个</string>
+    <string name="unit_threads"> 线程</string>
+    <string name="map_title_tile_cache">自定义瓦片缓存</string>
+    <string name="map_msg_tile_cache_invalid">请输入 %1$d 到 %2$d 之间的数值</string>
+    <string name="map_title_chunk_cache">自定义区块缓存</string>
+    <string name="map_msg_chunk_cache_invalid">请输入 %1$d 到 %2$d 之间的数值</string>
+    <string name="map_title_threads">自定义渲染线程数</string>
+    <string name="map_msg_threads_invalid">请输入 %1$d 到 %2$d 之间的数值</string>
+    <string name="map_stats_native">种子层已生成 %1$d 块瓦片，失败 %2$d 块，累计 %3$d ms</string>
 </resources>

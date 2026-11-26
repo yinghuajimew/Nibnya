@@ -173,29 +173,72 @@ class MapView @JvmOverloads constructor(
      * 用它给「已探索区域」描一圈边 —— 只画线，不参与取色，
      * 所以即使 mask 不全（比如只扫了包围盒）也不会画错颜色。
      */
+    /**
+     * 区块描边的数据源。
+     *
+     * 两个方法对应两条线，**都必须实现**：
+     *
+     * | 方法 | 含义 | 描边颜色 |
+     * |---|---|---|
+     * | [hasChunk] | 玩家真正加载过（数据库里有非透明方块） | 粉 `#FF7AB8` |
+     * | [isKnown]  | App 查过这个区块（含没加载的） | 青 `#00E5FF` |
+     *
+     * ## 为什么必须分开
+     *
+     * 地图按**瓦片**批量查询：一块瓦片 128×128 个区块，滑到某处时
+     * 整块瓦片都会被查一遍 —— 包括数据库里根本没有区块的那些。
+     * 所以「查过」的范围永远由完整瓦片拼成，严格对齐瓦片边界；
+     * 而「有数据」的范围贴着真实地形走。
+     *
+     * 两者混用会得到两个都不像的结果：
+     *   · 只用 isKnown  → 一个包住黑色区域的大矩形，看不出玩家玩到哪
+     *   · 只用 hasChunk → 纯海面区块被当成「没数据」，相邻处四条边全画，
+     *                     呈棋盘状 X
+     */
     interface ChunkMask {
-        /**
-         * 这个区块是否**查过**（不管有没有地形）。描边用它。
-         *
-         * 与 [hasChunk] 的区别很重要：
-         *   · isKnown   = 扫描过这个区块（纯海面、空区块也算）
-         *   · hasChunk  = 这个区块有可显示的地形
-         *
-         * 用 hasChunk 判断边界的后果是「一格有、一格没有」的棋盘状描边，
-         * 因为纯水区块会被当成「没数据」，和周围有数据的区块相邻处
-         * 四条边全部显形。
-         */
-        fun isKnown(cx: Int, cz: Int): Boolean
-
-        /** 这个区块是否**有地形**。 */
+        /** 玩家**真正加载过**这个区块吗？（有非透明方块）→ 粉色线 */
         fun hasChunk(cx: Int, cz: Int): Boolean
+
+        /** App **查过**这个区块吗？（不管有没有数据）→ 青色线 */
+        fun isKnown(cx: Int, cz: Int): Boolean
     }
 
     /** 区块边界描边用的数据源；null = 不描边。 */
     private var chunkMask: ChunkMask? = null
 
-    private val boundaryPaint = Paint().apply {
+    /** 是否画「已加载区域」的粉色描边。 */
+    private var showLoadedBoundary = true
+
+    /** 是否画「浏览足迹」的青色描边。 */
+    private var showVisitedBoundary = true
+
+    /**
+     * 粉色：玩家**真正加载过**的区块边界（数据库里有非透明方块）。
+     *
+     * 就是用户说的「正常框出已经被玩家加载过的地方」。
+     * 颜色沿用原来的 #FF7AB8 —— 它是这套配色里辨识度最高的暖色，
+     * 压在地形上不会被绿色群系吃掉。
+     */
+    private val loadedBoundaryPaint = Paint().apply {
         color = 0xE6FF7AB8.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        isAntiAlias = false
+    }
+
+    /**
+     * 青色：玩家**拖动浏览过**的范围，包括没加载的区块。
+     *
+     * 语义是「我看过这里」，不是「这里有数据」——
+     * 所以它总会比粉色大一圈（查看时整块瓦片都会被查询，
+     * 包括数据库里根本没区块的那些）。
+     *
+     * 颜色选青色（#00E5FF）而不是另一种暖色：
+     * 两条线在图上大量重叠，暖色+暖色会糊成一片，
+     * 冷色+暖色拉开明度差才分得清。
+     */
+    private val visitedBoundaryPaint = Paint().apply {
+        color = 0xE600E5FF.toInt()
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         isAntiAlias = false
@@ -203,6 +246,13 @@ class MapView @JvmOverloads constructor(
 
     fun setChunkMask(mask: ChunkMask?) {
         chunkMask = mask
+        invalidate()
+    }
+
+    /** 两个描边开关各自独立 —— 想只留一条线时不必连有用的那条一起关掉。 */
+    fun setBoundaryVisible(loaded: Boolean, visited: Boolean) {
+        showLoadedBoundary = loaded
+        showVisitedBoundary = visited
         invalidate()
     }
 
@@ -566,6 +616,8 @@ class MapView @JvmOverloads constructor(
      */
     private fun drawChunkBoundary(canvas: Canvas, px: Float, py: Float) {
         val mask = chunkMask ?: return
+        if (!showLoadedBoundary && !showVisitedBoundary) return
+
         val chunkPx = 16f / bpp
         if (chunkPx < MIN_BOUNDARY_CHUNK_PX) return
 
@@ -579,32 +631,58 @@ class MapView @JvmOverloads constructor(
         val count = (cx1 - cx0 + 1).toLong() * (cz1 - cz0 + 1)
         if (count > 60_000L) return
 
+        /*
+         * 两条线分开画，各自的判断条件和画笔都不同：
+         *
+         *   ① 已加载（粉）—— hasChunk：数据库里确实解析出了非透明方块
+         *   ② 浏览足迹（青）—— isKnown：App 查过这个区块（不管有没有数据）
+         *
+         * ⚠️ 顺序有讲究：青色先画、粉色后画。
+         *    青色范围更大且经常把粉色整个包住，若反过来，
+         *    粉色会被青色覆盖掉一半，看着像「粉色缺了一段」。
+         */
+        if (showVisitedBoundary) {
+            drawOutline(canvas, mask, cx0, cx1, cz0, cz1, px, py, visited = true)
+        }
+        if (showLoadedBoundary) {
+            drawOutline(canvas, mask, cx0, cx1, cz0, cz1, px, py, visited = false)
+        }
+    }
+
+    /**
+     * 画一圈轮廓。
+     *
+     * 只在「自己在内、邻居不在」的那一侧落线 —— 连续区域的内部
+     * 因此不会出现任何线，只有最外沿那一圈。
+     *
+     * @param visited true = 问 [ChunkMask.isKnown]（浏览过），
+     *                false = 问 [ChunkMask.hasChunk]（有数据）
+     */
+    private fun drawOutline(
+        canvas: Canvas,
+        mask: ChunkMask,
+        cx0: Int, cx1: Int, cz0: Int, cz1: Int,
+        px: Float, py: Float,
+        visited: Boolean,
+    ) {
+        val paint = if (visited) visitedBoundaryPaint else loadedBoundaryPaint
         val size = 16f / bpp
+        val inside: (Int, Int) -> Boolean =
+            if (visited) { cx, cz -> mask.isKnown(cx, cz) }
+            else { cx, cz -> mask.hasChunk(cx, cz) }
+
         for (cz in cz0..cz1) {
             for (cx in cx0..cx1) {
-                if (!mask.isKnown(cx, cz)) continue
+                if (!inside(cx, cz)) continue
                 val l = px + ((cx * 16.0 - centerX) / bpp).toFloat()
                 val tp = py + ((cz * 16.0 - centerZ) / bpp).toFloat()
                 val r = l + size
                 val b = tp + size
 
-                /*
-                 * 只在「自己在外、邻居不在」的那一侧画线。
-                 *
-                 * ⚠️ 用 isKnown 而不是 hasChunk。
-                 *
-                 * hasChunk 问的是「有没有地形」。如果拿它判边界，那么
-                 * 「查过但没地形」（纯海面 / 空区块）和「根本没查过」
-                 * 表现一样 —— 相邻区块一个在一个不在，四条边全画，
-                 * 画出来就是一格一格的**棋盘状 X**。
-                 *
-                 * isKnown 问的是「查过没有」，边界因此跟着**扫描范围**走，
-                 * 连续探索的区域内部不会出现任何线。
-                 */
-                if (!mask.isKnown(cx - 1, cz)) canvas.drawLine(l, tp, l, b, boundaryPaint)
-                if (!mask.isKnown(cx + 1, cz)) canvas.drawLine(r, tp, r, b, boundaryPaint)
-                if (!mask.isKnown(cx, cz - 1)) canvas.drawLine(l, tp, r, tp, boundaryPaint)
-                if (!mask.isKnown(cx, cz + 1)) canvas.drawLine(l, b, r, b, boundaryPaint)
+                if (!inside(cx - 1, cz)) canvas.drawLine(l, tp, l, b, paint)
+                if (!inside(cx + 1, cz)) canvas.drawLine(r, tp, r, b, paint)
+                if (!inside(cx, cz - 1)) canvas.drawLine(l, tp, r, tp, paint)
+                if (!inside(cx, cz + 1)) canvas.drawLine(l, b, r, b, paint)
             }
         }
     }

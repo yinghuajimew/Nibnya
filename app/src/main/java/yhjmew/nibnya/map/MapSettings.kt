@@ -89,13 +89,33 @@ object MapSettings {
         prefs(ctx).edit().putBoolean("seed_layer", on).apply()
     }
 
-    // ── 描边 ──
+    // ── 描边（两条线各自独立）──
 
-    fun boundaryEnabled(ctx: Context): Boolean =
-        prefs(ctx).getBoolean("boundary", true)
+    /**
+     * 粉色线：玩家真正加载过的区块。
+     *
+     * 键名用 `boundary_loaded`。旧版本只有一个 `boundary` 开关，
+     * 这里不迁移它 —— 旧值不分青红皂白，迁过来只会让「本来关着的人
+     * 突然多出一条青色线」，不如都回到默认全开。
+     */
+    fun loadedBoundaryEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean("boundary_loaded", true)
 
-    fun setBoundaryEnabled(ctx: Context, on: Boolean) {
-        prefs(ctx).edit().putBoolean("boundary", on).apply()
+    fun setLoadedBoundaryEnabled(ctx: Context, on: Boolean) {
+        prefs(ctx).edit().putBoolean("boundary_loaded", on).apply()
+    }
+
+    /**
+     * 青色线：玩家拖动浏览过的范围（含没加载的区块）。
+     *
+     * 默认**关闭**。理由：它严格对齐瓦片边界，看起来是大矩形，
+     * 对多数人来说是噪声；想看「我扫到哪」时再打开。
+     */
+    fun visitedBoundaryEnabled(ctx: Context): Boolean =
+        prefs(ctx).getBoolean("boundary_visited", false)
+
+    fun setVisitedBoundaryEnabled(ctx: Context, on: Boolean) {
+        prefs(ctx).edit().putBoolean("boundary_visited", on).apply()
     }
 
     // ── 预加载半径（已有功能，原先未持久化）──

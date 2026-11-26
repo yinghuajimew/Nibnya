@@ -122,6 +122,19 @@ class MapPageController(
         }
     }
 
+    /**
+     * 重新读取两个描边开关并应用。
+     *
+     * 设置页改完直接调它 —— 描边只是 MapView 里的两个布尔值，
+     * 下一帧就生效，不必重开地图页（与缓存/线程数不同）。
+     */
+    fun applyBoundary() {
+        mapView?.setBoundaryVisible(
+            loaded = MapSettings.loadedBoundaryEnabled(activity),
+            visited = MapSettings.visitedBoundaryEnabled(activity),
+        )
+    }
+
     /** 底部导航切到地图页时调用。 */
     fun onShown() {
         visible = true
@@ -270,17 +283,26 @@ class MapPageController(
                     // 顺序反了会让已探索区域在第一帧闪一下群系色
                     mapView?.setBaseSource(seedSrc)
                     mapView?.setTileSource(tiles)
-                    // 描边：只知道「已渲染到哪」，够用且零 IO
-                    // 描边可在设置里关掉（有人嫌乱）
-                    if (!MapSettings.boundaryEnabled(activity)) {
-                        mapView?.setChunkMask(null)
-                    } else mapView?.setChunkMask(object : MapView.ChunkMask {
-                        override fun isKnown(cx: Int, cz: Int): Boolean =
-                            tiles.isChunkKnown(cx, cz)
-
+                    /*
+                     * 描边：两条线各自独立开关。
+                     *
+                     *   · 粉色 hasChunk → isChunkPopulated（玩家真加载过）
+                     *   · 青色 isKnown   → isChunkKnown（查过，含没加载的）
+                     *
+                     * mask 始终挂上，是否绘制由 MapView 的开关决定 ——
+                     * 这样改设置后不必重开地图页，下一帧就生效。
+                     */
+                    mapView?.setChunkMask(object : MapView.ChunkMask {
                         override fun hasChunk(cx: Int, cz: Int): Boolean =
                             tiles.isChunkPopulated(cx, cz)
+
+                        override fun isKnown(cx: Int, cz: Int): Boolean =
+                            tiles.isChunkKnown(cx, cz)
                     })
+                    mapView?.setBoundaryVisible(
+                        loaded = MapSettings.loadedBoundaryEnabled(activity),
+                        visited = MapSettings.visitedBoundaryEnabled(activity),
+                    )
                     // 居中到出生点。区块中心 +8 让落点在该区块正中间
                     mapView?.centerOn(anchor.first * 16 + 8, anchor.second * 16 + 8)
                     loadedFolder = f
