@@ -32,6 +32,28 @@ class MapSession private constructor(
     private var db: PlayerDbManager? = null
     private var seedSource: SeedTerrainSource? = null
 
+    /**
+     * 本会话用的 level.dat 路径。
+     *
+     * ## 为什么不能直接用原存档里的那个
+     *
+     * `Android/data/<包名>/...` 下，Android 11+ 的分区存储允许
+     * `File.exists()` / `listFiles()`，但**读不出内容** ——
+     * `FileInputStream` 直接抛 `EACCES`。
+     *
+     * 以前这里写的是 `File(worldDir, "level.dat")`，读失败被
+     * `readLevelMeta()` 的 `catch (_: Throwable)` 吞掉返回 null，
+     * 于是 [createSeedSource] 返回 null、底层留空 ——
+     * 表现就是「地图背景一片黑，但存档层正常」。
+     *
+     * 现在与 db 一样走「复制到工作目录」：能直读就直读，
+     * 读不了就用 Shizuku 桥接中转。见 [readLevelMeta]。
+     */
+    private var levelDatFile: File = File(worldDir, "level.dat")
+
+    /** 工作副本里的 level.dat（Shizuku 中转用）。 */
+    private var levelDatCopy: File? = null
+
     companion object {
         /**
          * 读世界出生点对应的区块坐标。
@@ -42,8 +64,8 @@ class MapSession private constructor(
          *
          * @return 区块坐标；读不到返回 null
          */
-        private fun spawnChunkOf(worldDir: File): Pair<Int, Int>? = try {
-            val json = yhjmew.nibnya.nbt.BedrockParser.parse(File(worldDir, "level.dat").absolutePath)
+        private fun spawnChunkOf(levelDat: File): Pair<Int, Int>? = try {
+            val json = yhjmew.nibnya.nbt.BedrockParser.parse(levelDat.absolutePath)
                 ?: return null
             // BedrockParser 返回的结构里，数值字段是 {"t":3,"v":值}
             fun intOf(key: String): Int? = json.get(key)?.let { el ->
@@ -149,7 +171,11 @@ class MapSession private constructor(
             if (fileCount == 0) {
                 throw IllegalStateException("数据库目录为空，无法读取地形：${srcDb.absolutePath}")
             }
-            return MapSession(workDir, worldFolder, worldDir)
+
+            val session = MapSession(workDir, worldFolder, worldDir)
+            // level.dat 与 db 走同一套权限判定：读不了就经 Shizuku 中转
+            session.prepareLevelDat(ctx, vm)
+            return session
         }
 
         /**
@@ -232,6 +258,80 @@ class MapSession private constructor(
     private var tiles: SaveTiles? = null
 
     /**
+     * 把 level.dat 弄到「一定能读」的位置。
+     *
+     * 顺序与 db 一致：
+     *   ① 能直接读 → 原地读（老版本路径 `/storage/emulated/0/games/...`
+     *      就是这种情况，本来就没问题）
+     *   ② 读不了 → Shizuku 复制到兜底目录，再拉回工作副本
+     *
+     * ## 为什么用「读一个字节」来判断而不是 `canRead()`
+     * `File.canRead()` 在分区存储下会对 `Android/data` 里的文件
+     * 返回 true（SELinux 拦在 open 那一层，不在 stat 那一层），
+     * 用它判断会走错分支。实际打开读一下才是可靠的。
+     */
+    private fun prepareLevelDat(ctx: Context, vm: WorldViewModel) {
+        val src = File(worldDir, "level.dat")
+        if (!src.exists()) {
+            AppLogger.warn("MapSession", "level.dat 不存在：${src.absolutePath}")
+            return
+        }
+
+        // ① 试试原地读
+        if (probeReadable(src)) {
+            levelDatFile = src
+            return
+        }
+
+        // ② Shizuku 中转
+        val fallback = File(vm.worksDir(ctx), "map_level_${System.currentTimeMillis()}.dat")
+        val ok = try {
+            val bridgeRoot = yhjmew.nibnya.MainActivity.BRIDGE_ROOT
+            val bridgeFile = bridgeRoot + "map_level.dat"
+            vm.runShizukuCmd(arrayOf("sh", "-c", "mkdir -p \"$bridgeRoot\"")).waitFor()
+            vm.runShizukuCmd(
+                arrayOf("sh", "-c", "cp \"${src.absolutePath}\" \"$bridgeFile\"")
+            ).waitFor()
+            vm.runShizukuCmd(arrayOf("sh", "-c", "chmod 666 \"$bridgeFile\"")).waitFor()
+
+            val bf = File(bridgeFile)
+            if (!bf.exists()) false else {
+                fallback.parentFile?.mkdirs()
+                bf.copyTo(fallback, overwrite = true)
+                try {
+                    vm.runShizukuCmd(arrayOf("sh", "-c", "rm -f \"$bridgeFile\"")).waitFor()
+                } catch (_: Exception) {
+                }
+                probeReadable(fallback)
+            }
+        } catch (e: Exception) {
+            AppLogger.warn("MapSession", "level.dat Shizuku 中转失败: ${e.message}")
+            false
+        }
+
+        if (ok) {
+            levelDatCopy = fallback
+            levelDatFile = fallback
+            AppLogger.info("MapSession", "level.dat 经 Shizuku 中转：${fallback.absolutePath}")
+        } else {
+            // 读不到就保持原路径，让 readLevelMeta 自己判空 —— 
+            // 不许编一个假种子，那会画出和存档完全对不上的地形
+            AppLogger.warn(
+                "MapSession",
+                "level.dat 读不出内容，种子层将不会显示：${src.absolutePath}"
+            )
+        }
+    }
+
+    /** 真打开读一个字节，确认能读到内容（不是只看 canRead）。 */
+    private fun probeReadable(f: File): Boolean = try {
+        if (!f.isFile || f.length() == 0L) false
+        else java.io.FileInputStream(f).use { it.read() >= 0 || f.length() > 0 }
+    } catch (_: Throwable) {
+        false
+    }
+
+    /**
      * 取本会话的瓦片图层（单例）。
      *
      * 同一个世界只应该有一套瓦片缓存 —— 每次切页面都新建的话
@@ -285,7 +385,7 @@ class MapSession private constructor(
     private class LevelMeta(val seed: Long, val mcLevel: Int)
 
     private fun readLevelMeta(): LevelMeta? = try {
-        val json = yhjmew.nibnya.nbt.BedrockParser.parse(File(worldDir, "level.dat").absolutePath)
+        val json = yhjmew.nibnya.nbt.BedrockParser.parse(levelDatFile.absolutePath)
             ?: return null
 
         fun primitive(key: String) = json.get(key)?.takeIf { it.isJsonObject }
@@ -326,7 +426,7 @@ class MapSession private constructor(
      * @return 区块坐标；这个维度完全没有数据时返回 null
      */
     fun anchorChunk(dim: Int = 0): Pair<Int, Int>? {
-        spawnChunkOf(worldDir)?.let { return it }
+        spawnChunkOf(levelDatFile)?.let { return it }
         val bounds = ChunkIndex(database().rawDb()).scan(dim)
         if (bounds.isEmpty) return null
         return Pair(bounds.centerCx, bounds.centerCz)
