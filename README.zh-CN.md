@@ -279,7 +279,7 @@ Nibnya 通过 **[leveldb-java-src](https://github.com/yinghuajimew/leveldb-java-
 
 <!-- Bilibili: 少女粉 #FB7299 -->
 [bilibili-shield]: https://img.shields.io/badge/Bilibili-FB7299?style=flat-square&labelColor=black&logo=bilibili&logoColor=white
-[bilibili-link]: https://www.bilibili.com/video/BV1mkfnBnEKC
+[bilibili-link]: https://space.bilibili.com/648037057
 
 <!-- QQ交流群: 腾讯蓝 #12B7F5 -->
 [qq-shield]: https://img.shields.io/badge/QQ交流群-12B7F5?style=flat-square&labelColor=black&logo=qq&logoColor=white
