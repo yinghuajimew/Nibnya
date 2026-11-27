@@ -138,10 +138,24 @@ class MapPageController(
     /** 底部导航切到地图页时调用。 */
     fun onShown() {
         visible = true
+
+        /*
+         * 没有世界时，视口回到原点并且**禁用拖动/缩放**。
+         *
+         * 以前这里只改状态栏文字就 return，但 MapView 仍然吃触摸事件 ——
+         * 用户在一片黑的空页面上随手一滑，坐标读数就开始跑（截图里
+         * x -68 z -287 → x -114 z -309），看起来像地图在动，
+         * 实际上什么数据都没有。
+         *
+         * 锁住手势比「允许滑但什么都不画」诚实：页面本来就是空的。
+         */
         if (folder == null) {
+            mapView?.setGesturesEnabled(false)
+            mapView?.resetViewport()
             setStatus(activity.getString(R.string.map_status_waiting_world))
             return
         }
+        mapView?.setGesturesEnabled(true)
         if (folder != loadedFolder) openWorld()
     }
 
@@ -465,6 +479,10 @@ class MapPageController(
             withContext(Dispatchers.IO) {
                 s.close()
                 try {
+                    s.cleanupCopies()
+                } catch (_: Exception) {
+                }
+                try {
                     s.workDir.deleteRecursively()
                 } catch (_: Exception) {
                 }
@@ -500,6 +518,10 @@ class MapPageController(
             Thread({
                 s.close()
                 try {
+                    s.cleanupCopies()
+                } catch (_: Exception) {
+                }
+                try {
                     s.workDir.deleteRecursively()
                 } catch (_: Exception) {
                 }
@@ -508,25 +530,46 @@ class MapPageController(
     }
 
     /**
-     * 扫一遍 Works，把**除当前会话以外**的 `map_db_*` 全删掉。
-     * 只删 `map_db_` 前缀，不碰 `working_db_*`。
+     * 扫一遍 Works，把**除当前会话以外**的临时文件全删掉。
+     *
+     * 两类都要清：
+     *   · `map_db_*`          db 副本目录
+     *   · `map_level_*.dat`   Android/data 存档经 Shizuku 中转出来的 level.dat
+     *
+     * 只认这两个前缀，不碰 `working_db_*`（那是编辑器当前工作副本）。
+     *
+     * ⚠️ 以前只清目录、`isDirectory` 为 false 的直接 `return@forEach`，
+     * 于是 `map_level_*.dat` 一路累积没人管 —— 每次打开一个
+     * Android/data 下的存档就多留一个 3~4 KB 的文件。
      */
     private fun sweepStaleCopies() {
-        val keep = session?.workDir?.absolutePath
+        val keepDir = session?.workDir?.absolutePath
+        val keepDat = session?.currentLevelDatPath()
         val works = vm.worksDir(activity)
-        var removed = 0
-        works.listFiles()?.forEach { dir ->
-            if (!dir.isDirectory) return@forEach
-            if (!dir.name.startsWith("map_db_")) return@forEach
-            if (keep != null && dir.absolutePath == keep) return@forEach
-            try {
-                if (dir.deleteRecursively()) removed++
-            } catch (e: Exception) {
-                AppLogger.warn("MapPage", "清理地图副本失败 ${dir.name}: ${e.message}")
+        var removedDirs = 0
+        var removedFiles = 0
+
+        works.listFiles()?.forEach { f ->
+            if (f.isDirectory) {
+                if (!f.name.startsWith("map_db_")) return@forEach
+                if (keepDir != null && f.absolutePath == keepDir) return@forEach
+                try {
+                    if (f.deleteRecursively()) removedDirs++
+                } catch (e: Exception) {
+                    AppLogger.warn("MapPage", "清理地图副本失败 ${f.name}: ${e.message}")
+                }
+            } else {
+                if (!f.name.startsWith("map_level_") || !f.name.endsWith(".dat")) return@forEach
+                if (keepDat != null && f.absolutePath == keepDat) return@forEach
+                try {
+                    if (f.delete()) removedFiles++
+                } catch (e: Exception) {
+                    AppLogger.warn("MapPage", "清理临时 level.dat 失败 ${f.name}: ${e.message}")
+                }
             }
         }
-        if (removed > 0) {
-            AppLogger.info("MapPage", "清理地图副本 $removed 个")
+        if (removedDirs > 0 || removedFiles > 0) {
+            AppLogger.info("MapPage", "清理地图临时文件：目录 $removedDirs 个，level.dat $removedFiles 个")
         }
     }
 

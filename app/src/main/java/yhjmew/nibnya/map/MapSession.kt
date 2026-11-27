@@ -441,6 +441,34 @@ class MapSession private constructor(
         return opened
     }
 
+    /**
+     * 删掉本会话自己产生的工作文件。
+     *
+     * 只删**本会话复制出来的** level.dat —— 原存档里的那个
+     * 属于 Minecraft，绝不能碰。
+     *
+     * 工作目录 `map_db_*` 由调用方删除（里面是 db 副本）。
+     */
+    /**
+     * 当前会话用的 level.dat 若是**我们自己复制的**，返回它的路径；
+     * 直接读原存档时返回 null。
+     *
+     * 清理逻辑据此判断「能不能删」—— 绝不误删 Minecraft 的文件。
+     */
+    fun currentLevelDatPath(): String? = levelDatCopy?.absolutePath
+
+    fun cleanupCopies() {
+        levelDatCopy?.let { f ->
+            try {
+                if (f.exists() && f.delete()) {
+                    AppLogger.info("MapSession", "已删除临时 level.dat：${f.name}")
+                }
+            } catch (_: Exception) {
+            }
+            levelDatCopy = null
+        }
+    }
+
     @Synchronized
     fun close() {
         // 先停瓦片线程（它会读库 / 调 JNI），再停种子线程，最后关库

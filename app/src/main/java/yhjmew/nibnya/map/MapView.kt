@@ -168,6 +168,41 @@ class MapView @JvmOverloads constructor(
     var onViewportChanged: ((centerX: Int, centerZ: Int, bpp: Float) -> Unit)? = null
 
     /**
+     * 是否接受拖动与缩放。
+     *
+     * 没有打开世界时设为 false：页面本来就没有数据，允许滑动只会
+     * 让坐标读数在空页面上乱跑，看着像地图在动。
+     */
+    var gesturesEnabled: Boolean = true
+        private set
+
+    fun setGesturesEnabled(enabled: Boolean) {
+        if (gesturesEnabled == enabled) return
+        gesturesEnabled = enabled
+        if (!enabled) {
+            // 正在进行的缩放别残留半截状态
+            parent?.requestDisallowInterceptTouchEvent(false)
+        }
+        invalidate()
+    }
+
+    /**
+     * 视口回到原点、缩放回到默认档。
+     *
+     * 「原点」指方块坐标 (0, 0)，也就是区块 (0, 0) 的中心。
+     * 注意这与**出生点**不同：打开世界时仍按出生点居中（见
+     * [MapPageController.openWorld]），因为出生点周围才有数据；
+     * 这个方法只用于「没有世界」的空态。
+     */
+    fun resetViewport() {
+        centerX = 0.0
+        centerZ = 0.0
+        bpp = DEFAULT_BPP
+        notifyViewport()
+        invalidate()
+    }
+
+    /**
      * 哪些区块是真实存在的。
      *
      * 用它给「已探索区域」描一圈边 —— 只画线，不参与取色，
@@ -309,6 +344,7 @@ class MapView @JvmOverloads constructor(
                 e1: MotionEvent?, e2: MotionEvent,
                 distanceX: Float, distanceY: Float,
             ): Boolean {
+                if (!gesturesEnabled) return false
                 // 手指往左移（distanceX>0）→ 视野往右走
                 centerX += distanceX * bpp
                 centerZ += distanceY * bpp
@@ -318,6 +354,7 @@ class MapView @JvmOverloads constructor(
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
+                if (!gesturesEnabled) return false
                 val target = if (abs(bpp - DEFAULT_BPP) < 0.05f) DEFAULT_BPP / 4f else DEFAULT_BPP
                 zoomAround(e.x, e.y, target / bpp)
                 invalidate()
@@ -329,6 +366,7 @@ class MapView @JvmOverloads constructor(
     private val scaleGesture by lazy {
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
+                if (!gesturesEnabled) return false
                 // detector.scaleFactor > 1 表示两指分开（放大），bpp 要变小
                 zoomAround(detector.focusX, detector.focusY, 1f / detector.scaleFactor)
                 invalidate()
@@ -404,6 +442,14 @@ class MapView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        /*
+         * 手势禁用时**照样返回 true**（消费事件），只是不移动视口。
+         *
+         * 返回 false 会让事件往上冒，被 ViewPager / 底部导航之类的
+         * 父容器接走 —— 在空页面上左右划会切页面，比「划不动」更让人困惑。
+         */
+        if (!gesturesEnabled) return true
+
         scaleGesture.onTouchEvent(event)
         if (!scaleGesture.isInProgress) gesture.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {

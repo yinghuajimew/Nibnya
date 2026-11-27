@@ -581,7 +581,7 @@
     <string name="thread_count_custom">自定义…</string>
     <string name="title_custom_thread_count">自定义线程数</string>
     <string name="msg_thread_count_invalid">请输入 1 到 10000 之间的数字</string>
-    <string name="msg_about_content_full"><![CDATA[反馈问题 / 提交新功能？:<br><a href="https://github.com/yinghuajimew/Nibnya">点击访问 GitHub 仓库提 Issues</a><br>QQ交流群: <a href="https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&group_code=1077349003">点击加入樱喵NBT交流</a><br>感谢！！<br><a href="https://space.bilibili.com/628906424">Yejdhi</a>以及<a href="https://github.com/LiteLDev">LeviMC成员</a><br>有了他们才有了现在的点子，更好修改方法]]></string>
+    <string name="msg_about_content_full"><![CDATA[反馈问题 / 提交新功能？:<br><a href="https://github.com/yinghuajimew/Nibnya">点击访问 GitHub 仓库提 Issues</a><br>QQ交流群: <a href="https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&group_code=1077349003">点击加入樱喵NBT交流</a><br>感谢！！<br><a href="https://space.bilibili.com/648037057">Yejdhi</a>以及<a href="https://github.com/LiteLDev">LeviMC成员</a><br>有了他们才有了现在的点子，更好修改方法]]></string>
     <string name="msg_replace_all_data">替换所有数据？</string>
     <string name="msg_delete_items_confirm">删除 %d 项？无法撤销</string>
     <string name="msg_full_overwrite_confirm">完全覆盖 %s？这是不可逆转的</string>
