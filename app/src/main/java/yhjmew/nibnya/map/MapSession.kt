@@ -450,6 +450,17 @@ class MapSession private constructor(
      * 工作目录 `map_db_*` 由调用方删除（里面是 db 副本）。
      */
     /**
+     * 已建好的瓦片图层。**不**触发创建 —— null 表示还没建。
+     *
+     * 给「只切维度」用：那种场景下两个图层肯定已经存在，
+     * 拿不到就说明会话还没准备好，调用方退回完整的 openWorld()。
+     */
+    fun tilesOrNull(): SaveTiles? = tiles
+
+    /** 已建好的种子层。**不**触发创建。 */
+    fun seedSourceOrNull(): SeedTerrainSource? = seedSource
+
+    /**
      * 当前会话用的 level.dat 若是**我们自己复制的**，返回它的路径；
      * 直接读原存档时返回 null。
      *

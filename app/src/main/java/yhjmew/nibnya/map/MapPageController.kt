@@ -228,11 +228,65 @@ class MapPageController(
                 currentDim = which
                 MapSettings.setDimension(activity, which)
                 updateDimLabel()
-                // 换维度 = 换数据源：直接重开，锚点和瓦片缓存都跟着重算
-                openWorld()
+                /*
+                 * 换维度只需改数据源的维度，**不用重新 openWorld()**：
+                 *
+                 *   · 各维度的瓦片键本来就不同，共存于 LRU 里
+                 *   · 重开要走 MapSession.open()，那里面有一次 Shizuku
+                 *     拷贝 + 全库扫描，日志里实测阻塞主线程 2016ms → ANR
+                 *
+                 * 但锚点还是得重算：优先用这个维度存档里的第一个区块，
+                 * 没有就用种子层出生点。
+                 */
+                switchDimension(which)
             }
             .setNegativeButton(activity.getString(R.string.btn_cancel), null)
             .show()
+    }
+
+    /**
+     * 只切维度，不重开数据库。
+     *
+     * 这是「来回切维度会 OOM / ANR」的正面修复：以前直接 openWorld()，
+     * 每次都要重走 Shizuku 拷贝 + 全库扫描，还会把其他维度的瓦片全丢掉。
+     */
+    private fun switchDimension(dim: Int) {
+        val s = session ?: run { openWorld(); return }
+        val tiles = s.tilesOrNull() ?: run { openWorld(); return }
+
+        loadJob?.cancel()
+        loadJob = activity.lifecycleScope.launch {
+            try {
+                setStatus(activity.getString(R.string.map_status_preparing))
+                val anchor = withContext(Dispatchers.IO) {
+                    s.setDimension(dim)
+                    s.anchorChunk(dim)
+                        ?: s.seedSourceOrNull()?.spawnPoint()?.let {
+                            Pair(floorDiv(it.first, 16), floorDiv(it.second, 16))
+                        }
+                }
+                if (anchor == null) {
+                    setStatus(activity.getString(R.string.map_status_no_data))
+                    return@launch
+                }
+                withContext(Dispatchers.Main) {
+                    // 维度变了，旧视图的 wanted/缓存签名都要重算
+                    mapView?.setTileSource(null)
+                    mapView?.setBaseSource(null)
+                    mapView?.setTileSource(tiles)
+                    mapView?.setBaseSource(s.seedSourceOrNull())
+                    mapView?.centerOn(anchor.first * 16 + 8, anchor.second * 16 + 8)
+                    mapView?.setGesturesEnabled(true)
+                    setReadoutVisible(true)
+                }
+                schedulePreload()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.error("MapPage", "切换维度失败", e)
+                setStatus(activity.getString(R.string.map_status_failed, e.message ?: "unknown"))
+            }
+        }
     }
 
     private fun showRadiusMenu() {
@@ -335,7 +389,16 @@ class MapPageController(
                 setStatus(activity.getString(R.string.map_status_preparing))
                 AppLogger.info("MapPage", "打开世界 $f 的地图")
 
-                val s = session ?: MapSession.open(activity, vm, f).also { session = it }
+                /*
+                 * ⚠️ open() 必须在 IO 线程。
+                 *
+                 * 它内部要复制整个 db 目录，Android/data 下走 Shizuku 时
+                 * 还要等一次远程进程退出。lifecycleScope.launch 默认是主线程，
+                 * 日志里实测阻塞 2016ms → 直接 ANR（用户 2026-11-28 提供）。
+                 */
+                val s = session ?: withContext(Dispatchers.IO) {
+                    MapSession.open(activity, vm, f)
+                }.also { session = it }
 
                 /*
                  * ⚠️ 这三件事都必须离开主线程，否则首帧卡住 → ANR：
@@ -367,6 +430,8 @@ class MapPageController(
                     setStatus(activity.getString(R.string.map_status_no_data))
                     // 这个维度没有任何数据：把空态层放回来，用户能换一个存档
                     showEmptyOverlay(true)
+                    // 空态层本身可点，但万一用户先划一下也不该卡死手势
+                    mapView?.setGesturesEnabled(true)
                     return@launch
                 }
                 val (anchor, tiles, seedSrc) = prepared
@@ -401,6 +466,15 @@ class MapPageController(
                     setReadoutVisible(true)
                     applyStatusCorner()
                     showEmptyOverlay(false)
+                    /*
+                     * ⚠️ 必须在这里解锁手势。
+                     *
+                     * onShown() 在「没有世界」时会 setGesturesEnabled(false)，
+                     * 而选完存档后走的是 openWorld()，不经过 onShown——
+                     * 于是手势一直是禁用的，用户选完世界发现滑不动，
+                     * 必须先切回主页再切回来才恢复（用户 2026-11-28 反馈）。
+                     */
+                    mapView?.setGesturesEnabled(true)
                     loadedFolder = f
                     setStatus(
                         activity.getString(

@@ -86,15 +86,22 @@ class SaveTiles(
         }
     }
 
-    /** 当前维度。切维度时 [generation] 一起递增。 */
+    /**
+     * 当前维度（Bedrock 编码：0 主世界 / 1 下界 / 2 末地）。
+     *
+     * ## 切维度**不**递增 generation
+     *
+     * [key] 里本来就带 dimension，不同维度的瓦片天然是不同键。
+     * 早先这里调 [bumpGeneration]，后果是：
+     *   · generation++ → 所有旧键失效，切回来也得从头重新加载
+     *   · cache.evictAll() 丢掉其他维度的图，来回切就是反复重新生成
+     *   · evictAll 只丢引用不 recycle，几十 MB 位图等 GC，
+     *     反复切十几次直接把内存打满（用户 2026-11-28 反馈会崩）
+     *
+     * 现在只改字段。各维度的图共存在 LRU 里，靠 maxSize 自然淘汰。
+     */
     @Volatile
     var dimension: Int = 0
-        set(value) {
-            if (field != value) {
-                field = value
-                bumpGeneration()
-            }
-        }
 
     private val pool: ExecutorService = Executors.newFixedThreadPool(threadCount)
 
@@ -274,8 +281,30 @@ class SaveTiles(
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
-        cache.evictAll()
+        /*
+         * 先 recycle 再 evict。
+         *
+         * LruCache.evictAll() 只是把引用从表里摘掉，位图要等 GC 才真正
+         * 释放 —— 一块瓦片 64 KB，一屏 40 块就是 2.5 MB，反复开关页面
+         * 会看到「GC 疯狂跑但内存不降」。
+         */
+        recycleAll()
         surfaces.clear()
+    }
+
+    /**
+     * 把 LRU 里的位图显式回收，然后清空表。
+     *
+     * `snapshot()` 本身就返回一份拷贝，不必再自己重建 Map；
+     * 早先多绕了一层 `cache.get(k)`，那会让 LRU 顺序被打乱（等于
+     * 把所有条目重新「摸」一遍），纯属副作用。
+     */
+    private fun recycleAll() {
+        val olds: Collection<Bitmap> = cache.snapshot().values
+        cache.evictAll()
+        for (b in olds) {
+            if (!b.isRecycled) b.recycle()
+        }
     }
 
     /**

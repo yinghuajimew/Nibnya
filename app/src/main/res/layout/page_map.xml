@@ -145,8 +145,11 @@
         <!--
           空态覆盖层：没有打开世界时盖在地图上方，点一下就能选档。
 
-          用 FrameLayout 铺满 + 半透明底，让「这里可以点」有明确区域，
-          又不完全遮住深色底（用户能看到下面是地图页而不是白屏）。
+          必须**完全不透明**。
+
+          早先用 #F00E141B（94% 不透明），结果上一张地图的瓦片从下面
+          透出来 6%，看起来像「两层地图叠在一起」（用户 2026-11-28 反馈）。
+          空态就该是一块干净的黑，不要留任何底下的东西。
         -->
         <LinearLayout
             android:id="@+id/layout_map_empty"
@@ -156,7 +159,7 @@
             android:gravity="center"
             android:clickable="true"
             android:focusable="true"
-            android:background="#F00E141B">
+            android:background="#FF0E141B">
 
             <TextView
                 android:layout_width="wrap_content"

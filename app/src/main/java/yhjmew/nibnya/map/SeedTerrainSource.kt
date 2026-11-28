@@ -407,17 +407,41 @@ class SeedTerrainSource(
 
     // ── 生命周期 ──
 
-    /** 切维度时调用：作废旧瓦片（下界和末地的群系完全不同）。 */
+    /**
+     * 切维度。
+     *
+     * ## 为什么**不**作废旧瓦片
+     *
+     * [key] 的构成是 `generation/dim/seed/bpc/tx/tz` —— 维度本来就是
+     * 键的一部分。不同维度的瓦片互不冲突，不需要作废。
+     *
+     * 早先这里调 bumpGeneration()：generation++ 让全部旧键失效，
+     * 再加上 cache.clear() 只丢引用不 recycle，来回切主世界/下界/末地
+     * 十几次就把几十 MB 原生位图堆在 GC 里，最后 OOM 连系统一起崩
+     * （用户 2026-11-28 反馈）。
+     *
+     * 现在只记下维度，各维度的图在 LRU 里共存，来回切是秒开的。
+     */
     fun setDimension(dim: Int) {
-        if (dim == dimensionOverride) return
         dimensionOverride = dim
-        bumpGeneration()
     }
 
     private fun bumpGeneration() {
         generation++
-        cache.clear()
+        clearCache()
         synchronized(lock) { inflight.clear() }
+    }
+
+    /** 清缓存并**显式回收**位图，别等 GC。 */
+    private fun clearCache() {
+        val snapshot = ArrayList<Bitmap>()
+        synchronized(cache) {
+            snapshot.addAll(cache.values)
+            cache.clear()
+        }
+        for (b in snapshot) {
+            if (!b.isRecycled) b.recycle()
+        }
     }
 
     /** 世界种子变化（换存档）—— 由调用方新建实例，这里只做收尾。 */
@@ -428,7 +452,7 @@ class SeedTerrainSource(
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
-        cache.clear()
+        clearCache()
         synchronized(lock) { inflight.clear() }
     }
 

@@ -324,6 +324,32 @@ static int map_mc(int mc_level)
     }
 }
 
+/* ── 维度编码转换 ─────────────────────────────────────────────
+ *
+ * ⚠️ 这里有两套编码，混用会静默出错：
+ *
+ *   Bedrock / 存档数据库：  主世界=0  下界=1  末地=2
+ *   cubiomes 枚举：         主世界=0  下界=-1 末地=+1
+ *
+ * 曾经直接拿 Bedrock 的 dim 去做 `dim < DIM_NETHER || dim > DIM_END`
+ * 校验（即只允许 -1..1），后果是：
+ *   · dim=0 主世界  碰巧通过，applySeed(0) 也确实是主世界
+ *   · dim=1 下界    通过，但 applySeed(1) 生成的是**末地**
+ *   · dim=2 末地    被拒 → 日志刷屏「维度非法」
+ * 所以**必须**先换算再交给 cubiomes。
+ */
+#define DIM_INVALID  (-99)
+
+static int bedrock_to_cubiomes_dim(jint dim)
+{
+    switch (dim) {
+    case 0:  return DIM_OVERWORLD;  /* 主世界 */
+    case 1:  return DIM_NETHER;     /* 下界 */
+    case 2:  return DIM_END;        /* 末地 */
+    default: return DIM_INVALID;
+    }
+}
+
 /* 采样高度（**方块单位**）。
  *
  * ⚠️ 单位很容易搞错，这里写清楚：
@@ -470,8 +496,10 @@ Java_yhjmew_nibnya_map_SeedTerrainSource_nativeTile(
         log_from_worker(3, "nativeTile out 为 null", 0, 0);
         return ERR_BAD_ARG;
     }
-    if (dim < DIM_NETHER || dim > DIM_END) {
-        log_from_worker(3, "nativeTile 维度非法: dim=%ld", dim, 0);
+    /* 入参是 Bedrock 编码（0/1/2），换算成 cubiomes 编码后再用 */
+    int cdim = bedrock_to_cubiomes_dim(dim);
+    if (cdim == DIM_INVALID) {
+        log_from_worker(3, "nativeTile 维度非法: dim=%ld（只接受 0/1/2）", dim, 0);
         return ERR_BAD_DIM;
     }
 
@@ -492,7 +520,7 @@ Java_yhjmew_nibnya_map_SeedTerrainSource_nativeTile(
     ensure_colors();
 
     /* ② 分配 Generator */
-    Generator *g = new_generator(seed, mcLevel, dim);
+    Generator *g = new_generator(seed, mcLevel, cdim);
     if (!g)
         return ERR_BAD_VERSION;   /* new_generator 已校验过版本和维度 */
 
@@ -513,7 +541,7 @@ Java_yhjmew_nibnya_map_SeedTerrainSource_nativeTile(
     r.z = (int) floor((double) blockZ / scale);
     r.sx = cells;
     r.sz = cells;
-    r.y = range_y(mc, (int) dim, scale);
+    r.y = range_y(mc, cdim, scale);
     r.sy = 1;
 
     /*
@@ -596,11 +624,12 @@ Java_yhjmew_nibnya_map_SeedTerrainSource_nativeBiomeAt(
         jlong seed, jint mcLevel, jint dim, jint blockX, jint blockZ)
 {
     (void) env; (void) thiz;
-    if (dim < DIM_NETHER || dim > DIM_END) {
-        log_from_worker(3, "nativeBiomeAt 维度非法: dim=%ld", dim, 0);
+    int cdim = bedrock_to_cubiomes_dim(dim);
+    if (cdim == DIM_INVALID) {
+        log_from_worker(3, "nativeBiomeAt 维度非法: dim=%ld（只接受 0/1/2）", dim, 0);
         return -1;
     }
-    Generator *g = new_generator(seed, mcLevel, dim);
+    Generator *g = new_generator(seed, mcLevel, cdim);
     if (!g) {
         log_from_worker(3, "nativeBiomeAt 生成器创建失败: mcLevel=%ld", mcLevel, 0);
         return -1;
@@ -610,7 +639,7 @@ Java_yhjmew_nibnya_map_SeedTerrainSource_nativeBiomeAt(
     /* getBiomeAt 的 scale 固定传 4，所以 y 用 1:4 单位 */
     int id = getBiomeAt(g, 4,
                         (int) floor((double) blockX / 4.0),
-                        range_y(mc, (int) dim, 4),
+                        range_y(mc, cdim, 4),
                         (int) floor((double) blockZ / 4.0));
     free(g);
     return id;
