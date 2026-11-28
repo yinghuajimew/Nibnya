@@ -10,6 +10,7 @@
 [![License][license-shield]][license-link]
 [![Issues][issues-shield]][issues-link]
 
+[![Downloads][downloads-shield]][downloads-link]
 [![Forks][forks-shield]][forks-link]
 [![Stars][stars-shield]][stars-link]
 [![Contributors][contributors-shield]][contributors-link]
@@ -260,6 +261,10 @@ This project uses **[AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0)** protocol
 
 [issues-shield]: https://img.shields.io/github/issues/yinghuajimew/Nibnya?color=ff80eb&labelColor=black&style=flat-square
 [issues-link]: https://github.com/yinghuajimew/Nibnya/issues
+
+<!-- 下载量：GitHub Releases 里所有文件的下载次数总和 -->
+[downloads-shield]: https://img.shields.io/github/downloads/yinghuajimew/Nibnya/total?color=7C6BFF&labelColor=black&style=flat-square
+[downloads-link]: https://github.com/yinghuajimew/Nibnya/releases
 
 [forks-shield]: https://img.shields.io/github/forks/yinghuajimew/Nibnya?color=8ae8ff&labelColor=black&style=flat-square
 [forks-link]: https://github.com/yinghuajimew/Nibnya/network/members
