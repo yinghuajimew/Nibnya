@@ -46,6 +46,23 @@
             android:maxLines="1"
             android:ellipsize="middle" />
 
+        <!-- 维度切换：主世界 / 下界 / 末地。点一下弹列表 -->
+        <TextView
+            android:id="@+id/tv_map_dim"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="@string/map_dim_overworld"
+            android:textColor="@color/app_text_primary"
+            android:textSize="13sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+
         <!--
           开关 chip。开启态由 MapPageController 用 background + textColor 切换，
           这里给的是关闭态默认值，避免首帧闪一下高亮。
@@ -125,17 +142,63 @@
             android:clickable="false"
             android:focusable="false" />
 
-    </FrameLayout>
+        <!--
+          空态覆盖层：没有打开世界时盖在地图上方，点一下就能选档。
 
-    <!-- ── 状态行 ── -->
-    <TextView
-        android:id="@+id/tv_map_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="10dp"
-        android:text="@string/map_status_waiting_world"
-        android:textColor="@color/app_text_secondary"
-        android:textSize="12sp"
-        android:background="@color/app_surface" />
+          用 FrameLayout 铺满 + 半透明底，让「这里可以点」有明确区域，
+          又不完全遮住深色底（用户能看到下面是地图页而不是白屏）。
+        -->
+        <LinearLayout
+            android:id="@+id/layout_map_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="#F00E141B">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/map_empty_pick_world"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/map_empty_pick_hint"
+                android:textColor="#99FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!--
+          状态气泡（替代原来固定在底部的整条状态栏）。
+
+          用 FrameLayout 而不是横向 LinearLayout：
+          wrap_content 让黑底只包住文字，短消息不会拉出一整条白/黑长条。
+          gravity 由 MapPageController.applyStatusCorner() 按设置切换。
+        -->
+        <TextView
+            android:id="@+id/tv_map_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="10dp"
+            android:maxWidth="300dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:background="@drawable/bg_map_bubble"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:visibility="gone"
+            android:clickable="false"
+            android:focusable="false" />
+
+    </FrameLayout>
 
 </LinearLayout>

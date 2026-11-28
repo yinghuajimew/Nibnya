@@ -1072,4 +1072,21 @@ If this path is wrong, use "Custom path". Tap Diagnostics to see why the folder 
     <string name="map_title_threads">Custom render threads</string>
     <string name="map_msg_threads_invalid">Enter a value between %1$d and %2$d</string>
     <string name="map_stats_native">Seed layer: %1$d tiles generated, %2$d failed, %3$d ms total</string>
+    <string name="map_dim_overworld">Overworld</string>
+    <string name="map_dim_nether">Nether</string>
+    <string name="map_dim_end">The End</string>
+    <string name="map_dim_title">Switch dimension</string>
+    <string name="map_status_seconds">Toast duration</string>
+    <string name="map_status_seconds_fmt">%d s</string>
+    <string name="map_status_seconds_never">Never hide</string>
+    <string name="map_title_status_seconds">Custom toast duration</string>
+    <string name="map_msg_status_seconds_invalid">Enter a value between %1$d and %2$d seconds</string>
+    <string name="map_corner">Toast position</string>
+    <string name="map_corner_top_start">Top left</string>
+    <string name="map_corner_top_end">Top right</string>
+    <string name="map_corner_bottom_start">Bottom left</string>
+    <string name="map_corner_bottom_end">Bottom right</string>
+    <string name="map_empty_pick_world">Tap to select a save</string>
+    <string name="map_empty_pick_hint">The map opens as soon as you pick one</string>
+    <string name="map_desc_status_seconds">How long a status message stays on the map</string>
 </resources>

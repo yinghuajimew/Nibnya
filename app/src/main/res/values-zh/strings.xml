@@ -1075,4 +1075,21 @@ ID：%3$s
     <string name="map_title_threads">自定义渲染线程数</string>
     <string name="map_msg_threads_invalid">请输入 %1$d 到 %2$d 之间的数值</string>
     <string name="map_stats_native">种子层已生成 %1$d 块瓦片，失败 %2$d 块，累计 %3$d ms</string>
+    <string name="map_dim_overworld">主世界</string>
+    <string name="map_dim_nether">下界</string>
+    <string name="map_dim_end">末地</string>
+    <string name="map_dim_title">切换维度</string>
+    <string name="map_status_seconds">提示停留</string>
+    <string name="map_status_seconds_fmt">%d 秒</string>
+    <string name="map_status_seconds_never">不自动消失</string>
+    <string name="map_title_status_seconds">自定义提示停留时间</string>
+    <string name="map_msg_status_seconds_invalid">请输入 %1$d 到 %2$d 之间的秒数</string>
+    <string name="map_corner">提示位置</string>
+    <string name="map_corner_top_start">左上角</string>
+    <string name="map_corner_top_end">右上角</string>
+    <string name="map_corner_bottom_start">左下角</string>
+    <string name="map_corner_bottom_end">右下角</string>
+    <string name="map_empty_pick_world">点击选择存档</string>
+    <string name="map_empty_pick_hint">选好后会直接打开这个存档的地图</string>
+    <string name="map_desc_status_seconds">状态提示在地图上停留多久后自动消失</string>
 </resources>

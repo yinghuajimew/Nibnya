@@ -43,6 +43,11 @@ class MapPageController(
     private val tvRadius: TextView? = activity.findViewById(R.id.tv_map_radius)
     private val tvGrid: TextView? = activity.findViewById(R.id.tv_map_grid)
     private val tvReadout: TextView? = activity.findViewById(R.id.tv_map_readout)
+    private val tvDim: TextView? = activity.findViewById(R.id.tv_map_dim)
+    private val emptyOverlay: android.view.View? = activity.findViewById(R.id.layout_map_empty)
+
+    /** 当前维度（0 主世界 / 1 下界 / 2 末地）。 */
+    private var currentDim: Int = MapSettings.DIM_OVERWORLD
 
     /** 当前世界目录。null = 主页还没打开世界。 */
     private var folder: String? = null
@@ -70,10 +75,16 @@ class MapPageController(
         tvRadius?.setOnClickListener { showRadiusMenu() }
         updateRadiusLabel()
 
+        currentDim = MapSettings.dimension(activity)
+        updateDimLabel()
+        tvDim?.setOnClickListener { showDimMenu() }
+
         // 视口读数：中心坐标 + 缩放
         mapView?.onViewportChanged = { cx, cz, bpp ->
             tvReadout?.text = "x $cx  z $cz  ·  ${formatBpp(bpp)}"
         }
+        // 没有世界时不显示读数 —— 空页面上显示「x 0 z 0」只会让人困惑
+        setReadoutVisible(false)
 
         // 区块网格开关。状态存 prefs，下次进来保持。
         // ⚠️ 外观必须区分开/关两种状态：旧版只改文字颜色，
@@ -152,9 +163,16 @@ class MapPageController(
         if (folder == null) {
             mapView?.setGesturesEnabled(false)
             mapView?.resetViewport()
-            setStatus(activity.getString(R.string.map_status_waiting_world))
+            setReadoutVisible(false)
+            showEmptyOverlay(true)
+            /*
+             * 不调用 setStatus：空态层本身已经写着「点击选择存档」，
+             * 再冒一个「请先在主页打开一个世界」会自相矛盾 ——
+             * 现在根本不需要回主页。
+             */
             return
         }
+        showEmptyOverlay(false)
         mapView?.setGesturesEnabled(true)
         if (folder != loadedFolder) openWorld()
     }
@@ -167,6 +185,55 @@ class MapPageController(
     }
 
     // ── 预加载半径菜单 ──
+
+    /**
+     * 让用户选一个存档并打开地图。
+     *
+     * 由 [MainActivity] 在「地图页黑色区域被点击」时调用 ——
+     * 走的是和侧边栏统一的那套 ensureDbLoaded 流程，
+     * 所以选完档不需要再回主页点一次。
+     */
+    fun pickWorld() {
+        activity.pickWorldForMap()
+    }
+
+    private fun showEmptyOverlay(on: Boolean) {
+        emptyOverlay?.visibility =
+            if (on) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    // ── 维度菜单 ──
+
+    private fun updateDimLabel() {
+        tvDim?.text = activity.getString(
+            when (currentDim) {
+                MapSettings.DIM_NETHER -> R.string.map_dim_nether
+                MapSettings.DIM_END -> R.string.map_dim_end
+                else -> R.string.map_dim_overworld
+            }
+        )
+    }
+
+    private fun showDimMenu() {
+        val labels = arrayOf(
+            activity.getString(R.string.map_dim_overworld),
+            activity.getString(R.string.map_dim_nether),
+            activity.getString(R.string.map_dim_end),
+        )
+        android.app.AlertDialog.Builder(activity)
+            .setTitle(activity.getString(R.string.map_dim_title))
+            .setSingleChoiceItems(labels, currentDim) { dialog, which ->
+                dialog.dismiss()
+                if (which == currentDim) return@setSingleChoiceItems
+                currentDim = which
+                MapSettings.setDimension(activity, which)
+                updateDimLabel()
+                // 换维度 = 换数据源：直接重开，锚点和瓦片缓存都跟着重算
+                openWorld()
+            }
+            .setNegativeButton(activity.getString(R.string.btn_cancel), null)
+            .show()
+    }
 
     private fun showRadiusMenu() {
         // 第一项是自动，其余是固定半径（区块）
@@ -280,14 +347,26 @@ class MapPageController(
                 val prepared = withContext(Dispatchers.IO) {
                     // 种子层：先建出来（读 level.dat），失败就算了，不影响存档层
                     val seedSrc = runCatching { s.createSeedSource(activity) }.getOrNull()
-                    val anchor = s.anchorChunk(0)
-                        // 存档里一个区块都没有时，用种子层的出生点兜底 ——
-                        // 否则新存档打开地图会直接「没有数据」
-                        ?: seedSrc?.spawnPoint()?.let { Pair(floorDiv(it.first, 16), floorDiv(it.second, 16)) }
-                    if (anchor == null) null else Triple(anchor, s.createTiles(activity), seedSrc)
+                    /*
+                     * 维度必须在建瓦片**之前**设好：
+                     *   · SaveTiles 的 key 里带 dimension，先建后设会缓存一堆主世界的图
+                     *   · 种子层同理，setDimension 会 bumpGeneration 作废旧瓦片
+                     */
+                    val tiles = s.createTiles(activity)
+                    s.setDimension(currentDim)
+
+                    val anchor = s.anchorChunk(currentDim)
+                        // 这个维度一个区块都没有时，用种子层的出生点兜底 ——
+                        // 否则切到下界/末地会直接「没有数据」
+                        ?: seedSrc?.spawnPoint()?.let {
+                            Pair(floorDiv(it.first, 16), floorDiv(it.second, 16))
+                        }
+                    if (anchor == null) null else Triple(anchor, tiles, seedSrc)
                 }
                 if (prepared == null) {
                     setStatus(activity.getString(R.string.map_status_no_data))
+                    // 这个维度没有任何数据：把空态层放回来，用户能换一个存档
+                    showEmptyOverlay(true)
                     return@launch
                 }
                 val (anchor, tiles, seedSrc) = prepared
@@ -319,6 +398,9 @@ class MapPageController(
                     )
                     // 居中到出生点。区块中心 +8 让落点在该区块正中间
                     mapView?.centerOn(anchor.first * 16 + 8, anchor.second * 16 + 8)
+                    setReadoutVisible(true)
+                    applyStatusCorner()
+                    showEmptyOverlay(false)
                     loadedFolder = f
                     setStatus(
                         activity.getString(
@@ -436,8 +518,52 @@ class MapPageController(
 
     // ── 杂项 ──
 
+    /**
+     * 状态提示。
+     *
+     * 现在是「气泡」而不是固定的一整条：宽度随文字自适应，停留
+     * [MapSettings.statusSeconds] 秒后淡出。停留 0 秒表示不自动消失，
+     * 直到下一条消息把它顶掉。
+     */
     private fun setStatus(text: String) {
-        tvStatus?.text = text
+        val tv = tvStatus ?: return
+        tv.text = text
+        tv.animate().cancel()
+        tv.visibility = android.view.View.VISIBLE
+        tv.alpha = 0f
+        tv.animate().alpha(1f).setDuration(140).start()
+
+        val secs = MapSettings.statusSeconds(activity)
+        tv.removeCallbacks(hideStatus)
+        if (secs > 0) {
+            tv.postDelayed(hideStatus, secs * 1000L)
+        }
+    }
+
+    /** 气泡淡出。抽成字段是因为要 removeCallbacks，每次新建 lambda 删不掉。 */
+    private val hideStatus = Runnable {
+        tvStatus?.animate()?.alpha(0f)?.setDuration(220)?.withEndAction {
+            tvStatus?.visibility = android.view.View.GONE
+        }?.start()
+    }
+
+    /** 按设置把气泡挪到对应角落。 */
+    private fun applyStatusCorner() {
+        val tv = tvStatus ?: return
+        val lp = tv.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
+        val corner = MapSettings.statusCorner(activity)
+        lp.gravity = when (corner) {
+            MapSettings.CORNER_TOP_END -> android.view.Gravity.TOP or android.view.Gravity.END
+            MapSettings.CORNER_BOTTOM_START -> android.view.Gravity.BOTTOM or android.view.Gravity.START
+            MapSettings.CORNER_BOTTOM_END -> android.view.Gravity.BOTTOM or android.view.Gravity.END
+            else -> android.view.Gravity.TOP or android.view.Gravity.START
+        }
+        tv.layoutParams = lp
+    }
+
+    /** 坐标 / 缩放读数的可见性。 */
+    private fun setReadoutVisible(on: Boolean) {
+        tvReadout?.visibility = if (on) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun toast(msg: String) {

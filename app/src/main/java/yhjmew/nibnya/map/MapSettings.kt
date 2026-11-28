@@ -89,6 +89,63 @@ object MapSettings {
         prefs(ctx).edit().putBoolean("seed_layer", on).apply()
     }
 
+    // ── 维度 ──
+
+    /** 主世界 */
+    const val DIM_OVERWORLD = 0
+
+    /** 下界 */
+    const val DIM_NETHER = 1
+
+    /** 末地 */
+    const val DIM_END = 2
+
+    /**
+     * 上次查看的维度。
+     *
+     * 与「存档」无关：用户在 A 存档看下界，换到 B 存档仍然从下界开始，
+     * 因为「我正在看哪个维度」是操作习惯，不是存档属性。
+     */
+    fun dimension(ctx: Context): Int =
+        prefs(ctx).getInt("map_dim", DIM_OVERWORLD).coerceIn(0, 2)
+
+    fun setDimension(ctx: Context, dim: Int) {
+        prefs(ctx).edit().putInt("map_dim", dim).apply()
+    }
+
+    // ── 状态气泡 ──
+
+    /** 气泡停留秒数的最小值（0 = 不自动消失，由下一次消息顶掉） */
+    const val STATUS_SECONDS_MIN = 0
+
+    /** 气泡停留秒数的最大值 */
+    const val STATUS_SECONDS_MAX = 30
+
+    /**
+     * 状态气泡停留秒数。0 表示一直显示到被新消息替换。
+     *
+     * 默认 3 秒：状态行一次只有一条，3 秒足够读完又不挡地图。
+     */
+    fun statusSeconds(ctx: Context): Int =
+        prefs(ctx).getInt("map_status_seconds", 3).coerceIn(STATUS_SECONDS_MIN, STATUS_SECONDS_MAX)
+
+    fun setStatusSeconds(ctx: Context, v: Int) {
+        prefs(ctx).edit().putInt("map_status_seconds", v).apply()
+    }
+
+    /** 气泡位置：0 左上 / 1 右上 / 2 左下 / 3 右下。 */
+    const val CORNER_TOP_START = 0
+    const val CORNER_TOP_END = 1
+    const val CORNER_BOTTOM_START = 2
+    const val CORNER_BOTTOM_END = 3
+
+    fun statusCorner(ctx: Context): Int =
+        prefs(ctx).getInt("map_status_corner", CORNER_TOP_START).coerceIn(0, 3)
+
+    fun setStatusCorner(ctx: Context, corner: Int) {
+        prefs(ctx).edit().putInt("map_status_corner", corner).apply()
+    }
+
     // ── 描边（两条线各自独立）──
 
     /**

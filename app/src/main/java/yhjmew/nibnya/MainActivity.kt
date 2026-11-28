@@ -298,6 +298,15 @@ class MainActivity : ComponentActivity() {
 
     private var pendingWorldSelector = false
 
+    /**
+     * 选完存档后要接着做的事。
+     *
+     * 侧边栏按钮和地图空态都是「点了我，但还没选档」——
+     * 把后续动作暂存在这里，存档选中后立刻执行，
+     * 用户就不必先回主页加载再跑回来重按一次。
+     */
+    private var pendingWorldPick: ((WorldItem) -> Unit)? = null
+
     /** 当前备份列表所属的存档目录（重命名/删除后据此刷新列表） */
     private var backupListFolder: String? = null
 
@@ -594,9 +603,6 @@ class MainActivity : ComponentActivity() {
 
         bottomNav = BottomNavController(this)
 
-        // 地图页（只读地形预览，2026-11-02）
-        mapPage = yhjmew.nibnya.map.MapPageController(this, worldVM)
-
         // 数据库引擎选择要读 prefs，但 PlayerDbManager 只收一个目录路径，
         // 所以在这里把 application context 登记进去。
         yhjmew.nibnya.db.LevelDbEngine.attach(this)
@@ -844,6 +850,19 @@ class MainActivity : ComponentActivity() {
 
         findViewById<View?>(R.id.sidebar_header)?.setOnClickListener { showAppInfoDialog() }
         findViewById<View?>(R.id.iv_app_icon)?.setOnClickListener { showAppInfoDialog() }
+
+        /*
+         * 地图页放在这里创建，而不是 initViews。
+         *
+         * MapPageController.init 会给地图空态挂点击监听，调用
+         * pickWorldForMap()（定义在本类）。而 initViews 里还没有
+         * 任何按钮监听，构造顺序不影响功能 —— 但 keep 住这个顺序
+         * 更符合「先建控件、再建控制器」的直觉。
+         */
+        mapPage = yhjmew.nibnya.map.MapPageController(this, worldVM)
+        findViewById<View?>(R.id.layout_map_empty)?.setOnClickListener {
+            mapPage?.pickWorld()
+        }
     }
 
     // ============================================
@@ -1675,6 +1694,8 @@ class MainActivity : ComponentActivity() {
 
     private fun showWorldSelectorDialog(list: List<WorldItem>) {
         if (list.isEmpty()) {
+            // 没有可选存档时，侧边栏那边的待办已经无法完成，清掉
+            pendingWorldPick = null
             // 原来只弹一个一闪而过的 toast，用户和我们都拿不到线索。
             // 改成可交互的对话框：把当前路径显示出来，并给「诊断」入口。
             AlertDialog.Builder(this)
@@ -1705,7 +1726,21 @@ class MainActivity : ComponentActivity() {
                 // 「显示所有」模式下列表混着三条路径的存档，
                 // 必须把这条自己的根目录记下来，否则后续读写会跑到当前路径去。
                 worldVM.setCurrentWorldBase(w.basePath)
-                worldVM.openLevelDat(this, w.folderName)
+
+                /*
+                 * 侧边栏 / 地图空态触发的选档：不打开 level.dat，
+                 * 而是把用户想做的动作接着做完（联机玩家、地图数据……）。
+                 *
+                 * 从主页主动选档时 pendingWorldPick 为 null，
+                 * 走原来的 openLevelDat —— 两种入口互不干扰。
+                 */
+                val next = pendingWorldPick
+                if (next != null) {
+                    pendingWorldPick = null
+                    next(w)
+                } else {
+                    worldVM.openLevelDat(this, w.folderName)
+                }
             },
             onLongClick = { showWorldManageMenu(it) },
             menuItems = listOf(
@@ -3019,18 +3054,56 @@ class MainActivity : ComponentActivity() {
         { toast(getString(R.string.toast_select_world)); return false }
         return true
     }
+    /**
+     * 确保数据库已就绪，然后执行 [task]。
+     *
+     * ## 为什么要在这里弹选择器
+     * 以前没选档时只弹一句「请先点击蓝色按钮选择一个存档！」，
+     * 用户得先关掉侧边栏、回主页、点蓝色按钮、选档、再切回来重按。
+     *
+     * 现在直接弹列表，选完继续原来的动作。
+     * 用户明确要求：**每次都弹**，不复用上次的存档 ——
+     * 一次点击就到，也不用猜这次会打开哪个。
+     */
+    /**
+     * 地图页空态被点击时调用。
+     *
+     * 与侧边栏按钮走同一套 [ensureDbLoaded]：弹列表 → 选档 →
+     * 加载玩家数据 → 地图页自己发现 folder 变了并自动 openWorld。
+     *
+     * 这里的「任务」是空的 —— 真正要做的事是让
+     * `currentWorldFolder` 有值，MapPageController 的 collector 会接手。
+     */
+    internal fun pickWorldForMap() {
+        ensureDbLoaded(Runnable { /* 地图页自己监听 currentWorldFolder */ })
+    }
+
     private fun ensureDbLoaded(task: Runnable) {
         if (worldVM.currentWorkingDbPath != null && File(worldVM.currentWorkingDbPath!!).exists()) {
             task.run()
             return
         }
-        val f = etWorldName?.text.toString()
-        if (f.isEmpty() || f == getString(R.string.hint_select_world)) {
-            toast(getString(R.string.toast_select_save_first))
-            return
+
+        // 先登记「选完档要做什么」，再由选择器回调触发。
+        // onShortClick 里已经在选中时 setName 并设好 basePath，这里只需开库。
+        pendingWorldPick = pick@{ _ ->
+            val f = etWorldName?.text?.toString().orEmpty()
+            if (f.isEmpty() || f == getString(R.string.hint_select_world)) {
+                pendingWorldPick = null
+                toast(getString(R.string.toast_select_save_first))
+                return@pick
+            }
+            /*
+             * ⚠️ 必须把 task 作为 onSuccess 传进去，而不是自己写
+             * `pendingSidebarTask = task` 再调两参数版本。
+             *
+             * SAF 模式下 openPlayerData 走 loadPlayerDataViaSaf，
+             * 它内部会用 onSuccess 覆盖 pendingSidebarTask —— 手写的那份
+             * 会被静默丢掉，表现就是「选完档什么都没发生」。
+             */
+            worldVM.openPlayerData(this, f, task)
         }
-        worldVM.pendingSidebarTask = task
-        worldVM.openPlayerData(this, f)
+        showWorldSelector()
     }
 
     internal fun showProgressDialog(title: String, message: String) {

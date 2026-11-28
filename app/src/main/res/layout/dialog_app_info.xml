@@ -752,6 +752,60 @@
                 android:textColor="@color/app_text_secondary"
                 android:layout_marginBottom="8dp" />
 
+            <!-- 提示停留 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_status_seconds"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_map_status_seconds"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="112dp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_desc_status_seconds"
+                android:textSize="12sp"
+                android:textColor="@color/app_text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- 提示位置 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_corner"
+                    android:textColor="@color/app_text_primary"
+                    android:textSize="14sp" />
+
+                <Spinner
+                    android:id="@+id/sp_map_status_corner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="112dp" />
+            </LinearLayout>
+
             <!-- native 统计 -->
             <TextView
                 android:id="@+id/tv_map_native_stats"

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  地图页状态气泡的圆角黑底。
+
+  参照 Minecraft 聊天栏：半透明黑 + 小圆角 + 不给阴影。
+  透明度用 0xB3（约 70%）——再高会挡住下面的地形，
+  再低在浅色群系（沙漠、雪原）上白字会糊。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#B3000000" />
+    <corners android:radius="6dp" />
+</shape>

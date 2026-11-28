@@ -4,6 +4,8 @@ import android.content.Context
 import android.widget.CheckBox
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import yhjmew.nibnya.R
 import yhjmew.nibnya.map.MapSettings
@@ -115,6 +117,62 @@ object MapSettingsUi {
                         .getInt("${spec.prefKey}_custom", 0)
                 },
             )
+        }
+
+        // ── 提示停留（秒）──
+        // 0 表示不自动消失；用 bindPresetSpinner 会额外生成「✎ 7」这类
+        // 自定义行，正好满足「玩家想要改多长就去编辑器改」的要求。
+        run {
+            val sp = root.findViewById<Spinner?>(R.id.sp_map_status_seconds) ?: return@run
+            act.bindPresetSpinner(
+                sp = sp,
+                presetLabels = listOf(
+                    ctx.getString(R.string.map_status_seconds_never),
+                    ctx.getString(R.string.map_status_seconds_fmt, 2),
+                    ctx.getString(R.string.map_status_seconds_fmt, 3),
+                    ctx.getString(R.string.map_status_seconds_fmt, 5),
+                    ctx.getString(R.string.map_status_seconds_fmt, 10),
+                ),
+                presetValues = listOf(0, 2, 3, 5, 10),
+                titleRes = R.string.map_title_status_seconds,
+                invalidMsgRes = R.string.map_msg_status_seconds_invalid,
+                currentValue = { MapSettings.statusSeconds(ctx) },
+                applyValue = { v ->
+                    MapSettings.setStatusSeconds(ctx, v)
+                    onChange()
+                },
+                customLabel = { v -> "✎ " + ctx.getString(R.string.map_status_seconds_fmt, v) },
+            )
+        }
+
+        // ── 提示位置（四角）──
+        run {
+            val sp = root.findViewById<Spinner?>(R.id.sp_map_status_corner) ?: return@run
+            val labels = listOf(
+                ctx.getString(R.string.map_corner_top_start),
+                ctx.getString(R.string.map_corner_top_end),
+                ctx.getString(R.string.map_corner_bottom_start),
+                ctx.getString(R.string.map_corner_bottom_end),
+            )
+            sp.adapter = ArrayAdapter(
+                ctx, android.R.layout.simple_spinner_item, labels
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            sp.setSelection(MapSettings.statusCorner(ctx), false)
+
+            var picked = false
+            sp.setOnTouchListener { _, _ -> picked = true; false }
+            sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long,
+                ) {
+                    if (!picked) return
+                    picked = false
+                    MapSettings.setStatusCorner(ctx, pos)
+                    onChange()
+                }
+
+                override fun onNothingSelected(p: AdapterView<*>?) {}
+            }
         }
 
         // ── 三个开关 ──
